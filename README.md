@@ -18,4 +18,4 @@ git clone https://github.com/coolfluid/lss.git $PLUGIN_DIR/lss
 ```
 cd $CF3_BUILD_DIR
 cmake .  -DCF3_PLUGIN_DIRS=$PLUGIN_DIR -DCF3_PLUGIN_LSS=ON
-```
+```LSS Plugin describing the abstract API

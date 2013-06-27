@@ -1,17 +1,10 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
-//
-// This software is distributed under the terms of the
-// GNU Lesser General Public License version 3 (LGPLv3).
-// See doc/lgpl.txt and doc/gpl.txt for the license text.
-
-#ifndef cf3_lss_mmatrix_h
-#define cf3_lss_mmatrix_h
+#ifndef mmatrix_h
+#define mmatrix_h
 
 #include <vector>
 
 
-namespace cf3 {
-namespace lss {
+namespace m {
 
 
 /*
@@ -331,8 +324,7 @@ struct mmatrix_vbr : mmatrix< T,mmatrix_vbr< T > > {
 };
 
 
-}  // namespace lss
-}  // namespace cf3
+}  // namespace m
 
 
 #endif

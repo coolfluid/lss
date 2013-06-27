@@ -1,1 +1,0 @@
-LSS Plugin describing the abstract API
