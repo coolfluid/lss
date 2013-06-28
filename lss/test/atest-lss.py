@@ -9,13 +9,9 @@ cf.env.log_level = 3 #  1=error, 2=warning, 3=info, 4=debug
 
 
 print('x1')
-g = cf.root.create_component('g','cf3.lss.GaussianEliminationXXX')
+g1 = cf.root.create_component('g1','cf3.lss.GaussianElimination')
+g1.execute()
 print('x2')
-g.execute()
-print('x3')
-
-
-
 exit()
 
 
