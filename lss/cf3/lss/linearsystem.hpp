@@ -10,9 +10,11 @@
 
 
 #include <vector>
-#include <boost/parameter/preprocessor.hpp>
-#include <boost/parameter/keyword.hpp>
+//include <boost/foreach.hpp>
+//include <boost/parameter/preprocessor.hpp>
+//include <boost/parameter/keyword.hpp>
 #include "common/Action.hpp"
+#include "common/Log.hpp"
 
 
 namespace cf3 {
@@ -97,6 +99,7 @@ T& operator()(const unsigned R, const unsigned C, const unsigned r, const unsign
 
 /**
  * description of a matrix
+ * only describes an interface, storage is provided by the derived structs.
  * (T: storage type, P: parent class)
  * it is based on parent class template extension (CRTP) to simulate virtual
  * methods (not a true polymorphic type) so it can't be used with factories.
@@ -107,18 +110,18 @@ struct matrix {
   // constructor
   matrix() : Nr(0), Nc(0) {}
 
-  // indexing
+  // matrix interfacing
   const T& operator()(const size_t r, const size_t c) const { return P::operator()(r,c); }
         T& operator()(const size_t r, const size_t c)       { return P::operator()(r,c); }
 
-  // interfacing
-  matrix& clear(const T& v=T())     { P::clear(v);   return *this; }
-  matrix& zerorow(const size_t r) { P::zerorow(r); return *this; }
+  matrix& operator=(const T& v)   { return P::assign(v); }
+  matrix& assign(const T& v=T())  { return P::assign(v); }
+  matrix& zerorow(const size_t r) { return P::zerorow(r); }
 
-  // size/resizing
-  size_t size()                { return Nr*Nc; }
-  size_t size(const size_t& d) { return (d==0? Nr : (d==1? Nc : 0)); }
-  size_t resize(size_t _Nr, size_t _Nc) { Nr=_Nr; Nc=_Nc; return size(); }
+  size_t size()                const { return Nr*Nc; }
+  size_t size(const size_t& d) const { return (d==0? Nr : (d==1? Nc : 0)); }
+  matrix& clear() { Nr = Nc = 0; }
+  matrix& resize(size_t _Nr, size_t _Nc) { Nr=_Nr; Nc=_Nc; return *this; }
 
   // members
   size_t Nr;  // number of rows
@@ -128,25 +131,29 @@ struct matrix {
 
 
 /**
- * implementation of a dense matrix, std::vector< std::vector< T > > based
+ * dense matrix implementation, std::vector< std::vector< T > > based
  */
 template< typename T >
 struct matrix_dense_vv : matrix< T,matrix_dense_vv< T > > {
   typedef matrix< T,matrix_dense_vv< T > > P;
 
-  // indexing functions
+  // matrix interfacing
   const T& operator()(const size_t r, const size_t c) const { return a[r][c]; }
         T& operator()(const size_t r, const size_t c)       { return a[r][c]; }
 
-  // interfacing functions
-  matrix_dense_vv& operator=(const T& v) { return clear(v); }
-  matrix_dense_vv& clear(const T& v=T())   { if (size()) a.assign(P::Nr,std::vector< T >(P::Nc,v)); return *this; }
-  matrix_dense_vv& zerorow(const size_t r) { if (size()) a[r].assign(P::Nc,T()); return *this; }
+  matrix_dense_vv& assign(const T& v=T())  { if (P::size()) a.assign(P::Nr,std::vector< T >(P::Nc,v)); return *this; }
+  matrix_dense_vv& zerorow(const size_t r) { if (P::size()) a[r].assign(P::Nc,T()); return *this; }
+  void print(std::ostream& out) {
+    BOOST_FOREACH(const std::vector< T >& r, a) {
+      std::copy(r.begin(),r.end(), std::ostream_iterator< T >(out," "));
+      out << std::endl;
+    }
+  }
 
-  // size/resizing
-  size_t size()                { return P::size(); }
-  size_t size(const size_t& d) { return P::size(d); }
-  size_t resize(size_t _Nr, size_t _Nc) { P::resize(_Nr,_Nc); clear(); return size(); }
+  //size_t size()                { return P::size(); }
+  //size_t size(const size_t& d) { return P::size(d); }
+  matrix_dense_vv& clear() { a.clear(); return *this; }
+  matrix_dense_vv& resize(size_t _Nr, size_t _Nc) { P::resize(_Nr,_Nc); return assign(T()); }
 
   // members
   std::vector< std::vector< T > > a;
@@ -154,40 +161,49 @@ struct matrix_dense_vv : matrix< T,matrix_dense_vv< T > > {
 
 
 /**
- * implementation of a dense matrix, T[][] array based
+ * dense matrix implementation, T[][] array based
  */
 template< typename T >
 struct matrix_dense_aa : matrix< T,matrix_dense_aa< T > > {
   typedef matrix< T,matrix_dense_aa< T > > P;
 
   // destructor
-  ~matrix_dense_aa() {
-    if (P::Nr || P::Nc) {
-      delete[] a[0];
-      delete[] a;
-    }
-  }
+  ~matrix_dense_aa() { matrix_dense_aa::clear(); }
 
-  // indexing
+  // matrix interfacing
   const T& operator()(const size_t r, const size_t c) const { return a[r][c]; }
         T& operator()(const size_t r, const size_t c)       { return a[r][c]; }
 
-  // interfacing
-  matrix_dense_aa& operator=(const T& v) { return clear(v); }
-  matrix_dense_aa& clear(const T& v=T())   { for (size_t r=0; r<P::Nr; ++r) for (size_t c=0; c<P::Nc; ++c) a[r][c] = v; return *this; }
+  matrix_dense_aa& assign(const T& v=T())  {
+    for (size_t r=0; r<P::Nr; ++r)
+      for (size_t c=0; c<P::Nc; ++c)
+        a[r][c] = v;
+    return *this;
+  }
   matrix_dense_aa& zerorow(const size_t r) { for (size_t c=0; c<P::Nc; ++c) a[r][c] = T(); return *this; }
+  void print(std::ostream& out) {
+    for (size_t r=0; r<P::Nr; ++r) {
+      out << (r? "\n  ":"[ ");
+      std::copy(&(a[r][0]),&(a[r][0])+P::Nc, std::ostream_iterator< T >(out," "));
+    }
+    out << ']' << std::endl;
+  }
 
-  // size/resizing
-  size_t size()                { return P::size(); }
-  size_t size(const size_t& d) { return P::size(d); }
-  void resize(size_t _Nr, size_t _Nc) {
-    if (_Nr && _Nc) {
-      P::resize(_Nr,_Nc);
+  matrix_dense_aa& clear() {
+    if (P::size()) {
+      delete[] a[0];
+      delete[] a;
+    }
+    P::clear();
+  }
+  matrix_dense_aa& resize(size_t Nrows, size_t Ncolumns) {
+    if (Nrows && Ncolumns) {
+      P::resize(Nrows,Ncolumns);
       a    = new T*[ P::Nr ];
       a[0] = new T [ P::Nr * P::Nc ];
       for (size_t r=1; r<P::Nr; ++r)
         a[r] = a[r-1] + P::Nc;
-      clear();
+      assign();
     }
   }
 
@@ -198,7 +214,7 @@ struct matrix_dense_aa : matrix< T,matrix_dense_aa< T > > {
 
 
 /**
- * implementation of a sparse matrix, compressed sparse rows (CSR) format
+ * sparse matrix implementation, in compressed sparse rows (CSR) format
  * note: BASE={0,1}: {0,1}-based indexing (other values probably don't work)
  */
 template< typename T, int BASE >
@@ -215,15 +231,13 @@ struct matrix_sparse_csr : matrix< T,matrix_sparse_csr< T,BASE > > {
     }
   }
 
-  // indexing
+  // interfacing
   const T& operator()(const size_t r, const size_t c) const { const int i=getindex(r,c); if (i<0) return zero; return a[i]; }
         T& operator()(const size_t r, const size_t c)       { const int i=getindex(r,c); if (i<0) return zero; return a[i]; }
 
-  // interfacing
-  void clear(const T& v=T())                       { for (int i=0; i<nnz; ++i) a[i] = v; }
-  void zerorow(const size_t r)                   { for (int k=ia[r]-BASE; k<ia[r+1]-BASE; ++k) a[k] = T(); }
+  void clear(const T& v=T())   { for (int i=0; i<nnz; ++i) a[i] = v; }
+  void zerorow(const size_t r) { for (int k=ia[r]-BASE; k<ia[r+1]-BASE; ++k) a[k] = T(); }
 
-  // resizing
   void resize(size_t _Nr, size_t _Nc) { P::resize(_Nr,_Nc); }
   void resize(const std::vector< std::vector< size_t > >& nz) {
 
@@ -274,51 +288,80 @@ struct matrix_sparse_csr : matrix< T,matrix_sparse_csr< T,BASE > > {
  * solution and right-hand side vectors are included, matrix should be
  * included (by aggregation) in derived linearsystem classes
  */
-template< typename T, typename M >
-class linearsystem : public common::Action {
+template< typename T, typename MATRIX >
+class linearsystem :
+    public common::Action {
 
  public:
   // framework interfacing
   linearsystem(const std::string& name) : common::Action(name) {}
-  virtual ~linearsystem() {}
+  virtual ~linearsystem() { clear(); }
   void execute() { solve(); }
 
  public:
   // linear system solver interfacing
-  virtual linearsystem& solve()                 = 0;
-  virtual linearsystem& zerorow(const size_t r) = 0;
-  linearsystem& resize(size_t Nequations, size_t Nvariables, const T& v=T()) {
-    (Nequations? m_b.resize(Nequations) : m_b.clear());
-    (Nvariables? m_x.resize(Nvariables) : m_x.clear());
-    (Nvariables && Nequations? m_A.resize(Nequations,Nvariables) : (void) m_A.clear() );
-    return clear(v);
-  }
-  linearsystem& clear(const T& v=T()) {
-    if (m_x.size()) m_x.assign(m_x.size(),v);
-    if (m_b.size()) m_b.assign(m_b.size(),v);
-    if (m_A.size()) m_A = v;
+  const T& A(const size_t r, const size_t c) const { return m_A(r,c); }
+        T& A(const size_t r, const size_t c)       { return m_A(r,c); }
+  const T& b(const size_t c) const { return m_b[c]; }
+        T& b(const size_t c)       { return m_b[c]; }
+  const T& x(const size_t r) const { return m_x[r]; }
+        T& x(const size_t r)       { return m_x[r]; }
+
+  linearsystem& zerorow(const size_t r) { m_A.zerorow(r); m_b(r) = 0; }
+  linearsystem& assign(const T& v=T()) {
+    if (size()) {
+      m_A.assign(v);
+      m_b.assign(m_b.size(),v);
+      m_x.assign(m_x.size(),v);
+    }
     return *this;
   }
+  virtual linearsystem& solve() = 0;
 
-  void print_A(std::ostream& o) { m_A.print(o); o << std::endl; }
-  void print_x(std::ostream& o) { std::copy(m_x.begin(), m_x.end(), std::ostream_iterator< double >(o,'\n'));  o << std::endl; }
-  void print_b(std::ostream& o) { std::copy(m_b.begin(), m_b.end(), std::ostream_iterator< double >(o,'\n'));  o << std::endl; }
+  size_t size()                const { return m_A.size(0)*m_A.size(1); }
+  size_t size(const size_t& d) const { return m_A.size(d); }
+  linearsystem& clear() {
+    m_A.clear();
+    m_b.clear();
+    m_x.clear();
+    return *this;
+  }
+  linearsystem& resize(size_t Nequations, size_t Nvariables, const T& v=T()) {
+    if (!Nequations || !Nvariables)
+      return clear();
+    m_A.resize(Nequations,Nvariables);
+    m_b.resize(Nequations);
+    m_x.resize(Nvariables);
+    return assign(v);
+  }
 
-  // indexing
-  virtual const T& A(const size_t r, const size_t c) const = 0;
-  virtual       T& A(const size_t r, const size_t c)       = 0;
-          const T& x(const size_t r) const { return m_x[r]; }
-                T& x(const size_t r)       { return m_x[r]; }
-          const T& b(const size_t c) const { return m_b[c]; }
-                T& b(const size_t c)       { return m_b[c]; }
+  template< typename T2, typename MATRIX2 >
+  friend std::ostream& operator<<(std::ostream&, linearsystem< T2, MATRIX2>&);
 
  protected:
   // member variables
-  std::vector< T > m_x;
+  MATRIX           m_A;
   std::vector< T > m_b;
-  M                m_A;
+  std::vector< T > m_x;
 
 };
+
+
+template< typename T, typename MATRIX >
+std::ostream& operator<<(std::ostream& out, linearsystem< T, MATRIX >& lss) {
+  out << "linearsystem::A("
+    << "Nequations=" << lss.m_A.size(0) << ","
+    << "Nvariables=" << lss.m_A.size(1) << ","
+    << "Nentries="   << lss.m_A.size()  << "):\n";
+  lss.m_A.print(out);
+
+  out << "linearsystem::b(Nequations=" << lss.m_b.size() << "):\n[ ";
+  std::copy(lss.m_b.begin(), lss.m_b.end(), std::ostream_iterator< T >(out," "));
+  out << "]\n"
+      << "linearsystem::x(Nvariables=" << lss.m_x.size() << "):\n[ ";
+  std::copy(lss.m_x.begin(), lss.m_x.end(), std::ostream_iterator< T >(out," "));
+  return out << "]";
+}
 
 
 }  // namespace lss

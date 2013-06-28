@@ -22,30 +22,31 @@ common::ComponentBuilder< GaussianElimination, common::Component, LibLSS > Gauss
 
 GaussianElimination& GaussianElimination::solve()
 {
-  CFinfo << "ping pong" << name() << "ping pong" << CFendl;
-  return *this;
+  GaussianElimination::resize(3,3);
+  A(0,0) = 1; A(0,1) = 1; A(0,2) =  1; b(0) =  6;
+  A(1,0) = 0; A(1,1) = 2; A(1,2) =  5; b(1) = -4;
+  A(2,0) = 2; A(2,1) = 5; A(2,2) = -1; b(2) = 27;
+  std::cout << *this << std::endl;
 
-  m_x = m_b;
-  const unsigned Ne = 1;
-  const unsigned N = Ne;
 
+  const size_t N(m_A.size(0));
   double C;
+  m_x = m_b;
+
   boost::progress_display pbar(N-1);
-  for (unsigned m=0; m<N-1; ++m, ++pbar) {
+  for (size_t m=0; m<N-1; ++m, ++pbar) {
 
     // put row with highest diagonal element on top
     C = A(m,m);
-    for (unsigned n=m+1; n<N; n++) {
+    for (size_t n=m+1; n<N; n++) {
       if (std::abs(A(n,m)) > std::abs(C)) {
-        for (unsigned p=m; p<N; p++) {
+        for (size_t p=m; p<N; p++) {
           C = A(m,p);
           A(m,p) = A(n,p);
           A(n,p) = C;
         }
-        C    = x(m);
-        x(m) = x(n);
-        x(n) = C;
-        C    = A(m,m);
+        std::swap(x(m),x(n));
+        C = A(m,m);
       }
     }
 
@@ -56,14 +57,14 @@ GaussianElimination& GaussianElimination::solve()
     }
 
     // normalize row m
-    for (unsigned n=m+1; n<N; n++)
+    for (size_t n=m+1; n<N; n++)
       A(m,n) /= C;
     x(m) /= C;
 
     // subtract row m from subsequent rows
-    for (unsigned n=m+1; n<N; n++) {
+    for (size_t n=m+1; n<N; n++) {
       C = A(n,m);
-      for (unsigned p=m+1; p<N; p++)
+      for (size_t p=m+1; p<N; p++)
         A(n,p) -= C*A(m,p);
       x(n) -= C*x(m);
     }
@@ -71,12 +72,13 @@ GaussianElimination& GaussianElimination::solve()
 
   // solve by back substitution
   x(N-1) /= A(N-1,N-1);
-  for (unsigned p=0; p<N-1; p++) {
-    unsigned m = N-p-2;
-    for (unsigned n=m+1; n<N; n++)
+  for (size_t p=0; p<N-1; p++) {
+    size_t m = N-p-2;
+    for (size_t n=m+1; n<N; n++)
       x(m) -= A(m,n)*x(n);
   }
 
+  std::cout << *this << std::endl;
   return *this;
 }
 
