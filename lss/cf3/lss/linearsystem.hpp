@@ -144,10 +144,12 @@ struct matrix_dense_vv : matrix< T,matrix_dense_vv< T > > {
   matrix_dense_vv& assign(const T& v=T())  { if (P::size()) a.assign(P::Nr,std::vector< T >(P::Nc,v)); return *this; }
   matrix_dense_vv& zerorow(const size_t r) { if (P::size()) a[r].assign(P::Nc,T()); return *this; }
   void print(std::ostream& out) {
+    bool firstline = false;
     BOOST_FOREACH(const std::vector< T >& r, a) {
+      out << (firstline++? "\n  ":"[ ");
       std::copy(r.begin(),r.end(), std::ostream_iterator< T >(out," "));
-      out << std::endl;
     }
+    out << ']' << std::endl;
   }
 
   //size_t size()                { return P::size(); }
