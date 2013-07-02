@@ -10,11 +10,9 @@
 
 
 #include <vector>
-//include <boost/foreach.hpp>
-//include <boost/parameter/preprocessor.hpp>
-//include <boost/parameter/keyword.hpp>
+#include "boost/lexical_cast.hpp"
+#include "common/Signal.hpp"
 #include "common/Action.hpp"
-#include "common/Log.hpp"
 
 
 namespace cf3 {
@@ -27,7 +25,7 @@ namespace lss {
  * vector of entries that populate a sparse, dense, or block-addressable matrix.
  */
 struct index {
-  virtual void print(std::ostream& o) = 0;
+  virtual void output(std::ostream& o) = 0;
 #if 0
 unsigned Ne;  // number of (block) equations
 unsigned Nv;  // ... (block) variables
@@ -40,7 +38,7 @@ const T& B(const unsigned C, const unsigned c) const { return B(C*Nb+c); }
 T& B(const unsigned C, const unsigned c)       { return B(C*Nb+c); }
 virtual void resize(const std::vector< std::vector< unsigned > >& nz) = 0;
 virtual void zerorow(const unsigned R, const unsigned r) { zerorow(R*Nb+r); }
-void print(std::ostream& o) {     o << "m::linearsystem::B(Ne:" << Nv << ",Nb:" << Nb << "):" << std::endl;     }
+void output(std::ostream& o) {     o << "m::linearsystem::B(Ne:" << Nv << ",Nb:" << Nb << "):" << std::endl;     }
 // indexing functions (block indexing)
 const double& A(const unsigned R, const unsigned C, const unsigned r, const unsigned c) const { return m_A(R*Nb+r,C*Nb+c); }
 double& A(const unsigned R, const unsigned C, const unsigned r, const unsigned c)       { return m_A(R*Nb+r,C*Nb+c); }
@@ -66,7 +64,6 @@ void zerorow(const unsigned R, const unsigned r) { zerorow(P::Nb*R+r); }
 void zerorow(const unsigned R, const unsigned r) {
 const int b = (int) P::Nb;
 const int i = getindex(R,R,r,0);
-for (int j=0; j<b*b*(bpntr[R+1]-bpntr[R]); j+=b)
 val[i+j] = T();
 }
 // indexing functions (block indexing)
@@ -105,28 +102,31 @@ T& operator()(const unsigned R, const unsigned C, const unsigned r, const unsign
  * methods (not a true polymorphic type) so it can't be used with factories.
  */
 template< typename T, class P >
-struct matrix {
-
+struct matrix
+{
   // constructor
   matrix() : Nr(0), Nc(0) {}
 
   // matrix interfacing
   const T& operator()(const size_t r, const size_t c) const { return P::operator()(r,c); }
         T& operator()(const size_t r, const size_t c)       { return P::operator()(r,c); }
-
-  matrix& operator=(const T& v)   { return P::assign(v); }
-  matrix& assign(const T& v=T())  { return P::assign(v); }
-  matrix& zerorow(const size_t r) { return P::zerorow(r); }
+  const T& operator()(const size_t i) const { return P::operator()(i); }
+        T& operator()(const size_t i)       { return P::operator()(i); }
 
   size_t size()                const { return Nr*Nc; }
   size_t size(const size_t& d) const { return (d==0? Nr : (d==1? Nc : 0)); }
+
+  matrix& resize  (size_t r, size_t c, const T& v=T()) { Nr=r; Nc=c; return *this; }
+  matrix& zerorow (const size_t r)     { return P::zerorow(r); }
+  matrix& assign  (const T& v=T())     { return P::assign(v); }
   matrix& clear() { Nr = Nc = 0; }
-  matrix& resize(size_t _Nr, size_t _Nc) { Nr=_Nr; Nc=_Nc; return *this; }
+
+  void output(std::ostream& out) const { P::output(out); }
+  matrix& operator=(const T& v) { return P::assign(v); }
 
   // members
   size_t Nr;  // number of rows
   size_t Nc;  // ... columns
-
 };
 
 
@@ -134,28 +134,29 @@ struct matrix {
  * dense matrix implementation, std::vector< std::vector< T > > based
  */
 template< typename T >
-struct matrix_dense_vv : matrix< T,matrix_dense_vv< T > > {
+struct matrix_dense_vv :
+    matrix< T,matrix_dense_vv< T > > {
   typedef matrix< T,matrix_dense_vv< T > > P;
 
   // matrix interfacing
   const T& operator()(const size_t r, const size_t c) const { return a[r][c]; }
         T& operator()(const size_t r, const size_t c)       { return a[r][c]; }
+  const T& operator()(const size_t i) const { const size_t b(P::size(0)); return a[i/b][i%b]; }
+        T& operator()(const size_t i)       { const size_t b(P::size(0)); return a[i/b][i%b]; }
 
-  matrix_dense_vv& assign(const T& v=T())  { if (P::size()) a.assign(P::Nr,std::vector< T >(P::Nc,v)); return *this; }
-  matrix_dense_vv& zerorow(const size_t r) { if (P::size()) a[r].assign(P::Nc,T()); return *this; }
-  void print(std::ostream& out) {
-    bool firstline = false;
+  matrix_dense_vv& resize  (const size_t r, const size_t c, const T& v=T()) { P::resize(r,c); return assign(v); }
+  matrix_dense_vv& zerorow (const size_t r) { if (P::size()) a[r].assign(P::Nc,T());                    return *this; }
+  matrix_dense_vv& assign  (const T& v=T()) { if (P::size()) a.assign(P::Nr,std::vector< T >(P::Nc,v)); return *this; }
+  matrix_dense_vv& clear() { P::clear(); a.clear(); return *this; }
+
+  void output(std::ostream& out) const {
+    out << "[ ";
     BOOST_FOREACH(const std::vector< T >& r, a) {
-      out << (firstline++? "\n  ":"[ ");
-      std::copy(r.begin(),r.end(), std::ostream_iterator< T >(out," "));
+      std::copy(r.begin(),r.end(), std::ostream_iterator< T >(out,", "));
+      out << "\n  ";
     }
-    out << ']' << std::endl;
+    out << ']';
   }
-
-  //size_t size()                { return P::size(); }
-  //size_t size(const size_t& d) { return P::size(d); }
-  matrix_dense_vv& clear() { a.clear(); return *this; }
-  matrix_dense_vv& resize(size_t _Nr, size_t _Nc) { P::resize(_Nr,_Nc); return assign(T()); }
 
   // members
   std::vector< std::vector< T > > a;
@@ -166,7 +167,8 @@ struct matrix_dense_vv : matrix< T,matrix_dense_vv< T > > {
  * dense matrix implementation, T[][] array based
  */
 template< typename T >
-struct matrix_dense_aa : matrix< T,matrix_dense_aa< T > > {
+struct matrix_dense_aa :
+    matrix< T,matrix_dense_aa< T > > {
   typedef matrix< T,matrix_dense_aa< T > > P;
 
   // destructor
@@ -175,20 +177,31 @@ struct matrix_dense_aa : matrix< T,matrix_dense_aa< T > > {
   // matrix interfacing
   const T& operator()(const size_t r, const size_t c) const { return a[r][c]; }
         T& operator()(const size_t r, const size_t c)       { return a[r][c]; }
+  const T& operator()(const size_t i) const { const size_t b(P::size(1)); return a[i/b][i%b]; }
+        T& operator()(const size_t i)       { const size_t b(P::size(1)); return a[i/b][i%b]; }
+
+  matrix_dense_aa& resize(const size_t r, const size_t c, const T& v=T()) {
+    if (r && c) {
+      P::resize(r,c);
+      a    = new T*[ P::Nr ];
+      a[0] = new T [ P::Nr * P::Nc ];
+      for (size_t r=1; r<P::Nr; ++r)
+        a[r] = a[r-1] + P::Nc;
+      assign(v);
+    }
+  }
+
+  matrix_dense_aa& zerorow(const size_t r) {
+    for (size_t c=0; c<P::Nc; ++c)
+      a[r][c] = T();
+    return *this;
+  }
 
   matrix_dense_aa& assign(const T& v=T())  {
     for (size_t r=0; r<P::Nr; ++r)
       for (size_t c=0; c<P::Nc; ++c)
         a[r][c] = v;
     return *this;
-  }
-  matrix_dense_aa& zerorow(const size_t r) { for (size_t c=0; c<P::Nc; ++c) a[r][c] = T(); return *this; }
-  void print(std::ostream& out) {
-    for (size_t r=0; r<P::Nr; ++r) {
-      out << (r? "\n  ":"[ ");
-      std::copy(&(a[r][0]),&(a[r][0])+P::Nc, std::ostream_iterator< T >(out," "));
-    }
-    out << ']' << std::endl;
   }
 
   matrix_dense_aa& clear() {
@@ -198,20 +211,18 @@ struct matrix_dense_aa : matrix< T,matrix_dense_aa< T > > {
     }
     P::clear();
   }
-  matrix_dense_aa& resize(size_t Nrows, size_t Ncolumns) {
-    if (Nrows && Ncolumns) {
-      P::resize(Nrows,Ncolumns);
-      a    = new T*[ P::Nr ];
-      a[0] = new T [ P::Nr * P::Nc ];
-      for (size_t r=1; r<P::Nr; ++r)
-        a[r] = a[r-1] + P::Nc;
-      assign();
+
+  void output(std::ostream& out) const {
+    out << "[ ";
+    for (size_t r=0; r<P::Nr; ++r) {
+      std::copy(&(a[r][0]),&(a[r][0])+P::Nc, std::ostream_iterator< T >(out,", "));
+      out << "\n  ";
     }
+    out << ']';
   }
 
   // members
   T **a;
-
 };
 
 
@@ -240,7 +251,7 @@ struct matrix_sparse_csr : matrix< T,matrix_sparse_csr< T,BASE > > {
   void clear(const T& v=T())   { for (int i=0; i<nnz; ++i) a[i] = v; }
   void zerorow(const size_t r) { for (int k=ia[r]-BASE; k<ia[r+1]-BASE; ++k) a[k] = T(); }
 
-  void resize(size_t _Nr, size_t _Nc) { P::resize(_Nr,_Nc); }
+  void resize(size_t r, size_t c) { P::resize(r,c); }
   void resize(const std::vector< std::vector< size_t > >& nz) {
 
     // set row indices
@@ -290,79 +301,131 @@ struct matrix_sparse_csr : matrix< T,matrix_sparse_csr< T,BASE > > {
  * solution and right-hand side vectors are included, matrix should be
  * included (by aggregation) in derived linearsystem classes
  */
-template< typename T, typename MATRIX >
+template< typename T > class linearsystem;
+template< typename T > std::ostream& operator<< (std::ostream&, const linearsystem< T >&);
+template< typename T >
 class linearsystem :
-    public common::Action {
+  public common::Action
+{
+  typedef linearsystem< T > linearsystem_t;
 
  public:
   // framework interfacing
-  linearsystem(const std::string& name) : common::Action(name) {}
-  virtual ~linearsystem() { clear(); }
+  linearsystem(const std::string& name) :
+    common::Action(name),
+    m_zero(T())
+  {
+
+    // set component options level
+    mark_basic();
+
+    // configure signals
+    regist_signal("resize")
+      .connect(   boost::bind( &linearsystem::signal_resize,    this, _1 ))
+      .signature( boost::bind( &linearsystem::signature_ask_rc, this, _1 ));
+    regist_signal("zerorow")
+      .connect(   boost::bind( &linearsystem::signal_zerorow,  this, _1 ))
+      .signature( boost::bind( &linearsystem::signature_ask_r, this, _1 ));
+    regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this ));
+    regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this ));
+    regist_signal("output").connect( boost::bind( &linearsystem::signal_output, this ));
+
+    // configure options
+    options().add("A",std::vector< T >()).mark_basic().link_to(&m_swap)
+      .attach_trigger(boost::bind( &linearsystem::trigger_A, this ));
+    options().add("b",std::vector< T >()).mark_basic().link_to(&m_swap)
+      .attach_trigger(boost::bind( &linearsystem::trigger_b, this ));
+    options().add("x",std::vector< T >()).mark_basic().link_to(&m_swap)
+      .attach_trigger(boost::bind( &linearsystem::trigger_x, this ));
+
+  }
+  virtual ~linearsystem() {}
   void execute() { solve(); }
 
+ private:
+  // framework scripting
+  void signal_resize  (common::SignalArgs& args) { common::XML::SignalOptions opts(args); resize((size_t) opts.value< unsigned int >("r"), (size_t) opts.value< unsigned int >("c"), T()); }
+  void signal_zerorow (common::SignalArgs& args) { common::XML::SignalOptions opts(args); zerorow(opts.value< unsigned int >("r")); }
+  void signal_clear  () { clear(); }
+  void signal_solve  () { solve(); }
+  void signal_output () { operator<<(std::cout,*this); }
+
+  void signature_ask_rc    (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("r",(unsigned int) size_t()); opts.add("c",(unsigned int) size_t());  }
+  void signature_ask_r     (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("r",(unsigned int) size_t()); }
+  void signature_ask_value (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("value",T());  }
+
+  virtual void trigger_A() {
+    if (m_swap.size()!=size())
+      throw common::BadValue(FromHere(), "linearsystem is not of the same size as given matrix ("
+        + boost::lexical_cast< std::string >(size(0)) + "*"
+        + boost::lexical_cast< std::string >(size(1)) + "!="
+        + boost::lexical_cast< std::string >(m_swap.size()) + ")");
+    for (size_t r=0; r<size(0); ++r)
+      for (size_t c=0; c<size(1); ++c)
+        A(r,c) = m_swap[r*size(1)+c];
+    m_swap.clear();
+  }
+  void trigger_b() { swap_lss_vector(m_b); }
+  void trigger_x() { swap_lss_vector(m_x); }
+  void swap_lss_vector (std::vector< T >& v) {
+    if (m_swap.size()!=v.size())
+      throw common::BadValue(FromHere(), "linearsystem is not of the same size as given vector ("
+        + boost::lexical_cast< std::string >(v.size()) + "!="
+        + boost::lexical_cast< std::string >(m_swap.size()) + ")");
+    m_swap.swap(v);
+    m_swap.clear();
+  }
+
  public:
-  // linear system solver interfacing
-  const T& A(const size_t r, const size_t c) const { return m_A(r,c); }
-        T& A(const size_t r, const size_t c)       { return m_A(r,c); }
-  const T& b(const size_t c) const { return m_b[c]; }
-        T& b(const size_t c)       { return m_b[c]; }
+  // linear system solver addressing
+  virtual const T& A(const size_t r, const size_t c) const = 0;
+  virtual       T& A(const size_t r, const size_t c)       = 0;
+  virtual const T& A(const size_t i) const = 0;
+  virtual       T& A(const size_t i)       = 0;
+  const T& b(const size_t r) const { return m_b[r]; }
+        T& b(const size_t r)       { return m_b[r]; }
   const T& x(const size_t r) const { return m_x[r]; }
         T& x(const size_t r)       { return m_x[r]; }
 
-  linearsystem& zerorow(const size_t r) { m_A.zerorow(r); m_b(r) = 0; }
-  linearsystem& assign(const T& v=T()) {
-    if (size()) {
-      m_A.assign(v);
-      m_b.assign(m_b.size(),v);
-      m_x.assign(m_x.size(),v);
-    }
-    return *this;
-  }
+ public:
+  // linear system solver interfacing
+  virtual size_t size()             const = 0;
+  virtual size_t size(const size_t) const = 0;
+  virtual linearsystem& resize (const size_t Nequations, const size_t Nvariables, const T&) = 0;
+  virtual linearsystem& zerorow(const size_t) = 0;
+  virtual linearsystem& clear() = 0;
   virtual linearsystem& solve() = 0;
 
-  size_t size()                const { return m_A.size(0)*m_A.size(1); }
-  size_t size(const size_t& d) const { return m_A.size(d); }
-  linearsystem& clear() {
-    m_A.clear();
-    m_b.clear();
-    m_x.clear();
-    return *this;
-  }
-  linearsystem& resize(size_t Nequations, size_t Nvariables, const T& v=T()) {
-    if (!Nequations || !Nvariables)
-      return clear();
-    m_A.resize(Nequations,Nvariables);
-    m_b.resize(Nequations);
-    m_x.resize(Nvariables);
-    return assign(v);
-  }
-
-  template< typename T2, typename MATRIX2 >
-  friend std::ostream& operator<<(std::ostream&, linearsystem< T2, MATRIX2>&);
+ private:
+  // output
+  virtual void output_A(std::ostream& out) const { out << "[ (unavailable) ]"; }
+  virtual void output_b(std::ostream& out) const { out << "[ "; std::copy(m_b.begin(),m_b.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
+  virtual void output_x(std::ostream& out) const { out << "[ "; std::copy(m_x.begin(),m_x.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
+  friend std::ostream& operator<< < T > (std::ostream&, const linearsystem&);
 
  protected:
-  // member variables
-  MATRIX           m_A;
+  // variables
   std::vector< T > m_b;
   std::vector< T > m_x;
-
+  std::vector< T > m_swap;
+  T m_zero;
 };
 
 
-template< typename T, typename MATRIX >
-std::ostream& operator<<(std::ostream& out, linearsystem< T, MATRIX >& lss) {
+template< typename T >
+std::ostream& operator<<(std::ostream& out, const linearsystem< T >& lss) {
   out << "linearsystem::A("
-    << "Nequations=" << lss.m_A.size(0) << ","
-    << "Nvariables=" << lss.m_A.size(1) << ","
-    << "Nentries="   << lss.m_A.size()  << "):\n";
-  lss.m_A.print(out);
-
-  out << "linearsystem::b(Nequations=" << lss.m_b.size() << "):\n[ ";
-  std::copy(lss.m_b.begin(), lss.m_b.end(), std::ostream_iterator< T >(out," "));
-  out << "]\n"
-      << "linearsystem::x(Nvariables=" << lss.m_x.size() << "):\n[ ";
-  std::copy(lss.m_x.begin(), lss.m_x.end(), std::ostream_iterator< T >(out," "));
-  return out << "]";
+    << "Nequations=" << lss.size(0) << ","
+    << "Nvariables=" << lss.size(1) << ","
+    << "Nentries="   << lss.size()  << "):\n";
+  lss.output_A(out);
+  out << '\n'
+      << "linearsystem::b(Nequations=" << lss.m_b.size() << "):\n";
+  lss.output_b(out);
+  out << '\n'
+      << "linearsystem::x(Nvariables=" << lss.m_x.size() << "):\n";
+  lss.output_x(out);
+  return out << '\n';
 }
 
 

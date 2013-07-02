@@ -8,10 +8,37 @@ cf.env.log_level = 3 #  1=error, 2=warning, 3=info, 4=debug
 
 
 
-print('x1')
 g1 = cf.root.create_component('g1','cf3.lss.GaussianElimination')
-g1.execute()
-print('x2')
+g1.resize(r=3,c=3)
+g1.A = [ 1, 2, 1,
+         1, 1, 1,
+         2, 1, 1 ]
+g1.output()
+g1.b = [ 0, 0, 1 ]
+g1.x = [ 0, 0, 1 ]
+g1.output()
+g1.solve()
+g1.output()
+
+#g1.output()
+#g1.output()
+#g1.resize(r=10,c=4)
+#g1.output()
+#g1.clear()
+#g1.output()
+#print "a1"
+#g1.A = [  1,  1,  1,
+#          0,  2,  5,
+#          2,  5, -1 ]
+#print "a2"
+#g1.b = [ 6, -4, 27 ]
+#print "a3"
+#g1.x = [ 1, 1, 1 ]
+#print "a4"
+#g1.output()
+#print "a5"
+#g1.solve()
+#print "a6"
 exit()
 
 
