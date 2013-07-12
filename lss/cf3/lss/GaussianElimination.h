@@ -17,58 +17,58 @@ namespace cf3 {
 namespace lss {
 
 
+#if 0
 /**
  * example linear system solver, using Gaussian elimination
  * precision and matrix types are arbitrary, though it is only expected to work
  * for dense matrices
  */
-template< typename T, typename MATRIX >
+//template< typename T, typename MATRIX >
 struct lss_API GaussianElimination :
-  public linearsystem< T >
+  public linearsystem
 {
-  typedef linearsystem< T > linearsystem_t;
 
   // framework interfacing
   static std::string type_name() ;//{ return "GaussianElimination"; } // (mandatory!)
   GaussianElimination(const std::string& name) :
-    linearsystem_t(name) {}
+    linearsystem(name) {}
 
   // linear system solver addressing
-  const T& A(const size_t i) const { return m_A(i); }
-        T& A(const size_t i)       { return m_A(i); }
-  const T& A(const size_t r, const size_t c) const { return m_A(r,c); }
-        T& A(const size_t r, const size_t c)       { return m_A(r,c); }
+  const double& A(const size_t i) const { return m_A(i); }
+        double& A(const size_t i)       { return m_A(i); }
+  const double& A(const size_t r, const size_t c) const { return m_A(r,c); }
+        double& A(const size_t r, const size_t c)       { return m_A(r,c); }
 
   // linear system solver interfacing
   size_t size()               const { return m_A.size(); }
   size_t size(const size_t d) const { return m_A.size(d); }
 
-  GaussianElimination& resize(size_t Nequations, size_t Nvariables, const T& v=T()) {
+  GaussianElimination& resize(size_t Nequations, size_t Nvariables, const double& v=double()) {
     if (!Nequations || !Nvariables)
       return clear();
     m_A.resize(Nequations,Nvariables);
-    linearsystem_t::m_b.assign(Nequations,v);
-    linearsystem_t::m_x.assign(Nvariables,v);
+    m_b.assign(Nequations,v);
+    m_x.assign(Nvariables,v);
     return *this;
   }
 
   GaussianElimination& zerorow(const size_t r) {
     m_A.zerorow(r);
-    linearsystem_t::b(r) = 0;
+    b(r) = 0;
     return *this;
   }
 
   GaussianElimination& clear() {
     m_A.clear();
-    linearsystem_t::m_b.clear();
-    linearsystem_t::m_x.clear();
+    m_b.clear();
+    m_x.clear();
     return *this;
   }
 
   GaussianElimination& solve() {
     const size_t N(size(0));
-    T C;
-    linearsystem_t::m_x = linearsystem_t::m_b;
+    double C;
+    m_x = m_b;
 
     boost::progress_display pbar(N-1);
     for (size_t m=0; m<N-1; ++m, ++pbar) {
@@ -82,7 +82,7 @@ struct lss_API GaussianElimination :
             A(m,p) = A(n,p);
             A(n,p) = C;
           }
-          std::swap( linearsystem_t::x(m), linearsystem_t::x(n) );
+          std::swap( x(m), x(n) );
           C = A(m,m);
         }
       }
@@ -99,37 +99,34 @@ struct lss_API GaussianElimination :
       // normalize row m
       for (size_t n=m+1; n<N; ++n)
         A(m,n) /= C;
-      linearsystem_t::x(m) /= C;
+      x(m) /= C;
 
       // subtract row m from subsequent rows
       for (size_t n=m+1; n<N; ++n) {
         C = A(n,m);
         for (size_t p=m+1; p<N; ++p)
           A(n,p) -= C*A(m,p);
-        linearsystem_t::x(n) -= C * linearsystem_t::x(m);
+        x(n) -= C * x(m);
       }
     }
 
     // solve by back substitution
-    linearsystem_t::x(N-1) /= A(N-1,N-1);
+    x(N-1) /= A(N-1,N-1);
     for (size_t p=0; p<N-1; ++p) {
       size_t m = N-p-2;
       for (size_t n=m+1; n<N; ++n)
-        linearsystem_t::x(m) -= A(m,n) * linearsystem_t::x(n);
+        x(m) -= A(m,n) * x(n);
     }
 
     return *this;
   }
 
-
-
-
-
   void output_A(std::ostream& out) const { m_A.output(out); }
 
   // variables
-  MATRIX m_A;
+  dense_matrix_a< double > m_A;
 };
+#endif
 
 
 }  // namespace lss

@@ -5,6 +5,7 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
+//TODO: cleanup headers
 #include <cmath>
 #include <algorithm>
 #include "boost/progress.hpp"
@@ -15,6 +16,12 @@
 
 namespace cf3 {
 namespace lss {
+
+
+#if 0
+/* double precision, Gaussian elimination solvers */
+std::string GaussianElimination::type_name() { return "GaussianElimination";  }
+common::ComponentBuilder< GaussianElimination, common::Component, LibLSS > Builder_GaussianEliminationA_P2;
 
 
 /* double precision, Gaussian elimination solvers */
@@ -40,6 +47,7 @@ common::ComponentBuilder< GaussianElimination< float, dense_matrix_a<  float > >
 common::ComponentBuilder< GaussianElimination< float, dense_matrix_v<  float > >, common::Component, LibLSS > Builder_GaussianEliminationV_P1;
 common::ComponentBuilder< GaussianElimination< float, dense_matrix_aa< float > >, common::Component, LibLSS > Builder_GaussianEliminationAA_P1;
 common::ComponentBuilder< GaussianElimination< float, dense_matrix_vv< float > >, common::Component, LibLSS > Builder_GaussianEliminationVV_P1;
+#endif
 
 
 }  // namespace lss
