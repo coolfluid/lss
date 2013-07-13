@@ -31,15 +31,14 @@ namespace lss_matrix {
 template< typename T, class SPECIAL >
 struct matrix
 {
-  matrix() { clear(); }
+  matrix() : m_zero(T()) { clear(); }
 
   // matrix interfacing (derived matrices should have these defined)
-  const T& operator()(const size_t r, const size_t c) const { return zero; }
-        T& operator()(const size_t r, const size_t c)       { return zero; }
+  const T& operator()(const size_t r, const size_t c) const { return m_zero; }
+        T& operator()(const size_t r, const size_t c)       { return m_zero; }
 
   size_t size()                const { return Nr*Nc; }
   size_t size(const size_t& d) const { return (d==0? Nr : (d==1? Nc : 0)); }
-  void output(std::ostream& out) const { SPECIAL::output(out); }
 
   matrix& assign    (const T& v=T()) { return *this; }
   matrix& operator= (const T& v) { return SPECIAL::assign(v); }
@@ -47,6 +46,9 @@ struct matrix
   matrix& zerorow   (const size_t r) { return *this; }
   matrix& clear() { Nr=Nc=0; return *this; }
 
+  void output(std::ostream& out) const { SPECIAL::output(out); }
+
+  T m_zero;
   size_t Nr;  // number of rows
   size_t Nc;  // ... columns
 };
@@ -177,7 +179,7 @@ struct dense_matrix_aa :
 #endif
 
 
-#if 0
+#if 1
 /**
  * dense matrix implementation, std::vector< T > based
  */
@@ -248,7 +250,7 @@ struct dense_matrix_vv :
 #endif
 
 
-#if 0
+#if 1
 /**
  * sparse matrix implementation, in compressed sparse row (CSR) format
  * note: BASE={0,1}: {0,1}-based indexing (other values probably don't work)

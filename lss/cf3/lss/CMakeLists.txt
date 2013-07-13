@@ -6,6 +6,7 @@ coolfluid3_add_library(
     LibLSS.hpp
 
     linearsystem.hpp
+    lss_index.cpp
     lss_index.hpp
     lss_matrix.hpp
     dummy_linearsystem.h

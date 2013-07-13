@@ -1,15 +1,35 @@
 
-#ifndef dummy_linearsystem_h
-#define dummy_linearsystem_h
+#ifndef cf3_lss_dummy_linearsystem_h
+#define cf3_lss_dummy_linearsystem_h
 
 
 #include "linearsystem.hpp"
+#include "lss_matrix.hpp"
 
 
-struct dummy_linearsystem : public linearsystem
+namespace cf3 {
+namespace lss {
+
+
+struct dummy_linearsystem :
+  public linearsystem<
+    double,
+    lss_matrix::dense_matrix_v< double > >
 {
-  dummy_linearsystem() : linearsystem() {}
+  typedef linearsystem< double, lss_matrix::dense_matrix_v< double > > linearsystem_t;
+
+  // cons/destructor
+  dummy_linearsystem(const std::string& name) : linearsystem_t(name) {}
+  ~dummy_linearsystem() {}
+
+  // solve
+  dummy_linearsystem& solve();
+
 };
 
 
-#endif // dummy_linearsystem_h
+}  // namespace lss
+}  // namespace cf3
+
+
+#endif

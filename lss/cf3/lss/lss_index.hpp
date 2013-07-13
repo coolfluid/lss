@@ -9,7 +9,10 @@
 #define cf3_lss_lss_index_h
 
 
+#include <iostream>
 #include <vector>
+#include <algorithm>
+#include "boost/foreach.hpp"
 
 
 namespace cf3 {
@@ -17,8 +20,57 @@ namespace lss {
 namespace lss_index {
 
 
-// helper forward declaration to generic index base type
-struct index;
+/**
+ * @brief Matrix storage indexer
+ *
+ * This object wraps a method to return a single size_t index to a (very long
+ * and boring) vector of entries that populate a sparse, dense, and/or
+ * block-addressable matrix.
+ *
+ * Internally, the indexing is recursivelly nested to layer functionality as
+ * desired. Addressing related to the structured storage is the bottom layer,
+ * however block-addressing or multi-domain compositions can be layered over the
+ * base storage indexing. Specialized indexing which combine multiple indexing
+ * techniques in one layer can also be specified, at least that's the intent...
+ */
+struct index {
+
+  // destructor
+  virtual ~index() {}
+
+  // setup
+  virtual index& setup(
+    const std::vector< std::vector< size_t > >& _nz,
+    const size_t _regular_block_size) = 0;
+};
+
+
+/**
+ * @brief Matrix indexer assuming regular number of system equations
+ */
+class idx_regular_block : public index
+{
+ public:
+  index& setup(
+     const std::vector< std::vector< size_t > >& _nz,
+     const size_t _regular_block_size) {
+    return *this;
+  }
+};
+
+
+/**
+ * @brief Matrix storage in compressed sparse row format (CSR)
+ */
+class idx_sparse_matrix_csr : public index
+{
+ public:
+  index& setup(
+     const std::vector< std::vector< size_t > >& _nz,
+     const size_t _regular_block_size) {
+    return *this;
+  }
+};
 
 
 /**
@@ -43,60 +95,71 @@ struct index_creator : index_creator_t {
 
 
 /**
- * @brief Instance of the handler of "index creators" registered against a key
- * (a string), which can then create "index" objects using such key.
- */
-struct index_factory_t {
+ * @brief Auxiliary type to instantiate the "index creator" factory
+*/
+struct index_factory_wrapper_t {
+  index_factory_wrapper_t();
+};
 
+
+/**
+ * @brief Handler of "index creators" registered against std::string keys, which
+ * can use them to create specific "index" objects (factory pattern).
+ */
+class index_factory_t
+{
+ private:
+  // registered indexing creators
+  typedef std::vector< index_creator_t* > icreators_t;
+  icreators_t m_creators;
+
+  // helper class for checking if specific creator keys are already registered
+  struct creator_has_key
+  {
+    creator_has_key(const std::string& _key) : key(_key) {}
+    bool operator() (index_creator_t*& c) const { return key==c->key; }
+    const std::string key;
+  };
+
+ public:
   // indexing creation registration
-  void Register(const index_creator_t* creator) {
-    if (creator!=NULL)
-      if (creator->key.length() && std::find(m_icreators.begin(),m_icreators.end(),creator->key)==m_icreators.end()) {
-        m_icreators.push_back(creator);
-        return;
-      }
-    std::cerr << "index_factory_t: warning: cannot register key \"" << key << "\"!" << std::endl;
+  void Register(index_creator_t* creator) {
+    if ( creator->key.length() && m_creators.end()==std::find_if(
+          m_creators.begin(),m_creators.end(),creator_has_key(creator->key)) ) {
+      m_creators.push_back(creator);
+      return;
+    }
+    std::cerr << "index_factory_t: unable to register key \"" << creator->key << "\"." << std::endl;
   }
 
   // indexing creation from key
   index* Create(const std::string& key) {
-    if (std::find(m_icreators.begin(),m_icreators.end(),key)==m_icreators.end()) {
-      std::cerr << "index_factory_t: warning: creation of key \"" << key << "\" not possible!" << std::endl;
+    icreators_t::iterator c(std::find_if(m_creators.begin(),m_creators.end(),creator_has_key(key)));
+    if (c==m_creators.end()) {
+      std::cerr << "index_factory_t: unable to create from key \"" << key << "\"." << std::endl;
       return NULL;
     }
-    return std::find(m_icreators.begin(),m_icreators.end(),key)->create();
+    return (*c)->create();
   }
 
-  // destructor
+  void output(std::ostream& out) {
+    out << "index_factory_t: " << m_creators.size() << " key(s) registered.";
+    BOOST_FOREACH(index_creator_t*& c, m_creators) {
+      out << "\n  \"" << c->key << '"';
+    }
+    out << std::endl;
+  }
+
+  // constructor registering built-in indexing techniques
+  index_factory_t(const size_t n, index_creator_t* c, ...);
+
+  // destructor to handle deletion of indexing techniques creators
   ~index_factory_t() {
-    for (size_t i=0; i<m_icreators.size(); ++i)
-      delete m_icreators[i];
+    icreators_t::reverse_iterator c;
+    for (c=m_creators.rbegin(); c!=m_creators.rend(); ++c)
+      delete *c;
   }
 
-  // registered indexing creators
-  std::vector< index_creator_t* > m_icreators;
-
-}
-index_factory;
-
-
-/**
- * @brief Matrix storage indexer
- *
- * This object wraps a method to return a single size_t index to a (very long
- * and boring) vector of entries that populate a sparse, dense, and/or
- * block-addressable matrix.
- *
- * Internally, the indexing is recursivelly nested to layer functionality as
- * desired. Addressing related to the structured storage is the bottom layer,
- * however block-addressing or multi-domain compositions can be layered over the
- * base storage indexing. Specialized indexing which combine multiple indexing
- * techniques in one layer can also be specified, at least that's the intent...
- */
-struct index {
-#if 0
-virtual void resize(const std::vector< std::vector< unsigned > >& nz) = 0;
-#endif
 };
 
 

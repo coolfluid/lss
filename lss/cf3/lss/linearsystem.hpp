@@ -10,10 +10,12 @@
 
 
 #include <vector>
-#include <stack>
 #include "boost/lexical_cast.hpp"
+
 #include "common/Signal.hpp"
 #include "common/Action.hpp"
+#include "lss_index.hpp"
+#include "lss_matrix.hpp"
 
 
 namespace cf3 {
@@ -22,7 +24,7 @@ namespace lss {
 
 // helper forward declarations
 template< typename T, typename MATRIX > class linearsystem;
-template< typename T, typename MATRIX > std::ostream& operator<< (std::ostream&, const linearsystem< T >&);
+template< typename T, typename MATRIX > std::ostream& operator<< (std::ostream&, const linearsystem< T, MATRIX >&);
 
 
 /**
@@ -34,7 +36,6 @@ class linearsystem :
   public common::Action
 {
   typedef linearsystem< T, MATRIX > linearsystem_t;
-  typedef std::vector< *index >     indexer_t;
 
  public:
   // framework interfacing
@@ -66,7 +67,7 @@ class linearsystem :
 
     // configure indexing
     m_indexer.clear();
-    m_indexer.capacity(5);
+    m_indexer.reserve(10);
   }
   virtual ~linearsystem() {}
   void execute() { solve(); }
@@ -118,13 +119,14 @@ class linearsystem :
 
  public:
   // linear system solver interfacing
-  size_t size()             const { return m_A.size(); }
-  size_t size(const size_t) const { return m_A.size(d); }
+  size_t size()               const { return m_A.size(); }
+  size_t size(const size_t d) const { return m_A.size(d); }
 
+ public:
   void index() {}
   void reindex() {}
-  void index_push( )
-  void index_pop()  { indexer_t.pop_back(); }
+  void index_push(const std::string& index_name) {}
+  void index_pop() { if (!m_indexer.empty()) m_indexer.pop_back(); }
 
   linearsystem& clear() {
     m_A.clear();
@@ -133,7 +135,7 @@ class linearsystem :
     return *this;
   }
 
-  linearsystem& resize (const size_t Nequations, const size_t Nvariables, const T& v=T()) {
+  linearsystem& resize(const size_t Nequations, const size_t Nvariables, const T& v=T()) {
     m_A.resize(Nequations,Nvariables,v);
     m_b.assign(Nequations,v);
     m_x.assign(Nvariables,v);
@@ -148,6 +150,31 @@ class linearsystem :
 
   virtual linearsystem& solve() = 0;
 
+ private:
+  // output
+  virtual void output_A(std::ostream& out) const { out << "[ (unavailable) ]"; }
+  virtual void output_b(std::ostream& out) const { out << "[ "; std::copy(m_b.begin(),m_b.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
+  virtual void output_x(std::ostream& out) const { out << "[ "; std::copy(m_x.begin(),m_x.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
+  friend std::ostream& operator<< < T, MATRIX >(std::ostream&, const linearsystem&);
+
+
+ private:
+  // internal use variables
+
+  /// Internal index mapper hierarchy
+  /// (has to be "copyable" though object contents not really, that is, not
+  /// necessarily "duplicatable")
+  std::vector< lss_index::index* > m_indexer;
+
+  /// Internal signal storage interfacing
+  /// (this temporary storage is to be swapped with internal containers)
+  std::vector< T > m_swap;
+
+  /// Internal dummy value placeholder
+  /// (should maintain zero value (T()) though usage)
+  T m_zero;
+
+
  protected:
   // linear system variables
 
@@ -156,21 +183,6 @@ class linearsystem :
   std::vector< T > m_b;
   std::vector< T > m_x;
 
- private:
-  /// Internal signal storage interfacing, index mapper hierarchy and dummy value placeholder
-  // - the temporary storage is to be swapped with internal containers
-  // - the indexing container itself has to be "copyable" but the contents not really, that is, not necessarily "duplicatable")
-  // - the dummy placeholder should retain zero value throughout
-  std::vector< T > m_swap;
-  indexer_t m_indexer;
-  T m_zero;
-
- private:
-  // output
-  virtual void output_A(std::ostream& out) const { out << "[ (unavailable) ]"; }
-  virtual void output_b(std::ostream& out) const { out << "[ "; std::copy(m_b.begin(),m_b.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
-  virtual void output_x(std::ostream& out) const { out << "[ "; std::copy(m_x.begin(),m_x.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
-  friend std::ostream& operator<< < T, MATRIX >(std::ostream&, const linearsystem&);
 };
 
 
