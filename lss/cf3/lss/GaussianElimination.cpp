@@ -5,6 +5,7 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
+//TODO: cleanup headers
 #include <cmath>
 #include <algorithm>
 #include "boost/progress.hpp"
@@ -17,70 +18,36 @@ namespace cf3 {
 namespace lss {
 
 
-common::ComponentBuilder< GaussianElimination, common::Component, LibLSS > GaussianElimination_Builder;
+#if 0
+/* double precision, Gaussian elimination solvers */
+std::string GaussianElimination::type_name() { return "GaussianElimination";  }
+common::ComponentBuilder< GaussianElimination, common::Component, LibLSS > Builder_GaussianEliminationA_P2;
 
 
-GaussianElimination& GaussianElimination::solve()
-{
-  GaussianElimination::resize(3,3);
-  A(0,0) = 1; A(0,1) = 1; A(0,2) =  1; b(0) =  6;
-  A(1,0) = 0; A(1,1) = 2; A(1,2) =  5; b(1) = -4;
-  A(2,0) = 2; A(2,1) = 5; A(2,2) = -1; b(2) = 27;
-  std::cout << *this << std::endl;
+/* double precision, Gaussian elimination solvers */
+template<> std::string GaussianElimination< double, dense_matrix_a<  double > >::type_name() { return "GaussianEliminationA";  }
+template<> std::string GaussianElimination< double, dense_matrix_v<  double > >::type_name() { return "GaussianEliminationV";  }
+template<> std::string GaussianElimination< double, dense_matrix_aa< double > >::type_name() { return "GaussianEliminationAA"; }
+template<> std::string GaussianElimination< double, dense_matrix_vv< double > >::type_name() { return "GaussianEliminationVV"; }
+
+common::ComponentBuilder< GaussianElimination< double, dense_matrix_a<  double > >, common::Component, LibLSS > Builder_GaussianEliminationA_P2;
+common::ComponentBuilder< GaussianElimination< double, dense_matrix_v<  double > >, common::Component, LibLSS > Builder_GaussianEliminationV_P2;
+common::ComponentBuilder< GaussianElimination< double, dense_matrix_aa< double > >, common::Component, LibLSS > Builder_GaussianEliminationAA_P2;
+common::ComponentBuilder< GaussianElimination< double, dense_matrix_vv< double > >, common::Component, LibLSS > Builder_GaussianEliminationVV_P2;
 
 
-  const size_t N(m_A.size(0));
-  double C;
-  m_x = m_b;
+/* single precision, Gaussian elimination solvers */
+// FIXME: these don't work? there seems to be a segmentation fault from python?
+template<> std::string GaussianElimination< float, dense_matrix_a<  float > >::type_name() { return "GaussianEliminationA_P1";  }
+template<> std::string GaussianElimination< float, dense_matrix_v<  float > >::type_name() { return "GaussianEliminationV_P1";  }
+template<> std::string GaussianElimination< float, dense_matrix_aa< float > >::type_name() { return "GaussianEliminationAA_P1"; }
+template<> std::string GaussianElimination< float, dense_matrix_vv< float > >::type_name() { return "GaussianEliminationVV_P1"; }
 
-  boost::progress_display pbar(N-1);
-  for (size_t m=0; m<N-1; ++m, ++pbar) {
-
-    // put row with highest diagonal element on top
-    C = A(m,m);
-    for (size_t n=m+1; n<N; n++) {
-      if (std::abs(A(n,m)) > std::abs(C)) {
-        for (size_t p=m; p<N; p++) {
-          C = A(m,p);
-          A(m,p) = A(n,p);
-          A(n,p) = C;
-        }
-        std::swap(x(m),x(n));
-        C = A(m,m);
-      }
-    }
-
-    // check if diagonal element is (close to) zero
-    if (std::abs(C)<1.e-32) {
-      std::cerr << "error: matrix is singular (line:" << m << ",C:" << std::abs(C) << ")" << std::endl;
-      throw 42;
-    }
-
-    // normalize row m
-    for (size_t n=m+1; n<N; n++)
-      A(m,n) /= C;
-    x(m) /= C;
-
-    // subtract row m from subsequent rows
-    for (size_t n=m+1; n<N; n++) {
-      C = A(n,m);
-      for (size_t p=m+1; p<N; p++)
-        A(n,p) -= C*A(m,p);
-      x(n) -= C*x(m);
-    }
-  }
-
-  // solve by back substitution
-  x(N-1) /= A(N-1,N-1);
-  for (size_t p=0; p<N-1; p++) {
-    size_t m = N-p-2;
-    for (size_t n=m+1; n<N; n++)
-      x(m) -= A(m,n)*x(n);
-  }
-
-  std::cout << *this << std::endl;
-  return *this;
-}
+common::ComponentBuilder< GaussianElimination< float, dense_matrix_a<  float > >, common::Component, LibLSS > Builder_GaussianEliminationA_P1;
+common::ComponentBuilder< GaussianElimination< float, dense_matrix_v<  float > >, common::Component, LibLSS > Builder_GaussianEliminationV_P1;
+common::ComponentBuilder< GaussianElimination< float, dense_matrix_aa< float > >, common::Component, LibLSS > Builder_GaussianEliminationAA_P1;
+common::ComponentBuilder< GaussianElimination< float, dense_matrix_vv< float > >, common::Component, LibLSS > Builder_GaussianEliminationVV_P1;
+#endif
 
 
 }  // namespace lss
