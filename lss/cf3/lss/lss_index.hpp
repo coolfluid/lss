@@ -95,16 +95,9 @@ struct index_creator : index_creator_t {
 
 
 /**
- * @brief Auxiliary type to instantiate the "index creator" factory
-*/
-struct index_factory_wrapper_t {
-  index_factory_wrapper_t();
-};
-
-
-/**
  * @brief Handler of "index creators" registered against std::string keys, which
- * can use them to create specific "index" objects (factory pattern).
+ * are used to create specific "index" objects (factory pattern).
+ * The matrix addressing factory is declared below and instantiated outside.
  */
 class index_factory_t
 {
@@ -145,24 +138,23 @@ class index_factory_t
   void output(std::ostream& out) {
     out << "index_factory_t: " << m_creators.size() << " key(s) registered.";
     BOOST_FOREACH(index_creator_t*& c, m_creators) {
-      out << "\n  \"" << c->key << '"';
+      out << "\n  - \"" << c->key << '"';
     }
     out << std::endl;
   }
 
-  // constructor registering built-in indexing techniques
+  // constructor registering (a series of) indexing techniques
   index_factory_t(const size_t n, index_creator_t* c, ...);
 
   // destructor to handle deletion of indexing techniques creators
   ~index_factory_t() {
     icreators_t::reverse_iterator c;
     for (c=m_creators.rbegin(); c!=m_creators.rend(); ++c)
-      delete *c;
+      delete (*c);
   }
 
-};
-
-
+}
+extern idx_factory_matrix_indexing;
 
 
 }  // namespace lss_index
