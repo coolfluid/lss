@@ -9,8 +9,12 @@
 #define cf3_lss_linearsystem_h
 
 
+#include <stack>
 #include <vector>
+#include <limits>
+#include <cstdarg>  // NOTE: yes, here because it's a "really ugly" header
 #include "boost/lexical_cast.hpp"
+#include <boost/foreach.hpp>
 
 #include "common/Signal.hpp"
 #include "common/Action.hpp"
@@ -28,7 +32,7 @@ template< typename T, typename MATRIX > std::ostream& operator<< (std::ostream&,
 
 
 /**
- * description of a linear system (suitable for sparse matrix solvers.)
+ * @brief Description of a linear system (suitable for sparse matrix solvers.)
  * solution and right-hand side vectors are STL containers.
  */
 template< typename T, typename MATRIX >
@@ -37,11 +41,15 @@ class linearsystem :
 {
   typedef linearsystem< T, MATRIX > linearsystem_t;
 
+
+  /* ------------------------------------------------------------------------ *
+   * framework interfacing                                                    *
+   * ------------------------------------------------------------------------ */
  public:
-  // framework interfacing
+
   linearsystem(const std::string& name) :
     common::Action(name),
-    m_zero(T())
+    m_dummy_value(std::numeric_limits< T >::quiet_NaN())
   {
     // set component options level
     mark_basic();
@@ -64,16 +72,17 @@ class linearsystem :
       .attach_trigger(boost::bind( &linearsystem::trigger_b, this ));
     options().add("x",std::vector< T >()).mark_basic().link_to(&m_swap)
       .attach_trigger(boost::bind( &linearsystem::trigger_x, this ));
-
-    // configure indexing
-    m_indexer.clear();
-    m_indexer.reserve(10);
   }
+
   virtual ~linearsystem() {}
   void execute() { solve(); }
 
+
+  /* ------------------------------------------------------------------------ *
+   * framework scripting                                                      *
+   * ------------------------------------------------------------------------ */
  private:
-  // framework scripting
+
   void signal_resize  (common::SignalArgs& args) { common::XML::SignalOptions opts(args); this->resize((size_t) opts.value< unsigned int >("r"), (size_t) opts.value< unsigned int >("c"), T()); }
   void signal_zerorow (common::SignalArgs& args) { common::XML::SignalOptions opts(args); this->zerorow(opts.value< unsigned int >("r")); }
   void signal_clear  () { this->clear(); }
@@ -84,6 +93,8 @@ class linearsystem :
   void signature_ask_r     (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("r",(unsigned int) size_t()); }
   void signature_ask_value (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("value",T());  }
 
+  void trigger_b() { swap_lss_vector(m_b); }
+  void trigger_x() { swap_lss_vector(m_x); }
   virtual void trigger_A() {
     if (m_swap.size()!=size())
       throw common::BadValue(FromHere(), "linearsystem is not of the same size as given matrix ("
@@ -95,8 +106,7 @@ class linearsystem :
         A(r,c) = m_swap[r*size(1)+c];
     m_swap.clear();
   }
-  void trigger_b() { swap_lss_vector(m_b); }
-  void trigger_x() { swap_lss_vector(m_x); }
+
   void swap_lss_vector (std::vector< T >& v) {
     if (m_swap.size()!=v.size())
       throw common::BadValue(FromHere(), "linearsystem is not of the same size as given vector ("
@@ -106,27 +116,29 @@ class linearsystem :
     m_swap.clear();
   }
 
+
+  /* ------------------------------------------------------------------------ *
+   * linear system addressing                                                 *
+   * ------------------------------------------------------------------------ */
  public:
-  // linear system solver addressing
-  const T& A(const size_t r, const size_t c) const { return m_A(r,c); }
-        T& A(const size_t r, const size_t c)       { return m_A(r,c); }
+
   const T& b(const size_t r) const { return m_b[r]; }
         T& b(const size_t r)       { return m_b[r]; }
   const T& x(const size_t r) const { return m_x[r]; }
         T& x(const size_t r)       { return m_x[r]; }
-  virtual const T& A(const size_t i) const { return m_A(i); }
-  virtual       T& A(const size_t i)       { return m_A(i); }
+  const T& A(const size_t r, const size_t c) const { return m_dummy_value; /*m_A(index_dereference(r,c));*/ }
+        T& A(const size_t r, const size_t c)       { return m_dummy_value; /*m_A(index_dereference(r,c));*/ }
 
+
+  /* ------------------------------------------------------------------------ *
+   * linear system interfacing                                                *
+   * ------------------------------------------------------------------------ */
  public:
-  // linear system solver interfacing
+
+  virtual linearsystem& solve() = 0;
+
   size_t size()               const { return m_A.size(); }
   size_t size(const size_t d) const { return m_A.size(d); }
-
- public:
-  void index() {}
-  void reindex() {}
-  void index_push(const std::string& index_name) {}
-  void index_pop() { if (!m_indexer.empty()) m_indexer.pop_back(); }
 
   linearsystem& clear() {
     m_A.clear();
@@ -148,40 +160,73 @@ class linearsystem :
     return *this;
   }
 
-  virtual linearsystem& solve() = 0;
-
  private:
-  // output
+
   virtual void output_A(std::ostream& out) const { out << "[ (unavailable) ]"; }
   virtual void output_b(std::ostream& out) const { out << "[ "; std::copy(m_b.begin(),m_b.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
   virtual void output_x(std::ostream& out) const { out << "[ "; std::copy(m_x.begin(),m_x.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
   friend std::ostream& operator<< < T, MATRIX >(std::ostream&, const linearsystem&);
 
 
- private:
-  // internal use variables
+  /* ------------------------------------------------------------------------ *
+   * indexing manipulation                                                    *
+   * - implemented in stack style, forcing indexing hierarchy on client side  *
+   *   (simulate a FILO container, std::stack is a piece of crap, really!)    *
+   * - methods don't return anything, to force deliberate statements          *
+   * ------------------------------------------------------------------------ */
+ public:
 
-  /// Internal index mapper hierarchy
-  /// (has to be "copyable" though object contents not really, that is, not
-  /// necessarily "duplicatable")
-  std::vector< lss_index::index* > m_indexer;
+  /// Registration of the indexing hierarchy
+  void index(const size_t n, lss_index::index_t idx, ...) {
+    if (n==1) m_indexer.push_back(idx);
+    if (n<2) return;
+    va_list ap;
+    va_start(ap,idx);
+    for (size_t i=1; i<n; ++i)
+      m_indexer.push_back( va_arg(ap,lss_index::index_t) );
+    va_end(ap);
+  }
 
-  /// Internal signal storage interfacing
-  /// (this temporary storage is to be swapped with internal containers)
-  std::vector< T > m_swap;
+#if 0
+  /// Indexing insertion
+  void index_push(lss_index::index_t& _idx) { m_indexer.push_back(_idx); }
 
-  /// Internal dummy value placeholder
-  /// (should maintain zero value (T()) though usage)
-  T m_zero;
+  /// Indexing removal
+  void index_pop() { if (!m_indexer.empty()) m_indexer.pop_back(); }
+
+  /// Indexing configuration (top-most only, to force hierarchy in client side)
+  void index(size_t& _i, size_t& _j=size_t()) { m_indexer.back().index(_i,_j); }
+#endif
+
+ private:  // internal ugly stuff
+
+  /// Indexing dereference
+  const lss_index::ij index_dereference(const size_t r, const size_t c) {
+    lss_index::ij ij(r,c);
+    BOOST_REVERSE_FOREACH(const lss_index::index_t& idx, m_indexer)
+      idx.index(ij);
+    return ij;
+  }
 
 
+  /* ------------------------------------------------------------------------ *
+   * internal variables                                                       *
+   * ------------------------------------------------------------------------ */
  protected:
-  // linear system variables
 
-  /// Linear system matrix, right-hand and left-hand sides vectors
+  /// Linear system matrix, right and left-hand sides vectors, and dummy value
   MATRIX m_A;
   std::vector< T > m_b;
   std::vector< T > m_x;
+  T m_dummy_value;  // should keep NaN throughout
+
+  /// Indexing stack
+  std::vector< lss_index::index_t > m_indexer;
+
+ private:
+
+  /// Scripting temporary storage (to be swapped with internal containers)
+  std::vector< T > m_swap;
 
 };
 

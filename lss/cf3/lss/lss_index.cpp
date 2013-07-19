@@ -6,13 +6,61 @@
 
 
 #include "lss_index.hpp"
-#include <cstdarg>  // NOTE: below the above because it's a "really ugly" header
 
 
 namespace cf3 {
 namespace lss {
 namespace lss_index {
 
+
+
+
+
+
+#if 0
+void index_t::setup_domains(
+  const std::vector< std::string >& _domain_names,
+  const std::vector< size_t >& _domain_eqs_per_node)
+{
+  std::vector< size_t > domsizes(_domain_names.size());
+
+  // set sparsity pattern
+  //const std::vector< std::vector< size_t > >&_nz
+
+
+  // do it
+
+  return setup_block_irregular_size(domsizes);
+}
+
+
+void index_t::setup_block_regular_size(
+  size_t _block_size_i,
+  size_t _block_size_j )
+{
+  const size_t
+    sizei(_block_size_i),
+    sizej(_block_size_j? _block_size_j : _block_size_i);
+
+  // do it
+}
+
+
+void index_t::setup_block_irregular_size(
+  const std::vector< size_t >& _block_size_i,
+  const std::vector< size_t >& _block_size_j )
+{
+  const std::vector< size_t >&
+      sizei(_block_size_i),
+      sizej(_block_size_j.size()? _block_size_j : _block_size_i);
+
+  // do it
+}
+#endif
+
+
+#if 0
+#include <cstdarg>  // NOTE: yes, here because it's a "really ugly" header
 
 /*
  * NOTE: I opted for the constructor registering multiple methods (using
@@ -42,6 +90,7 @@ index_factory_t idx_factory_matrix_indexing(
     1,
     new index_creator< idx_regular_block >("regular_block")
     );
+#endif
 
 
 }  // namespace lss_index

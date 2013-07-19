@@ -12,8 +12,10 @@
 #include <vector>
 #include <stack>
 #include "boost/lexical_cast.hpp"
+
 #include "common/Signal.hpp"
 #include "common/Action.hpp"
+#include "lss_index.hpp"
 
 
 namespace cf3 {
@@ -270,8 +272,8 @@ struct sparse_matrix_csr : matrix< T,sparse_matrix_csr< T,BASE > > {
   }
 
   // interfacing
-  const T& operator()(const size_t r, const size_t c) const { const int i=getindex(r,c); if (i<0) return zero; return a[i]; }
-        T& operator()(const size_t r, const size_t c)       { const int i=getindex(r,c); if (i<0) return zero; return a[i]; }
+  const T& operator()(const size_t r, const size_t c) const { const int i=getindex(r,c); return (i<0? zero : a[i]); }
+        T& operator()(const size_t r, const size_t c)       { const int i=getindex(r,c); return (i<0? zero : a[i]); }
   const T& operator()(const size_t i) const { return a[i]; }
         T& operator()(const size_t i)       { return a[i]; }
 
