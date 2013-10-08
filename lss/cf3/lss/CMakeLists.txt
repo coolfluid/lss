@@ -5,22 +5,26 @@ coolfluid3_add_library(
     LibLSS.cpp
     LibLSS.hpp
 
+    linearsystem.cpp
     linearsystem.hpp
-    lss_index.cpp
     lss_index.hpp
     lss_matrix.hpp
-    dummy_linearsystem.h
-    dummy_linearsystem.cpp
- )
+    lss_utilities.cpp
+    lss_utilities.hpp
+
+    GaussianElimination.hpp
+    LAPACK.hpp
+  )
 
 coolfluid_mark_not_orphan(
-  mlinearsystem.cpp  # for reference, will be gone with the wind
-  mlinearsystem.h    #  ...
-  mmatrix.h          #  ...
-  GaussianElimination.cpp
-  GaussianElimination.h
-  GMRES.cpp
-  GMRES.h
-  pardiso.cpp
-  pardiso.h )
+  reference/GMRES.cpp
+  reference/GMRES.h
+  reference/linearsystem.hpp
+  reference/lss_index.cpp
+  reference/lss_index.hpp
+  reference/lss_matrix.hpp
+  reference/mlinearsystem.cpp
+  reference/mlinearsystem.h
+  reference/mmatrix.h
+  )
 

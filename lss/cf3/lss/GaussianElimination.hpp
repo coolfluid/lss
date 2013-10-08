@@ -9,6 +9,9 @@
 #define cf3_lss_GaussianElimination_h
 
 
+#include <cmath>
+#include "boost/progress.hpp"
+
 #include "LibLSS.hpp"
 #include "linearsystem.hpp"
 
@@ -17,21 +20,25 @@ namespace cf3 {
 namespace lss {
 
 
-#if 0
 /**
  * example linear system solver, using Gaussian elimination
- * precision and matrix types are arbitrary, though it is only expected to work
- * for dense matrices
+ * (precision is configurable)
  */
-//template< typename T, typename MATRIX >
+template<
+    typename T,
+    typename INDEX=index_hierarchy_t< index_hierarchy_t_end > >
 struct lss_API GaussianElimination :
-  public linearsystem
+  public linearsystem< T, INDEX >
 {
+  // utility definitions
+  typedef lss_matrix::dense_matrix_v< T > matrix_t;
+  typedef lss_matrix::dense_matrix_v< T > vector_t;
+  typedef linearsystem< T, INDEX > linearsystem_base_t;
 
   // framework interfacing
-  static std::string type_name() ;//{ return "GaussianElimination"; } // (mandatory!)
+  static std::string type_name() { return "GaussianElimination"; }
   GaussianElimination(const std::string& name) :
-    linearsystem(name) {}
+    linearsystem_base_t(name) {}
 
   // linear system solver addressing
   const double& A(const size_t i) const { return m_A(i); }
@@ -54,7 +61,8 @@ struct lss_API GaussianElimination :
 
   GaussianElimination& zerorow(const size_t r) {
     m_A.zerorow(r);
-    b(r) = 0;
+    m_b(r) = 0;
+    m_x(r) = 0;
     return *this;
   }
 
@@ -82,7 +90,7 @@ struct lss_API GaussianElimination :
             A(m,p) = A(n,p);
             A(n,p) = C;
           }
-          std::swap( x(m), x(n) );
+          std::swap( m_x(m), m_x(n) );
           C = A(m,m);
         }
       }
@@ -99,23 +107,23 @@ struct lss_API GaussianElimination :
       // normalize row m
       for (size_t n=m+1; n<N; ++n)
         A(m,n) /= C;
-      x(m) /= C;
+      m_x(m) /= C;
 
       // subtract row m from subsequent rows
       for (size_t n=m+1; n<N; ++n) {
         C = A(n,m);
         for (size_t p=m+1; p<N; ++p)
           A(n,p) -= C*A(m,p);
-        x(n) -= C * x(m);
+        m_x(n) -= C * m_x(m);
       }
     }
 
     // solve by back substitution
-    x(N-1) /= A(N-1,N-1);
+    m_x(N-1) /= A(N-1,N-1);
     for (size_t p=0; p<N-1; ++p) {
       size_t m = N-p-2;
       for (size_t n=m+1; n<N; ++n)
-        x(m) -= A(m,n) * x(n);
+        m_x(m) -= A(m,n) * m_x(n);
     }
 
     return *this;
@@ -124,9 +132,10 @@ struct lss_API GaussianElimination :
   void output_A(std::ostream& out) const { m_A.output(out); }
 
   // variables
-  dense_matrix_a< double > m_A;
+  matrix_t m_A;
+  vector_t m_b;
+  vector_t m_x;
 };
-#endif
 
 
 }  // namespace lss

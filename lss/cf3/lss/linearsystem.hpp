@@ -5,19 +5,16 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_linearsystem_h
-#define cf3_lss_linearsystem_h
+#ifndef cf3_lss_linearsystem_hpp
+#define cf3_lss_linearsystem_hpp
 
 
-#include <stack>
-#include <vector>
 #include <limits>
-#include <cstdarg>  // NOTE: yes, here because it's a "really ugly" header
-#include "boost/lexical_cast.hpp"
-#include <boost/foreach.hpp>
+#include <sstream>
+#include <stdexcept>
 
-#include "common/Signal.hpp"
-#include "common/Action.hpp"
+
+#include "lss_utilities.hpp"
 #include "lss_index.hpp"
 #include "lss_matrix.hpp"
 
@@ -26,239 +23,168 @@ namespace cf3 {
 namespace lss {
 
 
-// helper forward declarations
-template< typename T, typename MATRIX > class linearsystem;
-template< typename T, typename MATRIX > std::ostream& operator<< (std::ostream&, const linearsystem< T, MATRIX >&);
+/* -- linear system --------------------------------------------------------- */
 
+template<
+    typename T,
+    typename INDEX=index_hierarchy_t< index_hierarchy_t_end > >
+class linearsystem
+{ public:  //FIXME update permissions
 
-/**
- * @brief Description of a linear system (suitable for sparse matrix solvers.)
- * solution and right-hand side vectors are STL containers.
- */
-template< typename T, typename MATRIX >
-class linearsystem :
-  public common::Action
-{
-  typedef linearsystem< T, MATRIX > linearsystem_t;
+  // utility definitions
+  typedef INDEX index_t;
 
+  // construction, destruction and initialization
 
-  /* ------------------------------------------------------------------------ *
-   * framework interfacing                                                    *
-   * ------------------------------------------------------------------------ */
- public:
+  /// Construct the linear system, by direct initialization
+  linearsystem(
+      const size_t& _size_i=size_t(),
+      const size_t& _size_j=size_t(),
+      const size_t& _size_k=1,
+      const T& _value=T() ) { resize(_size_i,_size_j,_size_k,_value); }
 
-  linearsystem(const std::string& name) :
-    common::Action(name),
-    m_dummy_value(std::numeric_limits< T >::quiet_NaN())
-  {
-    // set component options level
-    mark_basic();
+  /// Construct the linear system, by copy
+  linearsystem(const linearsystem& _other) { operator=(_other); }
 
-    // configure signals
-    regist_signal("resize")
-      .connect(   boost::bind( &linearsystem::signal_resize,    this, _1 ))
-      .signature( boost::bind( &linearsystem::signature_ask_rc, this, _1 ));
-    regist_signal("zerorow")
-      .connect(   boost::bind( &linearsystem::signal_zerorow,  this, _1 ))
-      .signature( boost::bind( &linearsystem::signature_ask_r, this, _1 ));
-    regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this ));
-    regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this ));
-    regist_signal("output").connect( boost::bind( &linearsystem::signal_output, this ));
-
-    // configure options
-    options().add("A",std::vector< T >()).mark_basic().link_to(&m_swap)
-      .attach_trigger(boost::bind( &linearsystem::trigger_A, this ));
-    options().add("b",std::vector< T >()).mark_basic().link_to(&m_swap)
-      .attach_trigger(boost::bind( &linearsystem::trigger_b, this ));
-    options().add("x",std::vector< T >()).mark_basic().link_to(&m_swap)
-      .attach_trigger(boost::bind( &linearsystem::trigger_x, this ));
-  }
-
+  /// Destructs the linear system
   virtual ~linearsystem() {}
-  void execute() { solve(); }
 
-
-  /* ------------------------------------------------------------------------ *
-   * framework scripting                                                      *
-   * ------------------------------------------------------------------------ */
- private:
-
-  void signal_resize  (common::SignalArgs& args) { common::XML::SignalOptions opts(args); this->resize((size_t) opts.value< unsigned int >("r"), (size_t) opts.value< unsigned int >("c"), T()); }
-  void signal_zerorow (common::SignalArgs& args) { common::XML::SignalOptions opts(args); this->zerorow(opts.value< unsigned int >("r")); }
-  void signal_clear  () { this->clear(); }
-  void signal_solve  () { this->solve(); }
-  void signal_output () { operator<<(std::cout,*this); }
-
-  void signature_ask_rc    (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("r",(unsigned int) size_t()); opts.add("c",(unsigned int) size_t());  }
-  void signature_ask_r     (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("r",(unsigned int) size_t()); }
-  void signature_ask_value (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("value",T());  }
-
-  void trigger_b() { swap_lss_vector(m_b); }
-  void trigger_x() { swap_lss_vector(m_x); }
-  virtual void trigger_A() {
-    if (m_swap.size()!=size())
-      throw common::BadValue(FromHere(), "linearsystem is not of the same size as given matrix ("
-        + boost::lexical_cast< std::string >(size(0)) + "*"
-        + boost::lexical_cast< std::string >(size(1)) + "!="
-        + boost::lexical_cast< std::string >(m_swap.size()) + ")");
-    for (size_t r=0; r<size(0); ++r)
-      for (size_t c=0; c<size(1); ++c)
-        A(r,c) = m_swap[r*size(1)+c];
-    m_swap.clear();
+  /// Initialize linear system from file(s)
+  linearsystem& initialize(
+      const std::string& _Afname,
+      const std::string& _bfname="",
+      const std::string& _xfname="" ) {
+    if (_Afname.length()) A_initialize(_Afname);
+    if (_bfname.length()) b_initialize(_bfname); else b_resize(size(0),1);
+    if (_xfname.length()) x_initialize(_xfname); else x_resize(size(1),size(2));
+    is_size_consistent(A_size(0),A_size(1),b_size(0),b_size(1),x_size(0),x_size(1));
+    return *this;
   }
 
-  void swap_lss_vector (std::vector< T >& v) {
-    if (m_swap.size()!=v.size())
-      throw common::BadValue(FromHere(), "linearsystem is not of the same size as given vector ("
-        + boost::lexical_cast< std::string >(v.size()) + "!="
-        + boost::lexical_cast< std::string >(m_swap.size()) + ")");
-    m_swap.swap(v);
-    m_swap.clear();
+  /// Initialize linear system from vectors of values (lists, in right context)
+  linearsystem& initialize(
+      const std::vector< T >& vA,
+      const std::vector< T >& vb=std::vector< T >(),
+      const std::vector< T >& vx=std::vector< T >()) {
+    if (vA.size()) A_initialize(vA);
+    if (vb.size()) b_initialize(vb); else b_resize(size(0),1);
+    if (vx.size()) x_initialize(vx); else x_resize(size(1),size(2));
+    is_size_consistent(A_size(0),A_size(1),b_size(0),b_size(1),x_size(0),x_size(1));
+    return *this;
   }
 
+  // accessing, size/resizing, clearing and solving (pure methods)
 
-  /* ------------------------------------------------------------------------ *
-   * linear system addressing                                                 *
-   * ------------------------------------------------------------------------ */
- public:
+        T& A(const size_t& i, const size_t& j)         = 0;
+        T& b(const size_t& i, const size_t& j=0)       = 0;
+        T& x(const size_t& i, const size_t& j=0)       = 0;
+  const T& A(const size_t& i, const size_t& j)   const = 0;
+  const T& b(const size_t& i, const size_t& j=0) const = 0;
+  const T& x(const size_t& i, const size_t& j=0) const = 0;
 
-  const T& b(const size_t r) const { return m_b[r]; }
-        T& b(const size_t r)       { return m_b[r]; }
-  const T& x(const size_t r) const { return m_x[r]; }
-        T& x(const size_t r)       { return m_x[r]; }
-  const T& A(const size_t r, const size_t c) const { return m_dummy_value; /*m_A(index_dereference(r,c));*/ }
-        T& A(const size_t r, const size_t c)       { return m_dummy_value; /*m_A(index_dereference(r,c));*/ }
+  virtual size_t A_size(const size_t&) const = 0;
+  virtual size_t b_size(const size_t&) const = 0;
+  virtual size_t x_size(const size_t&) const = 0;
+  virtual linearsystem& A_resize(const size_t& _size_i, const size_t& _size_j,   const T& _value=T()) = 0;
+  virtual linearsystem& b_resize(const size_t& _size_i, const size_t& _size_j=1, const T& _value=T()) = 0;
+  virtual linearsystem& x_resize(const size_t& _size_i, const size_t& _size_j=1, const T& _value=T()) = 0;
 
+  virtual linearsystem& A_initialize(const std::vector< T >&) = 0;
+  virtual linearsystem& b_initialize(const std::vector< T >&) = 0;
+  virtual linearsystem& x_initialize(const std::vector< T >&) = 0;
+  virtual linearsystem& A_initialize(const std::string&) = 0;
+  virtual linearsystem& b_initialize(const std::string&) = 0;
+  virtual linearsystem& x_initialize(const std::string&) = 0;
 
-  /* ------------------------------------------------------------------------ *
-   * linear system interfacing                                                *
-   * ------------------------------------------------------------------------ */
- public:
+  virtual void A_clear() = 0;
+  virtual void b_clear() = 0;
+  virtual void x_clear() = 0;
 
-  virtual linearsystem& solve() = 0;
+  virtual void A_print(std::ostream&) = 0;
+  virtual void b_print(std::ostream&) = 0;
+  virtual void x_print(std::ostream&) = 0;
 
-  size_t size()               const { return m_A.size(); }
-  size_t size(const size_t d) const { return m_A.size(d); }
+  /// Assign values to the linear system
+  virtual linearsystem& operator=(const linearsystem& _other) = 0;
 
+  /// Solve (what everyone is waiting for!)
+  virtual bool solve() = 0;
+
+  // interfacing
+
+  /// Assign values to the linear system
+  linearsystem& operator=(const T& _value) { return resize(size(0),size(1),size(2),_value); }
+
+  /// Assign values to the linear system
+  linearsystem& assign(const T& _value=T()) { return operator=(_value); }
+
+  /// Changes the number of elements stored
+  linearsystem& resize(
+      const size_t& _size_i,
+      const size_t& _size_j,
+      const size_t& _size_k=1,
+      const T& _value=T()) {
+    is_size_consistent(_size_i,_size_j,_size_i,_size_k,_size_j,_size_k);
+    A_resize(_size_i,_size_j,_value);
+    b_resize(_size_i,_size_k,_value);
+    x_resize(_size_j,_size_k,_value);
+    return *this;
+  }
+
+  /// Clears the contents
   linearsystem& clear() {
-    m_A.clear();
-    m_b.clear();
-    m_x.clear();
+    A_clear();
+    b_clear();
+    x_clear();
     return *this;
   }
 
-  linearsystem& resize(const size_t Nequations, const size_t Nvariables, const T& v=T()) {
-    m_A.resize(Nequations,Nvariables,v);
-    m_b.assign(Nequations,v);
-    m_x.assign(Nvariables,v);
-    return *this;
+  /// Returns the specific dimension of the system
+  size_t size(const size_t& d) const {
+    return (d< 2? A_size(d) :
+           (d==2? b_size(1) : std::numeric_limits< size_t >::max()));
   }
 
-  linearsystem& zerorow(const size_t r) {
-    m_A.zerorow(r);
-    m_b[r] = T();
-    return *this;
-  }
+  /// Checks whether the linear system matrix is empty
+  bool empty() { return !(size(0)*size(1)*size(2)); }
 
- private:
+  // -- Utilities
 
-  virtual void output_A(std::ostream& out) const { out << "[ (unavailable) ]"; }
-  virtual void output_b(std::ostream& out) const { out << "[ "; std::copy(m_b.begin(),m_b.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
-  virtual void output_x(std::ostream& out) const { out << "[ "; std::copy(m_x.begin(),m_x.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
-  friend std::ostream& operator<< < T, MATRIX >(std::ostream&, const linearsystem&);
-
-
-  /* ------------------------------------------------------------------------ *
-   * indexing manipulation                                                    *
-   * - implemented in stack style, forcing indexing hierarchy on client side  *
-   *   (simulate a FILO container, std::stack is a piece of crap, really!)    *
-   * - methods don't return anything, to force deliberate statements          *
-   * ------------------------------------------------------------------------ */
- public:
-
-  /// Registration of the indexing hierarchy
-  void index(const size_t n, lss_index::index_t idx, ...) {
-    if (n==1) m_indexer.push_back(idx);
-    if (n<2) return;
-    va_list ap;
-    va_start(ap,idx);
-    for (size_t i=1; i<n; ++i)
-      m_indexer.push_back( va_arg(ap,lss_index::index_t) );
-    va_end(ap);
-  }
-
-#if 0
-  /// Indexing insertion
-  void index_push(lss_index::index_t& _idx) { m_indexer.push_back(_idx); }
-
-  /// Indexing removal
-  void index_pop() { if (!m_indexer.empty()) m_indexer.pop_back(); }
-
-  /// Indexing configuration (top-most only, to force hierarchy in client side)
-  void index(size_t& _i, size_t& _j=size_t()) { m_indexer.back().index(_i,_j); }
-#endif
-
- private:  // internal ugly stuff
-
-  /// Indexing dereference
-  const lss_index::ij index_dereference(const size_t r, const size_t c) {
-    lss_index::ij ij(r,c);
-    BOOST_REVERSE_FOREACH(const lss_index::index_t& idx, m_indexer)
-      idx.index(ij);
-    return ij;
-  }
-
-
-  /* ------------------------------------------------------------------------ *
-   * internal variables                                                       *
-   * ------------------------------------------------------------------------ */
  protected:
+  bool is_size_consistent(const size_t& Ai, const size_t& Aj,
+                          const size_t& bi, const size_t& bj,
+                          const size_t& xi, const size_t& xj) const {
+    if (Ai!=bi || Aj!=xi || bj!=xj || !(Ai*Aj*bi*bj*xi*xj)) {
+      std::ostringstream msg;
+      msg << "linearsystem: size is not consistent: "
+          << "A(" << Ai << 'x' << Aj << ") "
+          << "x(" << xi << 'x' << xj << ") = "
+          << "b(" << bi << 'x' << bj << ") ";
+      throw std::runtime_error(msg.str());
+    }
+    return true;
+  }
 
-  /// Linear system matrix, right and left-hand sides vectors, and dummy value
-  MATRIX m_A;
-  std::vector< T > m_b;
-  std::vector< T > m_x;
-  T m_dummy_value;  // should keep NaN throughout
-
-  /// Indexing stack
-  std::vector< lss_index::index_t > m_indexer;
-
+  // a private friend, how promiscuous
  private:
+  template< typename aT, typename aINDEX >
+  friend std::ostream& operator<< (std::ostream&, const linearsystem< aT, aINDEX >&);
 
-  /// Scripting temporary storage (to be swapped with internal containers)
-  std::vector< T > m_swap;
-
+  // storage
+ protected:
+  index_t m_idx;  // (only indexing is part of the base type)
 };
 
 
-/**
- * printing of a linear system to a given stream
- */
-template< typename T, typename MATRIX >
-std::ostream& operator<<(std::ostream& out, const linearsystem< T, MATRIX >& lss) {
-  const bool
-    output_A(false),
-    output_b(false),
-    output_x(true);
-  if (output_A) {
-    out << "linearsystem::A("
-        << "Nequations=" << lss.size(0) << ","
-        << "Nvariables=" << lss.size(1) << ","
-        << "Nentries="   << lss.size()  << "):\n";
-    lss.output_A(out);
-    out << '\n';
-  }
-  if (output_b) {
-    out << "linearsystem::b(Nequations=" << lss.m_b.size() << "):\n";
-    lss.output_b(out);
-    out << '\n';
-  }
-  if (output_x) {
-    out << "linearsystem::x(Nvariables=" << lss.m_x.size() << "):\n";
-    lss.output_x(out);
-    out << '\n';
-  }
-  return out;
+/* -- linear system output -------------------------------------------------- */
+
+template< typename T, typename INDEX >
+std::ostream& operator<< (std::ostream& o, const linearsystem< T, INDEX >& lss)
+{
+  o << "linearsystem: A: "; lss.A_print(o); o << std::endl;
+  o << "linearsystem: b: "; lss.b_print(o); o << std::endl;
+  o << "linearsystem: x: "; lss.x_print(o); o << std::endl;
+  return o;//.print(o);
 }
 
 
@@ -267,4 +193,3 @@ std::ostream& operator<<(std::ostream& out, const linearsystem< T, MATRIX >& lss
 
 
 #endif
-
