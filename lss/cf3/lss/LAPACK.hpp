@@ -41,7 +41,7 @@ struct lss_API LAPACK :
   typedef linearsystem< T, INDEX > linearsystem_base_t;
 
   // framework interfacing
-  static std::string type_name() { return "LAPACK"; }
+  static std::string type_name();
   LAPACK(const std::string& name) :
     linearsystem_base_t(name) {}
 
@@ -52,7 +52,7 @@ struct lss_API LAPACK :
              const T& _value=T() ) :
     linearsystem_base_t(_size_i,_size_j,_size_k,_value) {}
 
-  bool solve() {
+  LAPACK& solve() {
     int n    = static_cast< int >(this->size(0));
     int nrhs = static_cast< int >(this->size(2));
     int err  = 0;

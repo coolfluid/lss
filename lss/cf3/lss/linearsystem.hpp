@@ -13,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "common/Action.hpp"
 
 #include "lss_utilities.hpp"
 #include "lss_index.hpp"
@@ -28,7 +29,8 @@ namespace lss {
 template<
     typename T,
     typename INDEX=index_hierarchy_t< index_hierarchy_t_end > >
-class linearsystem
+class linearsystem :
+  public common::Action
 { public:  //FIXME update permissions
 
   // utility definitions
@@ -75,12 +77,12 @@ class linearsystem
 
   // accessing, size/resizing, clearing and solving (pure methods)
 
-        T& A(const size_t& i, const size_t& j)         = 0;
-        T& b(const size_t& i, const size_t& j=0)       = 0;
-        T& x(const size_t& i, const size_t& j=0)       = 0;
-  const T& A(const size_t& i, const size_t& j)   const = 0;
-  const T& b(const size_t& i, const size_t& j=0) const = 0;
-  const T& x(const size_t& i, const size_t& j=0) const = 0;
+  virtual       T& A(const size_t& i, const size_t& j)         = 0;
+  virtual       T& b(const size_t& i, const size_t& j=0)       = 0;
+  virtual       T& x(const size_t& i, const size_t& j=0)       = 0;
+  virtual const T& A(const size_t& i, const size_t& j)   const = 0;
+  virtual const T& b(const size_t& i, const size_t& j=0) const = 0;
+  virtual const T& x(const size_t& i, const size_t& j=0) const = 0;
 
   virtual size_t A_size(const size_t&) const = 0;
   virtual size_t b_size(const size_t&) const = 0;
@@ -107,8 +109,11 @@ class linearsystem
   /// Assign values to the linear system
   virtual linearsystem& operator=(const linearsystem& _other) = 0;
 
+  /// Execute redirects to solve
+  void execute () { solve(); }
+
   /// Solve (what everyone is waiting for!)
-  virtual bool solve() = 0;
+  virtual linearsystem& solve() = 0;
 
   // interfacing
 

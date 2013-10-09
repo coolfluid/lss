@@ -36,7 +36,7 @@ struct lss_API GaussianElimination :
   typedef linearsystem< T, INDEX > linearsystem_base_t;
 
   // framework interfacing
-  static std::string type_name() { return "GaussianElimination"; }
+  static std::string type_name();
   GaussianElimination(const std::string& name) :
     linearsystem_base_t(name) {}
 
