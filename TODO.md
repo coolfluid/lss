@@ -14,6 +14,7 @@ TODO: sparse solvers
 
 To implement as separate plugin libraries:
 
+  + TODO: MUMPS
   + TODO: Aztec
   + TODO: Eigen (surprise!)
   + TODO: GMRES

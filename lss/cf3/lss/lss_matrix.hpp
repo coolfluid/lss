@@ -45,7 +45,8 @@ struct matrix
   {}
 
   // initializations
-  matrix& initialize(const std::string& _fname) { return Impl::initialize(_fname); }
+  matrix& initialize(const std::vector< T >& _vector) { return Impl::initialize(_vector); }
+  matrix& initialize(const std::string&       _fname) { return Impl::initialize(_fname); }
 
   // assignments (defer to implementation)
   matrix& operator=(const matrix& _other)   { return Impl::operator=(_other); }
@@ -99,7 +100,7 @@ struct matrix
     return (_d==0? m_size.i :
            (_d==1? m_size.j : std::numeric_limits< size_t >::max()));
   }
-  idx_t& size() const { return m_size; }
+  const idx_t& size() const { return m_size; }
 
   // indexing (defer to implementation)
   virtual const T& operator()(const size_t& i, const size_t& j=0) const = 0;
@@ -131,6 +132,7 @@ struct dense_matrix_vv :
   using matrix_base_t::size;
 
   // initializations
+  dense_matrix_vv& initialize(const std::vector< T >& _vector) { return assign(_vector); }
   dense_matrix_vv& initialize(const std::string& _fname) {
     clear();
     if (!read_dense< T >(_fname,ORIENT,matrix_base_t::m_size,a))
@@ -212,6 +214,7 @@ struct dense_matrix_v :
   using matrix_base_t::size;
 
   // initializations
+  dense_matrix_v& initialize(const std::vector< T >& _vector) { return assign(_vector); }
   dense_matrix_v& initialize(const std::string& _fname) {
     clear();
     std::vector< std::vector< T > > another_a;
@@ -303,6 +306,10 @@ struct sparse_matrix_csr :
   ~sparse_matrix_csr() { clear(); }
 
   // initializations
+  sparse_matrix_csr& initialize(const std::vector< T >& _vector) {
+    throw std::runtime_error("sparse_matrix_csr::initialize is not possible from vector.");
+    return *this;
+  }
   sparse_matrix_csr& initialize(const std::string& _fname) {
     clear();
     if (!read_sparse< T >(_fname,true,BASE,matrix_base_t::m_size,a,idx.ia,idx.ja))

@@ -5,18 +5,19 @@ coolfluid3_add_library(
     LibLSS.cpp
     LibLSS.hpp
 
-    linearsystem.cpp
     linearsystem.hpp
     lss_index.hpp
     lss_matrix.hpp
     lss_utilities.cpp
     lss_utilities.hpp
 
-    GaussianElimination.hpp
+    LAPACK.cpp
     LAPACK.hpp
   )
 
 coolfluid_mark_not_orphan(
+    GaussianElimination.cpp
+    GaussianElimination.hpp
   reference/GMRES.cpp
   reference/GMRES.h
   reference/linearsystem.hpp

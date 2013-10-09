@@ -39,6 +39,7 @@ class linearsystem :
   // construction, destruction and initialization
 
   /// Construct the linear system, by direct initialization
+  linearsystem(const std::string& name) : common::Action(name) {}
   linearsystem(
       const size_t& _size_i=size_t(),
       const size_t& _size_j=size_t(),
@@ -75,8 +76,12 @@ class linearsystem :
     return *this;
   }
 
-  // accessing, size/resizing, clearing and solving (pure methods)
+  /// Execute redirects to solve
+  void execute () { solve(); }
 
+
+  // (pure methods)
+  /// Accessors/mutators
   virtual       T& A(const size_t& i, const size_t& j)         = 0;
   virtual       T& b(const size_t& i, const size_t& j=0)       = 0;
   virtual       T& x(const size_t& i, const size_t& j=0)       = 0;
@@ -84,43 +89,62 @@ class linearsystem :
   virtual const T& b(const size_t& i, const size_t& j=0) const = 0;
   virtual const T& x(const size_t& i, const size_t& j=0) const = 0;
 
-  virtual size_t A_size(const size_t&) const = 0;
-  virtual size_t b_size(const size_t&) const = 0;
-  virtual size_t x_size(const size_t&) const = 0;
+
+  // (pure methods)
+  /// Matrix/vectors resizing
   virtual linearsystem& A_resize(const size_t& _size_i, const size_t& _size_j,   const T& _value=T()) = 0;
   virtual linearsystem& b_resize(const size_t& _size_i, const size_t& _size_j=1, const T& _value=T()) = 0;
   virtual linearsystem& x_resize(const size_t& _size_i, const size_t& _size_j=1, const T& _value=T()) = 0;
 
+
+  // (pure methods)
+  /// Matrix/vectors initialization from given vector or filename
   virtual linearsystem& A_initialize(const std::vector< T >&) = 0;
   virtual linearsystem& b_initialize(const std::vector< T >&) = 0;
   virtual linearsystem& x_initialize(const std::vector< T >&) = 0;
-  virtual linearsystem& A_initialize(const std::string&) = 0;
-  virtual linearsystem& b_initialize(const std::string&) = 0;
-  virtual linearsystem& x_initialize(const std::string&) = 0;
+  virtual linearsystem& A_initialize(const std::string&)      = 0;
+  virtual linearsystem& b_initialize(const std::string&)      = 0;
+  virtual linearsystem& x_initialize(const std::string&)      = 0;
 
+
+  // (pure methods)
+  /// Matrix/vectors clearing
   virtual void A_clear() = 0;
   virtual void b_clear() = 0;
   virtual void x_clear() = 0;
 
+
+  // (pure methods)
+  /// Matrix/vectors output
   virtual void A_print(std::ostream&) = 0;
   virtual void b_print(std::ostream&) = 0;
   virtual void x_print(std::ostream&) = 0;
 
-  /// Assign values to the linear system
+
+  // (pure methods)
+  /// Matrix/vectors size
+  virtual size_t A_size(const size_t&) const = 0;
+  virtual size_t b_size(const size_t&) const = 0;
+  virtual size_t x_size(const size_t&) const = 0;
+
+
+/*
+  // (pure method)
+  /// Linear system copy assignment operator
   virtual linearsystem& operator=(const linearsystem& _other) = 0;
+*/
 
-  /// Execute redirects to solve
-  void execute () { solve(); }
 
-  /// Solve (what everyone is waiting for!)
+  // (pure method)
+  /// Linear system solve (what everyone is waiting for!)
   virtual linearsystem& solve() = 0;
 
   // interfacing
 
-  /// Assign values to the linear system
+  /// Linear system value assignment operator
   linearsystem& operator=(const T& _value) { return resize(size(0),size(1),size(2),_value); }
 
-  /// Assign values to the linear system
+  /// Linear system value assignment method
   linearsystem& assign(const T& _value=T()) { return operator=(_value); }
 
   /// Changes the number of elements stored
