@@ -33,12 +33,16 @@ template<
     typename T,
     typename INDEX=index_hierarchy_t< index_hierarchy_t_end > >
 struct lss_API LAPACK :
-  public linearsystem< T, INDEX >
+  public linearsystem<
+    T,
+    INDEX,
+    detail::dense_matrix_v< T, detail::column_oriented >,
+    detail::dense_matrix_v< T, detail::column_oriented > >
 {
   // utility definitions
-  typedef lss_matrix::dense_matrix_v< T, lss_matrix::column_oriented > matrix_t;
-  typedef lss_matrix::dense_matrix_v< T, lss_matrix::column_oriented > vector_t;
-  typedef linearsystem< T, INDEX > linearsystem_base_t;
+  typedef detail::dense_matrix_v< T, detail::column_oriented > matrix_t;
+  typedef detail::dense_matrix_v< T, detail::column_oriented > vector_t;
+  typedef linearsystem< T, INDEX, matrix_t, vector_t > linearsystem_base_t;
 
   // framework interfacing
   static std::string type_name();
@@ -96,6 +100,7 @@ struct lss_API LAPACK :
   const vector_t& b() const { return m_b; }
   const vector_t& x() const { return m_x; }
 
+  /*
 
         T& A(const size_t& i, const size_t& j)         { return m_A(i,j); }
         T& b(const size_t& i, const size_t& j=0)       { return m_b(i,j); }
@@ -127,7 +132,6 @@ struct lss_API LAPACK :
   void b_print(std::ostream& o) { m_b.print(o); }
   void x_print(std::ostream& o) { m_x.print(o); }
 
-  /*
   LAPACK& operator=(const LAPACK& _other) {
     m_A = _other.m_A;
     return *this;

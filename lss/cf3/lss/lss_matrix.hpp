@@ -18,7 +18,7 @@
 
 namespace cf3 {
 namespace lss {
-namespace lss_matrix {
+namespace detail {
 
 
 /* -- matrix interface and implementations ---------------------------------- */
