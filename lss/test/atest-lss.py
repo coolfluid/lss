@@ -8,11 +8,8 @@ cf.env.log_level = 3 #  1=error, 2=warning, 3=info, 4=debug
 
 
 list_of_solvers = [
-  'GaussianEliminationA',
-  'GaussianEliminationV',
-  'GaussianEliminationAA',
-  'GaussianEliminationVV',
-  'GMRES' ]
+  'GaussianElimination_SingleP',
+  'LAPACK_DoubleP']
 
 for solver in list_of_solvers:
   g1 = cf.root.create_component('MySolver','cf3.lss.' + solver)
@@ -33,3 +30,4 @@ for solver in list_of_solvers:
   g1.b = [  2,  4,  6,  8 ]
   g1.solve()
   g1.output()
+

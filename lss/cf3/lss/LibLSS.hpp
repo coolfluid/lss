@@ -34,7 +34,7 @@ namespace cf3 {
   /**
    * @brief lss namespace
    *
-   * The namespace lls provides a bare-bones interface to linear system solvers,
+   * The namespace lss provides a bare-bones interface to linear system solvers,
    * of dense and sparse matrices in different precisions. A few implementations
    * are provided in the core plugin and others, more sophisticated, are
    * available as dependent plugins.

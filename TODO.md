@@ -1,44 +1,39 @@
 
-TODO: dense solvers
-=============
-
-To implement in core plugin library:
-
-  + TODO: Eigen[1]
-  + TODO: GaussianElimination
-  + TODO: LAPACK[2]
+TODO:
+=====
 
 
-TODO: sparse solvers
-==============
-
-To implement as separate plugin libraries:
-
-  + TODO: Aztec
-  + TODO: Eigen (surprise!)
-  + TODO: GMRES
-  + TODO: HSL Mathematical Software Library[4]
-  + TODO: PETSc[5]
-  + TODO: PSPIKE[6] (abandoned?)
-  + TODO: Pardiso[7], standalone (v4) or MKL (v3)
-  + TODO: SAMG
-  + TODO: SAMGp
-  + TODO: SPARSKIT[8]
-  + TODO: SuperLU[9]
-  + TODO: Trilinos/AztecOO
-  + TODO: Trilinos/ShyLU
-  + TODO: Trilinos/others (?)
-  + TODO: WSMP
-  + TODO: pARMS[10]
+  - work in progress:
+      + (core plugin, dense) GaussianElimination
+      + (core plugin, dense) LAPACK[2]
+      + (core plugin, sparse) GMRES
+      + (separate plugin, sparse) PETSc[5]
+      + (separate plugin, sparse) Pardiso/Basel[7] (version 4)
+      + (separate plugin, sparse) Pardiso/MKL (version 3)
 
 
-Matrix partitioning
-===================
+  - to consider:
+      + (core plugin, dense) Eigen[1]
+      + (core plugin, sparse) Eigen[1] (extending the sparse matrices pruning)
+      + (separate plugin, sparse) DSS/MKL (version 3)
+      + (separate plugin, sparse) MUMPS
+      + (separate plugin, sparse) SPARSKIT[8] (neglected uncle of pARMS?)
+      + (separate plugin, sparse) SuperLU[9]
+      + (separate plugin, sparse) Trilinos/AztecOO
+      + (separate plugin, sparse) Trilinos/ShyLU
+      + (separate plugin, sparse) WSMP
 
-These hypergraph partitioning tools are probably not a reasonable idea:
 
-  + Mondriaan[11]
-  + PaToH (can be used via Zoltan or Mondriaan)[12]
+  - probably not reasonable:
+      + (separate plugin, hypergraph partitioning) Mondriaan[11]
+      + (separate plugin, hypergraph partitioning) PaToH (used via Zoltan or Mondriaan)[12]
+      + (separate plugin, sparse) Aztec
+      + (separate plugin, sparse) HSL Mathematical Software Library[4]
+      + (separate plugin, sparse) PSPIKE[6] (abandoned?)
+      + (separate plugin, sparse) SAMG
+      + (separate plugin, sparse) SAMGp
+      + (separate plugin, sparse) Trilinos (other solvers?)
+      + (separate plugin, sparse) pARMS[10]
 
 
 [1]: http://eigen.tuxfamily.org/dox/TutorialLinearAlgebra.html
