@@ -8,7 +8,7 @@
 //include "system"
 
 #include "common/Builder.hpp"
-#include "GMRES.h"
+#include "GMRES.hpp"
 
 
 namespace cf3 {
