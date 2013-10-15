@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_lss_utilities_hpp
-#define cf3_lss_lss_utilities_hpp
+#ifndef cf3_lss_detail_utilities_hpp
+#define cf3_lss_detail_utilities_hpp
 
 
 #include <algorithm>
@@ -20,6 +20,7 @@
 
 namespace cf3 {
 namespace lss {
+namespace detail {
 
 
 /* -- basic types for index manipulation ------------------------------------ */
@@ -418,6 +419,7 @@ bool read_sparse(
 }
 
 
+}  // namespace detail
 }  // namespace lss
 }  // namespae cf3
 

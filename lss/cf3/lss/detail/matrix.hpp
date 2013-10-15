@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_lss_matrix_hpp
-#define cf3_lss_lss_matrix_hpp
+#ifndef cf3_lss_detail_matrix_hpp
+#define cf3_lss_detail_matrix_hpp
 
 
 #include <iterator>
@@ -14,6 +14,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
+
+#include "index.hpp"
 
 
 namespace cf3 {
@@ -298,7 +300,7 @@ struct sparse_matrix_csr :
     matrix< T,sparse_matrix_csr< T, BASE > >
 {
   typedef matrix< T,sparse_matrix_csr< T, BASE > > matrix_base_t;
-  typedef lss_index::index_compressed_sparse_row_t< BASE > matrix_index_t;
+  typedef index_compressed_sparse_row_t< BASE > matrix_index_t;
   using matrix_base_t::size;
 
   // cons/destructor
@@ -437,7 +439,7 @@ struct sparse_matrix_csr :
 };
 
 
-}  // namespace lss_matrix
+}  // namespace detail
 }  // namespace lss
 }  // namespace cf3
 

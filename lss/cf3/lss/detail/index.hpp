@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_lss_index_hpp
-#define cf3_lss_lss_index_hpp
+#ifndef cf3_lss_detail_index_hpp
+#define cf3_lss_detail_index_hpp
 
 
 #include <vector>
@@ -15,7 +15,7 @@
 
 namespace cf3 {
 namespace lss {
-namespace lss_index {
+namespace detail {
 
 
 /* -- indexing techniques --------------------------------------------------- */
@@ -36,7 +36,7 @@ struct index_compressed_sparse_row_t : index_conversion_t
     nz.clear();
     nz.reserve(_nz.size());
     for (size_t r=0; r<_nz.size(); ++r)
-      lss_index::vector_sorted_t::apply(nz.back(),r);
+      index::vector_sorted_t::apply(nz.back(),r);
 
     //FIXME
     const size_t Nb = 1;
@@ -94,7 +94,7 @@ struct index_compressed_sparse_row_t : index_conversion_t
 };
 
 
-}  // namespace lss_index
+}  // namespace detail
 }  // namespace lss
 }  // namespace cf3
 
