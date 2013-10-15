@@ -372,13 +372,11 @@ struct sparse_matrix_csr :
     return *this;
   }
 
-  void swap(sparse_matrix_csr& other) {
+  sparse_matrix_csr& swap(sparse_matrix_csr& other) {
     other.a.swap(a);
-    other.idx.ia.swap(idx.ia);
-    other.idx.ja.swap(idx.ja);
-    std::swap(other.idx.nnu);
-    std::swap(other.idx.nnz);
+    other.idx.swap(idx);
     matrix_base_t::swap(other);
+    return *this;
   }
 
   // indexing

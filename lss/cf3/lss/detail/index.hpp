@@ -12,6 +12,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "utilities.hpp"
+
 
 namespace cf3 {
 namespace lss {
@@ -19,6 +21,264 @@ namespace detail {
 
 
 /* -- indexing techniques --------------------------------------------------- */
+
+
+
+
+
+
+
+
+
+// matrix index return and input type as (i[,j]) pair
+typedef struct ij {
+  size_t idx[2];
+  ij(const size_t& i=size_t(), const size_t& j=size_t()) { idx[0]=i; idx[1]=j; }
+} ij;
+
+
+
+
+
+
+struct index_t
+{
+  void index(ij& _idx) {}
+};
+
+
+struct index_multi_domain_t : index_t
+{
+  index_multi_domain_t() {}
+  index_multi_domain_t(std::vector< std::string >&) {}
+};
+
+
+struct index_irregular_block_t : index_t
+{
+  index_irregular_block_t() {}
+  index_irregular_block_t(std::vector< size_t >&) {}
+};
+
+
+struct index_regular_block_t : index_t
+{
+  index_regular_block_t() {}
+  index_regular_block_t(std::vector< size_t >&) {}
+  index_regular_block_t(size_t&) {}
+};
+
+
+
+
+
+
+
+
+
+
+#if 0
+/**
+ * @brief Matrix indexer
+ */
+class index_t
+{
+  template< typename T, typename MATRIX >
+  friend class linearsystem;
+
+// (deliberately force right methods on the right types at runtime)
+#define NO_IMPLEMENTATION throw std::runtime_error("index_t: wrong method call")
+
+#if 0
+  index_t() : type(detail::none) {}
+  index_t(const std::string& _type) : type(detail::idx_name_to_type(_type)) {}
+  const detail::idx_type type;
+#endif
+
+ public:
+  // index configuration methods
+  virtual void index(const size_t& _i, const size_t& _j) { NO_IMPLEMENTATION; }
+
+ private:
+  // index application
+  virtual ij& index(ij& idx) const { NO_IMPLEMENTATION; return idx; }
+
+#undef NO_IMPLEMENTATION
+};
+#endif
+
+
+#if 0
+/**
+ * @brief Matrix indexer assuming a regular size block
+ */
+struct index_regular_block_t : public index_t
+{
+  // setup in construction
+  index_regular_block_t(
+    size_t _block_size_i,
+    size_t _block_size_j=size_t() )
+  {
+    const size_t
+      sizei(_block_size_i),
+      sizej(_block_size_j? _block_size_j : _block_size_i);
+    // do it
+  }
+
+  // configuration
+
+  // application
+  ij& index(ij& idx) const {
+    return idx;
+  }
+};
+#endif
+
+
+#if 0
+/**
+ * @brief Matrix indexer assuming a irregular size block
+ */
+struct index_irregular_block_t : public index_t
+{
+  // no-setup construction (for internal handling)
+  index_irregular_block_t() {}
+
+  // setup in construction
+  index_irregular_block_t(
+    const std::vector< size_t >& _block_size_i,
+    const std::vector< size_t >& _block_size_j=std::vector< size_t >() )
+  { setup_index_irregular_block(_block_size_i,_block_size_j); }
+
+  // setup
+  void setup_index_irregular_block(
+    const std::vector< size_t >& _block_size_i,
+    const std::vector< size_t >& _block_size_j=std::vector< size_t >() ) {
+    const std::vector< size_t >&
+        sizei(_block_size_i),
+        sizej(_block_size_j.size()? _block_size_j : _block_size_i);
+  }
+
+  // configuration
+
+  // application
+  ij& index(ij& idx) const {
+    return idx;
+  }
+};
+#endif
+
+
+#if 0
+/**
+ * @brief Matrix indexer assuming a regular size block
+ */
+struct index_multi_domain_t : index_irregular_block_t
+{
+  // setup in construction
+  index_multi_domain_t(
+    const std::vector< std::string >& _domain_names,
+    const std::vector< size_t >& _domain_eqs_per_node)
+  {
+    std::vector< size_t > domsizes(_domain_names.size());
+
+    // set sparsity pattern
+    // const std::vector< std::vector< size_t > >&_nz
+
+    // do it
+    // return index_irregular_block_t::setup_block_irregular_size(domsizes);
+  }
+};
+#endif
+
+
+#if 0
+namespace detail {
+namespace {
+
+  static const std::string idx_name[] = { "",   "block_regular", "block_irregular", ""  };
+  enum                     idx_type     { none,  block_regular,   block_irregular,  all };
+  idx_type idx_name_to_type(const std::string& name) {
+    for (int i=1; i<all; ++i)
+      if (idx_name[i]==name)
+        return (idx_type) i;
+    return none;
+  }
+}  // namespace (unnamed)
+}  // namespace detail
+#endif
+
+
+#if 0
+void index_t::setup_domains(
+  const std::vector< std::string >& _domain_names,
+  const std::vector< size_t >& _domain_eqs_per_node)
+{
+  std::vector< size_t > domsizes(_domain_names.size());
+
+  // set sparsity pattern
+  //const std::vector< std::vector< size_t > >&_nz
+
+
+  // do it
+
+  return setup_block_irregular_size(domsizes);
+}
+#endif
+
+
+#if 0
+void index_t::setup_block_regular_size(
+  size_t _block_size_i,
+  size_t _block_size_j )
+{
+  const size_t
+    sizei(_block_size_i),
+    sizej(_block_size_j? _block_size_j : _block_size_i);
+
+  // do it
+}
+#endif
+
+
+#if 0
+void index_t::setup_block_irregular_size(
+  const std::vector< size_t >& _block_size_i,
+  const std::vector< size_t >& _block_size_j )
+{
+  const std::vector< size_t >&
+      sizei(_block_size_i),
+      sizej(_block_size_j.size()? _block_size_j : _block_size_i);
+
+  // do it
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+/**
+ * @brief Matrix storage indexer
+ *
+ * This object wraps a method to return a single size_t index to a (very long
+ * and boring) vector of entries that populate a sparse, dense, and/or
+ * block-addressable matrix.
+ *
+ * Internally, the indexing is recursivelly nested to layer functionality as
+ * desired. Addressing related to the structured storage is the bottom layer,
+ * however block-addressing or multi-domain compositions can be layered over the
+ * base storage indexing. Specialized indexing which combine multiple indexing
+ * techniques in one layer can also be specified, at least that's the intent...
+ */
+
+
+
 
 /**
  * @brief Storage indexing in compressed sparse row
@@ -29,8 +289,8 @@ struct index_compressed_sparse_row_t : index_conversion_t
 {
   index_compressed_sparse_row_t() { clear(); }
 
+  void setup(index_compressed_sparse_row_t& x) {
 #if 0
-  void initialize(const index_compressed_sparse_row_t& x) {
     const std::vector< std::vector< size_t > >& nz;
 
     nz.clear();
@@ -61,14 +321,17 @@ struct index_compressed_sparse_row_t : index_conversion_t
             ja[k++] = (int) (Nb*nz[R][I]) + c + BASE;
       }
     }
-  }
 #endif
-
-  void clear() {
-    ia.clear();
-    ja.clear();
-    nnu = nnz = 0;
   }
+
+  void swap(index_compressed_sparse_row_t& other) {
+    other.ia.swap(ia);
+    other.ia.swap(ja);
+    std::swap(other.nnu,nnu);
+    std::swap(other.nnz,nnz);
+  }
+
+  void clear() { ia.clear(); ja.clear(); nnu = nnz = 0; }
 
   size_t size() const { return static_cast< size_t >(nnz); }
   size_t size(const size_t& d) const {

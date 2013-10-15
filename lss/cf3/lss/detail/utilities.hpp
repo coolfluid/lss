@@ -29,6 +29,7 @@ namespace detail {
 /// @brief Index pair, fundamental dereferencing type
 struct idx_t
 {
+//  size_t ij[2];  // TODO: check this option too?
   size_t i, j;
   idx_t(const size_t& _i=std::numeric_limits< size_t >::max(),
         const size_t& _j=std::numeric_limits< size_t >::max()) : i(_i), j(_j) {}
