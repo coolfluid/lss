@@ -1,3 +1,8 @@
+// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+//
+// This software is distributed under the terms of the
+// GNU Lesser General Public License version 3 (LGPLv3).
+// See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
 #include <fstream>
@@ -6,11 +11,12 @@
 #include <stdexcept>
 
 
-#include "lss_utilities.hpp"
+#include "utilities.hpp"
 
 
 namespace cf3 {
 namespace lss {
+namespace detail {
 
 
 /* -- coordinate matrix helper structures ----------------------------------- */
@@ -505,5 +511,6 @@ bool read_sparse(
 }  // namespace CSR
 
 
+}  // namespace detail
 }  // namespace lss
 }  // namespace cf3
