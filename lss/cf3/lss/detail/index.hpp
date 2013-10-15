@@ -5,21 +5,29 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_lss_index_h
-#define cf3_lss_lss_index_h
+#ifndef cf3_lss_detail_index_hpp
+#define cf3_lss_detail_index_hpp
 
 
-#include <iostream>
 #include <vector>
 #include <algorithm>
-#include <stdexcept>
-#include <cmath>
-#include "boost/parameter.hpp"
+
+#include "utilities.hpp"
 
 
 namespace cf3 {
 namespace lss {
-namespace lss_index {
+namespace detail {
+
+
+/* -- indexing techniques --------------------------------------------------- */
+
+
+
+
+
+
+
 
 
 // matrix index return and input type as (i[,j]) pair
@@ -97,8 +105,10 @@ class index_t
 
 #undef NO_IMPLEMENTATION
 };
+#endif
 
 
+#if 0
 /**
  * @brief Matrix indexer assuming a regular size block
  */
@@ -122,8 +132,10 @@ struct index_regular_block_t : public index_t
     return idx;
   }
 };
+#endif
 
 
+#if 0
 /**
  * @brief Matrix indexer assuming a irregular size block
  */
@@ -154,8 +166,10 @@ struct index_irregular_block_t : public index_t
     return idx;
   }
 };
+#endif
 
 
+#if 0
 /**
  * @brief Matrix indexer assuming a regular size block
  */
@@ -196,79 +210,59 @@ namespace {
 
 
 #if 0
-  // indexing setup
-  BOOST_PARAMETER_NAME(sparsity_structure_per_row)
-  BOOST_PARAMETER_NAME(block_regular_size_i)
-  BOOST_PARAMETER_NAME(block_regular_size_j)
-  BOOST_PARAMETER_NAME(block_irregular_size_i)
-  BOOST_PARAMETER_NAME(block_irregular_size_j)
-  BOOST_PARAMETER_NAME(domains)
+void index_t::setup_domains(
+  const std::vector< std::string >& _domain_names,
+  const std::vector< size_t >& _domain_eqs_per_node)
+{
+  std::vector< size_t > domsizes(_domain_names.size());
 
-  // indexing configuration
-  BOOST_PARAMETER_NAME(block_i)
-  BOOST_PARAMETER_NAME(block_j)
-  BOOST_PARAMETER_NAME(domain)
-
-  // indexing application
-  BOOST_PARAMETER_NAME(idx)
+  // set sparsity pattern
+  //const std::vector< std::vector< size_t > >&_nz
 
 
-  BOOST_PARAMETER_MEMBER_FUNCTION( (index_t&), setup, tag, (optional
-    (sparsity_structure_per_row, *, std::vector< std::vector< size_t > >())
-    (block_regular_size_i, (size_t), 0)
-    (block_regular_size_j, (size_t), 0)
-    (block_irregular_size_i, (std::vector< size_t >), 0)
-    (block_irregular_size_j, (std::vector< size_t >), 0)
-                                                            ))
-  {
-    switch (type) {
+  // do it
 
-      case block_regular : {
-        idx[0] += block_index[0]*block_size[0];
-        idx[1] += block_index[1]*block_size[1];
-        break;
-      }
-
-      case block_irregular : { break; }
-
-      case none: case all: default: {}
-    }
-    return *this;
-  }
-
-  BOOST_PARAMETER_CONST_MEMBER_FUNCTION( (idx_t&), index, tag, (required
-    (in_out(idx), (idx_t&)) ))
-  {
-    switch (type) {
-      case block_regular : {
-        idx[0] += block_index[0]*block_size[0];
-        idx[1] += block_index[1]*block_size[1];
-        break;
-      }
-      case block_irregular : { break; }
-      case none:
-      case all:
-      default: {}
-    }
-    return idx;
-  }
-
-  BOOST_PARAMETER_CONST_MEMBER_FUNCTION( (idx_t&), index, tag, (required
-    (in_out(idx), (idx_t&)) ))
-  {
-    switch (type) {
-      case block_regular :   { break; }
-      case block_irregular : { break; }
-      case none:
-      case all:
-      default: {}
-    }
-    return idx;
-  }
+  return setup_block_irregular_size(domsizes);
+}
 #endif
 
 
 #if 0
+void index_t::setup_block_regular_size(
+  size_t _block_size_i,
+  size_t _block_size_j )
+{
+  const size_t
+    sizei(_block_size_i),
+    sizej(_block_size_j? _block_size_j : _block_size_i);
+
+  // do it
+}
+#endif
+
+
+#if 0
+void index_t::setup_block_irregular_size(
+  const std::vector< size_t >& _block_size_i,
+  const std::vector< size_t >& _block_size_j )
+{
+  const std::vector< size_t >&
+      sizei(_block_size_i),
+      sizej(_block_size_j.size()? _block_size_j : _block_size_i);
+
+  // do it
+}
+#endif
+
+
+
+
+
+
+
+
+
+
 /**
  * @brief Matrix storage indexer
  *
@@ -284,92 +278,86 @@ namespace {
  */
 
 
-/**
- * @brief Auxiliary type to generic "index creator"
- */
-struct index_creator_t {
-  index_creator_t(const std::string& _key) : key(_key) {}
-  virtual ~index_creator_t() {}
-  virtual index_t* create() = 0;
-  const std::string key;
-};
 
 
 /**
- * @brief Auxiliary type to specific "index creator"
+ * @brief Storage indexing in compressed sparse row
+ * BASE: {0,1}-based indexing, other bases won't work
  */
-template< class INDEX >
-struct index_creator : index_creator_t {
-  index_creator(const std::string& _key) : index_creator_t(_key) {}
-  index_t* create() { return new INDEX(); }
-};
-
-
-/**
- * @brief Handler of "index creators" registered against std::string keys, which
- * are used to create specific "index" objects (factory pattern).
- * The matrix addressing factory is declared below and instantiated outside.
- */
-class index_factory_t
+template< int BASE >
+struct index_compressed_sparse_row_t : index_conversion_t
 {
- private:
-  // registered indexing creators
-  typedef std::vector< index_creator_t* > icreators_t;
-  icreators_t m_creators;
+  index_compressed_sparse_row_t() { clear(); }
 
-  // helper class for checking if specific creator keys are already registered
-  struct creator_has_key
-  {
-    creator_has_key(const std::string& _key) : key(_key) {}
-    bool operator() (index_creator_t*& c) const { return key==c->key; }
-    const std::string key;
-  };
+  void setup(index_compressed_sparse_row_t& x) {
+#if 0
+    const std::vector< std::vector< size_t > >& nz;
 
- public:
-  // indexing creation registration
-  void Register(index_creator_t* creator) {
-    if ( creator->key.length() && m_creators.end()==std::find_if(
-          m_creators.begin(),m_creators.end(),creator_has_key(creator->key)) ) {
-      m_creators.push_back(creator);
-      return;
+    nz.clear();
+    nz.reserve(_nz.size());
+    for (size_t r=0; r<_nz.size(); ++r)
+      index::vector_sorted_t::apply(nz.back(),r);
+
+    //FIXME
+    const size_t Nb = 1;
+
+    // set row indices
+    nnu = (int) (Nb * nz.size());
+    ia.resize(nnu+1);
+    ia[0] = BASE;
+    int k = 0;
+    for (int R=0; R<(int) nz.size(); ++R)
+      for (int i=0; i<(int) Nb; ++i, ++k)
+        ia[k+1] = ia[k] + (int) Nb * (int) nz[R].size();
+
+    // set column indices
+    nnz = ia[nnu] - BASE;
+    ja.resize(nnz);
+    for (size_t R=0; R<nz.size(); ++R) {
+      for (int r=0; r<(int) Nb; ++r) {
+        k = ia[R*Nb+r] - BASE;
+        for (size_t I=0; I<nz[R].size(); ++I)
+          for (int c=0; c<(int) Nb; ++c)
+            ja[k++] = (int) (Nb*nz[R][I]) + c + BASE;
+      }
     }
-    std::cerr << "index_factory_t: unable to register key \"" << creator->key << "\"." << std::endl;
-  }
-
-  // indexing creation from key
-  index_t* Create(const std::string& key) {
-    icreators_t::iterator c(std::find_if(m_creators.begin(),m_creators.end(),creator_has_key(key)));
-    if (c==m_creators.end()) {
-      std::cerr << "index_factory_t: unable to create from key \"" << key << "\"." << std::endl;
-      return NULL;
-    }
-    return (*c)->create();
-  }
-
-  void output(std::ostream& out) {
-    out << "index_factory_t: " << m_creators.size() << " key(s) registered.";
-    BOOST_FOREACH(index_creator_t*& c, m_creators) {
-      out << "\n  - \"" << c->key << '"';
-    }
-    out << std::endl;
-  }
-
-  // constructor registering (a series of) indexing techniques
-  index_factory_t(const size_t n, index_creator_t* c, ...);
-
-  // destructor to handle deletion of indexing techniques creators
-  ~index_factory_t() {
-    icreators_t::reverse_iterator c;
-    for (c=m_creators.rbegin(); c!=m_creators.rend(); ++c)
-      delete (*c);
-  }
-
-}
-extern idx_factory_matrix_indexing;
 #endif
+  }
+
+  void swap(index_compressed_sparse_row_t& other) {
+    other.ia.swap(ia);
+    other.ia.swap(ja);
+    std::swap(other.nnu,nnu);
+    std::swap(other.nnz,nnz);
+  }
+
+  void clear() { ia.clear(); ja.clear(); nnu = nnz = 0; }
+
+  size_t size() const { return static_cast< size_t >(nnz); }
+  size_t size(const size_t& d) const {
+    return (d==0? static_cast< size_t >(nnu) :
+                  std::numeric_limits< size_t >::max());
+  }
+
+  idx_t& dereference(idx_t& _idx) const {
+    const int i = static_cast< const int >(_idx.i),
+              j = static_cast< const int >(_idx.j);
+    _idx.invalidate();
+    for (int k=ia[i]-BASE; k<ia[i+1]-BASE; ++k)
+      if (ja[k]-BASE==j) {
+        _idx = idx_t(static_cast< size_t >(k),0);
+        break;
+      }
+    return _idx;
+  }
+
+  // storage
+  std::vector< int > ia, ja;
+  int nnu, nnz;
+};
 
 
-}  // namespace lss_index
+}  // namespace detail
 }  // namespace lss
 }  // namespace cf3
 

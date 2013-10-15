@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_lss_utilities_hpp
-#define cf3_lss_lss_utilities_hpp
+#ifndef cf3_lss_detail_utilities_hpp
+#define cf3_lss_detail_utilities_hpp
 
 
 #include <algorithm>
@@ -20,6 +20,7 @@
 
 namespace cf3 {
 namespace lss {
+namespace detail {
 
 
 /* -- basic types for index manipulation ------------------------------------ */
@@ -28,6 +29,7 @@ namespace lss {
 /// @brief Index pair, fundamental dereferencing type
 struct idx_t
 {
+//  size_t ij[2];  // TODO: check this option too?
   size_t i, j;
   idx_t(const size_t& _i=std::numeric_limits< size_t >::max(),
         const size_t& _j=std::numeric_limits< size_t >::max()) : i(_i), j(_j) {}
@@ -418,6 +420,7 @@ bool read_sparse(
 }
 
 
+}  // namespace detail
 }  // namespace lss
 }  // namespae cf3
 
