@@ -27,9 +27,9 @@ namespace detail {
 
 template<
     typename T,
+    typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end >,
     typename MATRIX=detail::dense_matrix_v< T >,
-    typename VECTOR=detail::dense_matrix_v< T >,
-    typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end > >
+    typename VECTOR=detail::dense_matrix_v< T > >
 class linearsystem
 {
 

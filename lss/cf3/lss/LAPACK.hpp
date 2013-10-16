@@ -35,15 +35,14 @@ template<
     typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end > >
 struct lss_API LAPACK : public
   linearsystem,
-  detail::linearsystem< T,
+  detail::linearsystem< T, INDEX,
     detail::dense_matrix_v< T, detail::column_oriented >,
-    detail::dense_matrix_v< T, detail::column_oriented >,
-    INDEX >
+    detail::dense_matrix_v< T, detail::column_oriented > >
 {
   // utility definitions
   typedef detail::dense_matrix_v< T, detail::column_oriented > matrix_t;
   typedef detail::dense_matrix_v< T, detail::column_oriented > vector_t;
-  typedef detail::linearsystem< T, matrix_t, vector_t, INDEX > linearsystem_t;
+  typedef detail::linearsystem< T, INDEX, matrix_t, vector_t > linearsystem_t;
 
   // framework interfacing
   static std::string type_name();
@@ -74,18 +73,18 @@ struct lss_API LAPACK : public
 
   /// Linear system solving
   LAPACK& solve() {
-    int n    = static_cast< int >(this->size(0));
-    int nrhs = static_cast< int >(this->size(2));
+    int n    = static_cast< int >(linearsystem_t::size(0));
+    int nrhs = static_cast< int >(linearsystem_t::size(2));
     int err  = 0;
     std::vector< int > ipiv(n);
 
     if (!m_A.size().is_square_size()) { err = -17; }
-    else if (typeid(T)==typeid(double)) { dgesv_( &n, &nrhs, (double*) &this->m_A.a[0], &n, &ipiv[0], (double*) &this->m_b.a[0], &n, &err ); }
-    else if (typeid(T)==typeid(float))  { sgesv_( &n, &nrhs, (float*)  &this->m_A.a[0], &n, &ipiv[0], (float*)  &this->m_b.a[0], &n, &err ); }
+    else if (typeid(T)==typeid(double)) { dgesv_( &n, &nrhs, (double*) &m_A.a[0], &n, &ipiv[0], (double*) &m_b.a[0], &n, &err ); }
+    else if (typeid(T)==typeid(float))  { sgesv_( &n, &nrhs, (float*)  &m_A.a[0], &n, &ipiv[0], (float*)  &m_b.a[0], &n, &err ); }
     else { err = -42; }
 
     std::ostringstream msg;
-    err==-17? msg << "LAPACK: system matrix size must be square" :
+    err==-17? msg << "LAPACK: system matrix must be square" :
     err==-42? msg << "LAPACK: precision not implemented: " << typeid(T).name() :
     err<0?    msg << "LAPACK: invalid " << err << "'th argument to dgesv_()/sgesv_()" :
     err>0?    msg << "LAPACK: triangular factor matrix U(" << err << ',' << err << ") is zero, so A is singular (not invertible)" :
@@ -103,6 +102,7 @@ struct lss_API LAPACK : public
     A() = _other.A();
     b() = _other.b();
     x() = _other.x();
+    m_idx = _other.m_idx;
     return *this;
   }
 
