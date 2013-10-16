@@ -11,6 +11,7 @@
 
 #include "LibLSS.hpp"
 #include "linearsystem.hpp"
+#include "detail/linearsystem.hpp"
 
 
 namespace cf3 {
@@ -26,33 +27,56 @@ extern "C"
 
 
 /**
- * example linear system solver, using LAPACK
+ * @brief example linear system solver, using LAPACK
  * (available in single and double precision, only works for square matrices)
  */
 template<
     typename T,
-    typename INDEX=index_hierarchy_t< index_hierarchy_t_end > >
-struct lss_API LAPACK :
-  public linearsystem<
-    T,
-    INDEX,
+    typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end > >
+struct lss_API LAPACK : public
+  linearsystem< T, INDEX >,
+  detail::linearsystem< T,
     detail::dense_matrix_v< T, detail::column_oriented >,
     detail::dense_matrix_v< T, detail::column_oriented > >
 {
   // utility definitions
   typedef detail::dense_matrix_v< T, detail::column_oriented > matrix_t;
   typedef detail::dense_matrix_v< T, detail::column_oriented > vector_t;
-  typedef linearsystem< T, INDEX, matrix_t, vector_t > linearsystem_base_t;
+  typedef linearsystem        < T, INDEX >              linearsystem_comp_t;
+  typedef detail::linearsystem< T, matrix_t, vector_t > linearsystem_base_t;
 
   // framework interfacing
   static std::string type_name();
-  LAPACK(const std::string& name) : linearsystem_base_t(name) {}
+  LAPACK(const std::string& name) : linearsystem_comp_t(name) {}
+  /*
   LAPACK(const size_t& _size_i=size_t(),
          const size_t& _size_j=size_t(),
          const size_t& _size_k=1,
          const T& _value=T() ) :
-    linearsystem_base_t(_size_i,_size_j,_size_k,_value) {}
+    linearsystem_comp_t(_size_i,_size_j,_size_k,_value) {}
+    */
 
+
+  /// Linear system resizing (consistently)
+  LAPACK& resize(
+      const size_t& _size_i,
+      const size_t& _size_j,
+      const size_t& _size_k=1,
+      const T& _value=T()) { linearsystem_base_t::resize(_size_i,_size_j,_size_k,_value); return *this; }
+
+  /// Linear system initialization from file(s)
+  LAPACK& initialize(
+      const std::string& _Afname,
+      const std::string& _bfname="",
+      const std::string& _xfname="" ) { linearsystem_base_t::initialize(_Afname,_bfname,_xfname); return *this; }
+
+  /// Linear system initialization from vectors of values (lists, in right context)
+  LAPACK& initialize(
+      const std::vector< T >& vA,
+      const std::vector< T >& vb=std::vector< T >(),
+      const std::vector< T >& vx=std::vector< T >()) { linearsystem_base_t::initialize(vA,vb,vx); return *this; }
+
+  /// Linear system solving
   LAPACK& solve() {
     int n    = static_cast< int >(this->size(0));
     int nrhs = static_cast< int >(this->size(2));
@@ -74,25 +98,20 @@ struct lss_API LAPACK :
       throw std::runtime_error(msg.str());
 
     // solution is in b, so swap with x (with A square, size b = size x)
-    this->m_b.swap(this->m_x);
+    b().swap(x());
+    b().clear();
     return *this;
   }
 
-  size_t size(const size_t& d) {
-    //FIXME return the right size
-    return 42;
+  LAPACK& operator=(const LAPACK& _other) {
+    A() = _other.m_A;
+    return *this;
   }
 
-
-  // storage
- private:
-  matrix_t m_A;
-  vector_t m_b;
-  vector_t m_x;
+  size_t size(const size_t& d) { return linearsystem_base_t::size(d); }
 
 
- public: //FIXME: permissions
-
+ public:
         matrix_t& A()       { return m_A; }
         vector_t& b()       { return m_b; }
         vector_t& x()       { return m_x; }
@@ -100,43 +119,11 @@ struct lss_API LAPACK :
   const vector_t& b() const { return m_b; }
   const vector_t& x() const { return m_x; }
 
-  /*
 
-        T& A(const size_t& i, const size_t& j)         { return m_A(i,j); }
-        T& b(const size_t& i, const size_t& j=0)       { return m_b(i,j); }
-        T& x(const size_t& i, const size_t& j=0)       { return m_x(i,j); }
-  const T& A(const size_t& i, const size_t& j)   const { return m_A(i,j); }
-  const T& b(const size_t& i, const size_t& j=0) const { return m_b(i,j); }
-  const T& x(const size_t& i, const size_t& j=0) const { return m_x(i,j); }
-
-  size_t A_size(const size_t& _d)   const { return m_A.size(_d); }
-  size_t b_size(const size_t& _d=0) const { return m_b.size(_d); }
-  size_t x_size(const size_t& _d=0) const { return m_x.size(_d); }
-
-  LAPACK& A_resize(const size_t& _size_i, const size_t& _size_j,   const T& _value=T()) { m_A.resize(_size_i,_size_j,_value); return *this; }
-  LAPACK& b_resize(const size_t& _size_i, const size_t& _size_j=1, const T& _value=T()) { m_b.resize(_size_i,_size_j,_value); return *this; }
-  LAPACK& x_resize(const size_t& _size_i, const size_t& _size_j=1, const T& _value=T()) { m_x.resize(_size_i,_size_j,_value); return *this; }
-
-  LAPACK& A_initialize(const std::vector< T >& _vector) { m_A.initialize(_vector); return *this; }
-  LAPACK& b_initialize(const std::vector< T >& _vector) { m_b.initialize(_vector); return *this; }
-  LAPACK& x_initialize(const std::vector< T >& _vector) { m_x.initialize(_vector); return *this; }
-  LAPACK& A_initialize(const std::string& _fname) { m_A.initialize(_fname); return *this; }
-  LAPACK& b_initialize(const std::string& _fname) { m_b.initialize(_fname); return *this; }
-  LAPACK& x_initialize(const std::string& _fname) { m_x.initialize(_fname); return *this; }
-
-  void A_clear() { m_A.clear(); }
-  void b_clear() { m_b.clear(); }
-  void x_clear() { m_x.clear(); }
-
-  void A_print(std::ostream& o) { m_A.print(o); }
-  void b_print(std::ostream& o) { m_b.print(o); }
-  void x_print(std::ostream& o) { m_x.print(o); }
-
-  LAPACK& operator=(const LAPACK& _other) {
-    m_A = _other.m_A;
-    return *this;
-  }
-  */
+ protected:
+  matrix_t m_A;
+  vector_t m_b;
+  vector_t m_x;
 
 };
 

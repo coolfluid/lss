@@ -10,6 +10,8 @@ coolfluid3_add_library(
     detail/utilities.cpp
     detail/utilities.hpp
     linearsystem.hpp
+    LAPACK.cpp
+    LAPACK.hpp
   )
 
 coolfluid_mark_not_orphan(
@@ -17,8 +19,6 @@ coolfluid_mark_not_orphan(
     GMRES.hpp
     GaussianElimination.cpp
     GaussianElimination.hpp
-    LAPACK.cpp
-    LAPACK.hpp
   reference/linearsystem.hpp
   reference/lss_index.cpp
   reference/lss_index.hpp
