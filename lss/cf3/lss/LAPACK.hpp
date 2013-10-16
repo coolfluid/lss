@@ -51,7 +51,7 @@ struct lss_API LAPACK : public
          const size_t& _size_i=size_t(),
          const size_t& _size_j=size_t(),
          const size_t& _size_k=1,
-         const T& _value=T() ) : linearsystem(name) { linearsystem_t::resize(_size_i,_size_j,_size_k,_value); }
+         const double& _value=T() ) : linearsystem(name) { linearsystem_t::resize(_size_i,_size_j,_size_k,_value); }
 
   /// Linear system resizing (consistently)
   LAPACK& resize(
@@ -70,26 +70,7 @@ struct lss_API LAPACK : public
   LAPACK& initialize(
       const std::vector< double >& vA,
       const std::vector< double >& vb=std::vector< double >(),
-      const std::vector< double >& vx=std::vector< double >())
-  {
-    if (typeid(T)!=typeid(double)) {
-      std::vector< T >
-        another_A(vA.size()),
-        another_b(vb.size()),
-        another_x(vx.size());
-      std::transform( vA.begin(),vA.end(),another_A.begin(),detail::storage_conversion_t< double, T >() );
-      std::transform( vb.begin(),vb.end(),another_b.begin(),detail::storage_conversion_t< double, T >() );
-      std::transform( vx.begin(),vx.end(),another_x.begin(),detail::storage_conversion_t< double, T >() );
-      linearsystem_t::initialize(another_A,another_b,another_x);
-    }
-    else {
-      linearsystem_t::initialize(
-        (const std::vector< T >&) vA,
-        (const std::vector< T >&) vb,
-        (const std::vector< T >&) vx );
-    }
-    return *this;
-  }
+      const std::vector< double >& vx=std::vector< double >()) { linearsystem_t::initialize(vA,vb,vx); return *this; }
 
   /// Linear system solving
   LAPACK& solve() {

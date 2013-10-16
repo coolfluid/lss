@@ -55,11 +55,12 @@ class linearsystem
       const size_t& _size_i,
       const size_t& _size_j,
       const size_t& _size_k=1,
-      const T& _value=T()) {
+      const double& _value=T()) {
     consistent(_size_i,_size_j,_size_i,_size_k,_size_j,_size_k);
-    A().resize(_size_i,_size_j,_value);
-    b().resize(_size_i,_size_k,_value);
-    x().resize(_size_j,_size_k,_value);
+    const T value(static_cast< T >(_value));
+    A().resize(_size_i,_size_j,value);
+    b().resize(_size_i,_size_k,value);
+    x().resize(_size_j,_size_k,value);
     return *this;
   }
 
@@ -77,12 +78,31 @@ class linearsystem
 
   /// Initialize linear system from vectors of values (lists, in the right context)
   linearsystem& initialize(
-      const std::vector< T >& vA,
-      const std::vector< T >& vb=std::vector< T >(),
-      const std::vector< T >& vx=std::vector< T >()) {
-    if (vA.size()) A().initialize(vA);
-    if (vb.size()) b().initialize(vb); else b().resize(size(0),1);
-    if (vx.size()) x().initialize(vx); else x().resize(size(1),size(2));
+      const std::vector< double >& vA,
+      const std::vector< double >& vb=std::vector< T >(),
+      const std::vector< double >& vx=std::vector< T >()) {
+
+    // input parameter type insulation from the templated base class
+    const bool conversion_needed(typeid(T)!=typeid(double));
+    std::vector< T >
+      another_A(vA.size()),
+      another_b(vb.size()),
+      another_x(vx.size());
+    if (conversion_needed) {
+      std::transform( vA.begin(),vA.end(),another_A.begin(),storage_conversion_t< double, T >() );
+      std::transform( vb.begin(),vb.end(),another_b.begin(),storage_conversion_t< double, T >() );
+      std::transform( vx.begin(),vx.end(),another_x.begin(),storage_conversion_t< double, T >() );
+    }
+
+    // propper initialization of linear system components
+    std::vector< T >&
+      correct_A(conversion_needed? another_A : (std::vector< T >&) vA),
+      correct_b(conversion_needed? another_b : (std::vector< T >&) vb),
+      correct_x(conversion_needed? another_x : (std::vector< T >&) vx);
+    if (vA.size()) A().initialize(correct_A);
+    if (vb.size()) b().initialize(correct_b); else b().resize(size(0),1);
+    if (vx.size()) x().initialize(correct_x); else x().resize(size(1),size(2));
+
     consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
     return *this;
   }
