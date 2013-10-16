@@ -17,33 +17,12 @@
 #include <typeinfo>
 #include <vector>
 
+#include "index.hpp"
+
 
 namespace cf3 {
 namespace lss {
 namespace detail {
-
-
-/* -- basic types for index manipulation ------------------------------------ */
-
-
-/// @brief Index pair, fundamental dereferencing type
-struct idx_t
-{
-//  size_t ij[2];  // TODO: check this option too?
-  size_t i, j;
-  idx_t(const size_t& _i=std::numeric_limits< size_t >::max(),
-        const size_t& _j=std::numeric_limits< size_t >::max()) : i(_i), j(_j) {}
-
-  bool operator<  (const idx_t& _other) const { return (i<_other.i? true : i>_other.i? false : (j<_other.j)); }
-  bool operator>  (const idx_t& _other) const { return idx_t(_other)<*this; }
-  bool operator== (const idx_t& _other) const { return i==_other.i && j==_other.j; }
-  bool operator!= (const idx_t& _other) const { return i!=_other.i || j!=_other.j; }
-
-  idx_t& invalidate() { return (*this = idx_t()); }
-  bool is_valid_size()  const { return operator>(idx_t(0,0)) && operator<(idx_t()); }
-  bool is_square_size() const { return i==j; }
-  bool is_diagonal()    const { return is_square_size(); }
-};
 
 
 /* -- indexing conversion/application types --------------------------------- */
@@ -62,17 +41,6 @@ template< typename Tin, typename Tout >
 struct storage_conversion_t
 {
   Tout operator()(const Tin& in) { return static_cast< Tout >(in); }
-};
-
-
-/// @brief Index conversion base class (pure abstract)
-struct index_conversion_t
-{
-  virtual ~index_conversion_t() {}
-  virtual void clear() = 0;
-  virtual size_t size()                   const = 0;
-  virtual size_t size(const size_t& d)    const = 0;
-  virtual idx_t& dereference(idx_t& _idx) const = 0;
 };
 
 

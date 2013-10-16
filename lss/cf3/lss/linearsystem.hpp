@@ -45,27 +45,35 @@ class linearsystem :
   virtual ~linearsystem() {}
 
 
-  // -- Interfacing
+  // -- Interfacing (pure)
  public:
 
-  /// Resize the linear system (consistently)
-  linearsystem& resize(
+  /// Linear system resizing (consistently)
+  virtual linearsystem& resize(
       const size_t& _size_i,
       const size_t& _size_j,
       const size_t& _size_k=1,
       const T& _value=T()) = 0;
 
-  /// Initialize linear system from file(s)
-  linearsystem& initialize(
+  /// Linear system initialization from file(s)
+  virtual linearsystem& initialize(
       const std::string& _Afname,
       const std::string& _bfname="",
       const std::string& _xfname="" ) = 0;
 
-  /// Initialize linear system from vectors of values (lists, in right context)
-  linearsystem& initialize(
+  /// Linear system initialization from vectors of values (lists, in right context)
+  virtual linearsystem& initialize(
       const std::vector< T >& vA,
       const std::vector< T >& vb=std::vector< T >(),
       const std::vector< T >& vx=std::vector< T >()) = 0;
+
+  /// Linear system solving
+  virtual linearsystem& solve() = 0;
+
+
+#if 0
+  // -- Interfacing
+ public:
 
   /// Value assignment (operator)
   linearsystem& operator=(const T& _value) { return this->operator =(_value); }
@@ -81,13 +89,15 @@ class linearsystem :
 
   /// Checks whether the linear system matrix is empty
   bool empty() { return this->empty(); }
+#endif
 
-  /// Linear system solving (execute)
-  virtual void execute() = 0;
+  /// Linear system solving, aliased from execute
+  void execute() { solve(); }
 
-  // storage
- protected:
-  index_t m_idx;  // (only indexing is part of the base type)
+
+  // -- Storage
+ private:
+  index_t m_idx;
 
 };
 
