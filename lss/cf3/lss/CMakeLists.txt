@@ -9,7 +9,7 @@ coolfluid3_add_library(
     detail/matrix.hpp
     detail/utilities.cpp
     detail/utilities.hpp
-    linearsystem.hpp
+    linearsystem.h
     LAPACK.cpp
     LAPACK.hpp
   )

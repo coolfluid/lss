@@ -27,14 +27,8 @@ namespace lss {
 /* note: the class name forces the distinction of (this) acessible plugin     */
 /* and the detail::linearsystem building class (to avoid 'using namespace's)  */
 
-template<
-    typename T,
-    typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end > >
-class linearsystem :
-  public common::Action
+class linearsystem : public common::Action
 {
-  typedef INDEX index_t;
-
   // -- Construction and destruction
  public:
 
@@ -53,7 +47,7 @@ class linearsystem :
       const size_t& _size_i,
       const size_t& _size_j,
       const size_t& _size_k=1,
-      const T& _value=T()) = 0;
+      const double& _value=double()) = 0;
 
   /// Linear system initialization from file(s)
   virtual linearsystem& initialize(
@@ -63,41 +57,15 @@ class linearsystem :
 
   /// Linear system initialization from vectors of values (lists, in right context)
   virtual linearsystem& initialize(
-      const std::vector< T >& vA,
-      const std::vector< T >& vb=std::vector< T >(),
-      const std::vector< T >& vx=std::vector< T >()) = 0;
+      const std::vector< double >& vA,
+      const std::vector< double >& vb=std::vector< double >(),
+      const std::vector< double >& vx=std::vector< double >()) = 0;
 
   /// Linear system solving
   virtual linearsystem& solve() = 0;
 
-
-#if 0
-  // -- Interfacing
- public:
-
-  /// Value assignment (operator)
-  linearsystem& operator=(const T& _value) { return this->operator =(_value); }
-
-  /// Value assignment (method)
-  linearsystem& assign(const T& _value=T()) { return this->operator=(_value); }
-
-  /// Clear the contents
-  linearsystem& clear() { return this->clear(); }
-
-  /// Returns the specific dimension of the system
-  size_t size(const size_t& d) const { return this->size(d); }
-
-  /// Checks whether the linear system matrix is empty
-  bool empty() { return this->empty(); }
-#endif
-
   /// Linear system solving, aliased from execute
   void execute() { solve(); }
-
-
-  // -- Storage
- private:
-  index_t m_idx;
 
 };
 
