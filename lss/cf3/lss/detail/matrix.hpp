@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "index.hpp"
+#include "utilities.hpp"
 
 
 namespace cf3 {
@@ -273,11 +274,11 @@ struct dense_matrix_v :
     return *this;
   }
   dense_matrix_v& zerorow(const size_t& i) {
-    if (ORIENT)
-      std::fill_n(a.begin()+i*size(1),size(1),T());
-    else
+    if (ORIENT) std::fill_n(a.begin()+i*size(1),size(1),T());
+    else {
       for (size_t j=0, k=i; j<size(1); ++j, k+=size(0))
         a[k] = T();
+    }
     return *this;
   }
 
