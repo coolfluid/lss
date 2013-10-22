@@ -78,6 +78,11 @@ namespace {
 #endif
 
 
+#if 0
+typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end > >
+#endif
+
+
 /// @brief Matrix indexer assuming a irregular size block
 struct index_irregular_block_t : index_t
 {

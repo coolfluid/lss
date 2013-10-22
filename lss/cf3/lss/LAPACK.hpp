@@ -30,19 +30,18 @@ extern "C"
  * @brief example linear system solver, using LAPACK
  * (available in single and double precision, only works for square matrices)
  */
-template<
-    typename T,
-    typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end > >
+template< typename T >
 struct lss_API LAPACK : public
   linearsystem,
-  detail::linearsystem< T, INDEX,
+  detail::linearsystem< T,
     detail::dense_matrix_v< T, detail::column_oriented >,
     detail::dense_matrix_v< T, detail::column_oriented > >
 {
   // utility definitions
   typedef detail::dense_matrix_v< T, detail::column_oriented > matrix_t;
   typedef detail::dense_matrix_v< T, detail::column_oriented > vector_t;
-  typedef detail::linearsystem< T, INDEX, matrix_t, vector_t > linearsystem_t;
+  typedef detail::linearsystem< T, matrix_t, vector_t > linearsystem_t;
+
 
   // framework interfacing
   static std::string type_name();
@@ -102,9 +101,9 @@ struct lss_API LAPACK : public
     A() = _other.A();
     b() = _other.b();
     x() = _other.x();
-    m_idx = _other.m_idx;
     return *this;
   }
+
 
  public:
         matrix_t& A()       { return m_A; }
@@ -119,7 +118,6 @@ struct lss_API LAPACK : public
   matrix_t m_A;
   vector_t m_b;
   vector_t m_x;
-  INDEX m_idx;
 
 };
 
