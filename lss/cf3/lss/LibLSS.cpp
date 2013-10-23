@@ -18,11 +18,10 @@ cf3::common::RegistLibrary< LibLSS > LibLSS;
 
 void LibLSS::initiate()
 {
-  using namespace common;
   if (m_is_initiated)
     return;
 
-  Handle< Component > lib = Core::instance().libraries().get_child("cf3.muphys");
+  Handle< common::Component > lib = common::Core::instance().libraries().get_child("cf3.muphys");
   cf3_assert(lib);
 
   m_is_initiated = true;

@@ -346,8 +346,7 @@ struct sparse_matrix_csr :
   }
 
   sparse_matrix_csr& operator=(const T& _value) {
-    for (size_t i=0; i<size(); ++i)
-      a[i] = _value;
+    a.assign(a.size(),_value);
     return *this;
   }
 
@@ -361,7 +360,7 @@ struct sparse_matrix_csr :
   }
 
   sparse_matrix_csr& clear() {
-    size().invalidate();
+    matrix_base_t::m_size.invalidate();
     idx.clear();
     a.clear();
     return *this;

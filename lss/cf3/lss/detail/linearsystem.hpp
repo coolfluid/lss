@@ -120,6 +120,14 @@ class linearsystem
     return *this;
   }
 
+  /// Zero row in all system components
+  linearsystem& zerorow(const size_t r) {
+    A().zerorow(r);
+    b().zerorow(r);
+    x().zerorow(r);
+    return *this;
+  }
+
   /// Returns the specific dimension of the system
   size_t size(const size_t& d) const {
     return (d< 2? A().size(d) :

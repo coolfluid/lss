@@ -5,7 +5,7 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-//include "system"
+#include <cmath>
 
 #include "common/Builder.hpp"
 #include "GMRES.hpp"
@@ -18,54 +18,21 @@ namespace lss {
 common::ComponentBuilder< GMRES, common::Component, LibLSS > Builder_GMRES;
 
 
-GMRES::GMRES(const std::string& name) :
-  linearsystem_t(name),
-  c__1(1)
+std::string GMRES::type_name() { return "GMRES"; }
+GMRES::GMRES(const std::string& name,
+      const size_t& _size_i,
+      const size_t& _size_j,
+      const size_t& _size_k,
+      const double& _value) : linearsystem(name), c__1(1)
 {
-  // set component options level
-  mark_basic();
-
-//  // configure options
-//  options().add("IA",std::vector< double >()).mark_basic().link_to(&linearsystem< double >::m_swap)
-//    .attach_trigger(boost::bind( &GMRES::trigger_IA, this ));
-//  options().add("JA",std::vector< double >()).mark_basic().link_to(&linearsystem< double >::m_swap)
-//    .attach_trigger(boost::bind( &GMRES::trigger_JA, this ));
-}
-
-
-GMRES& GMRES::resize(size_t Nequations, size_t Nvariables, const double& v)
-{
-  if (!Nequations || !Nvariables)
-    return clear();
-  m_A.resize(Nequations,Nvariables);
-  linearsystem_t::m_b.assign(Nequations,v);
-  linearsystem_t::m_x.assign(Nvariables,v);
-  return *this;
-}
-
-
-GMRES& GMRES::zerorow(const size_t r)
-{
-  m_A.zerorow(r);
-  linearsystem_t::b(r) = 0;
-  return *this;
-}
-
-
-GMRES& GMRES::clear()
-{
-  m_A.clear();
-  linearsystem_t::m_b.clear();
-  linearsystem_t::m_x.clear();
-  return *this;
+  linearsystem_t::resize(_size_i,_size_j,_size_k,_value);
 }
 
 
 GMRES& GMRES::solve()
 {
-#if 0
   int n = m_A.size(0);
-  int iwk = m_A.nnz;
+  int iwk = m_A.idx.nnz;
   int ierr;
   double eps = 1e-5;  // tolerance, process is stopped when eps>=||current residual||/||initial residual||
   int im     = 50;    // size of krylov subspace (should not exceed 50)
@@ -95,7 +62,7 @@ GMRES& GMRES::solve()
   }
 
   /*int newiwk = 0;*/
-  /*int newiwk =*/ iluk(&n,m_A.a,m_A.ja,m_A.ia,&lfil,
+  /*int newiwk =*/ iluk(&n,&m_A.a[0],&m_A.idx.ja[0],&m_A.idx.ia[0],&lfil,
                 alu,jlu,ju,levs,&iwk,w,jw,&ierr);
 
   delete[] w;
@@ -103,27 +70,22 @@ GMRES& GMRES::solve()
   delete[] levs;
 
   double *vv = new double[n*(im+1)];
-  double *dblRHS = new double[n];
-  double *dblRES = new double[n];
+  std::vector< double >
+    dblRES(n,0.),
+    dblRHS(n);
+  for (size_t i=0; i<n; ++i)
+    dblRHS[i] = b().operator()(i);
 
-  for (unsigned index=0; index<n; index++) {
-    dblRHS[index] = linearsystem_t::b(index);
-    dblRES[index] = 0.;
-  }
+  pgmres(&n,&im,&dblRHS[0],&dblRES[0],vv,&eps,&maxits,&iout,
+         &m_A.a[0],&m_A.idx.ja[0],&m_A.idx.ia[0],alu,jlu,ju,&ierr);
 
-  pgmres(&n,&im,dblRHS,dblRES,vv,&eps,&maxits,&iout,
-         m_A.a,m_A.ja,m_A.ia,alu,jlu,ju,&ierr);
-
-  for (unsigned index=0; index<m_A.size(0); index++)
-    linearsystem_t::x(index) = dblRES[index];
+  for (size_t i=0; i<m_A.size(0); ++i)
+    x().operator()(i) = dblRES[i];
 
   delete [] alu;
   delete [] jlu;
   delete [] ju;
   delete [] vv;
-  delete [] dblRHS;
-  delete [] dblRES;
-#endif
 
   return *this;
 }
@@ -1286,20 +1248,6 @@ L991:
 
 /* L999: */
     *ierr = -1;
-}
-
-
-void GMRES::trigger_IA()
-{
-  std::cout << "here: GMRES::trigger_IA()" << std::endl;
-  linearsystem_t::m_swap.clear();
-}
-
-
-void GMRES::trigger_JA()
-{
-  std::cout << "here: GMRES::trigger_JA()" << std::endl;
-  linearsystem_t::m_swap.clear();
 }
 
 
