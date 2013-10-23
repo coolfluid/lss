@@ -53,7 +53,7 @@ struct matrix
 
   // assignments (defer to implementation)
   matrix& operator=(const matrix& _other)   { return Impl::operator=(_other); }
-  matrix& operator=(const T& _value)        { return Impl::resize(m_size.i,m_size.j,_value); }
+  matrix& operator=(const T& _value)        { return Impl::initialize(m_size.i,m_size.j,_value); }
   matrix& assign(const std::vector< T >& v) { return Impl::assign(v); }
 
   // utilities
@@ -95,7 +95,7 @@ struct matrix
   }
 
   // resizing and clearing (defer to implementation)
-  matrix& resize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) { return Impl::resize(_size_i,_size_j,_value); }
+  matrix& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) { return Impl::initialize(_size_i,_size_j,_value); }
   matrix& clear()                   { return Impl::clear();     }
   matrix& zerorow(const size_t& _i) { return Impl::zerorow(_i); }
 
@@ -161,7 +161,7 @@ struct dense_matrix_vv :
   }
 
   dense_matrix_vv& operator=(const T& _value) {
-    return resize(size(0),size(1),_value);
+    return initialize(size(0),size(1),_value);
   }
 
   void swap(dense_matrix_vv& other) {
@@ -172,7 +172,7 @@ struct dense_matrix_vv :
   std::ostream& print(std::ostream& o) const { return matrix_base_t::print(o); }
 
   // resizing and clearing
-  dense_matrix_vv& resize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
+  dense_matrix_vv& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
     if (idx_t(_size_i,_size_j).is_valid_size()) {
       matrix_base_t::m_size = idx_t(_size_i,_size_j);
       a.assign(ORIENT? size(0):size(1),std::vector< T >(
@@ -250,7 +250,7 @@ struct dense_matrix_v :
   }
 
   dense_matrix_v& operator=(const T& _value) {
-    return resize(size(0),size(1),_value);
+    return initialize(size(0),size(1),_value);
   }
 
   void swap(dense_matrix_v& other) {
@@ -261,7 +261,7 @@ struct dense_matrix_v :
   std::ostream& print(std::ostream& o) const { return matrix_base_t::print(o); }
 
   // resizing and clearing
-  dense_matrix_v& resize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
+  dense_matrix_v& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
     if (idx_t(_size_i,_size_j).is_valid_size()) {
       matrix_base_t::m_size = idx_t(_size_i,_size_j);
       a.assign(size(0)*size(1),_value);
@@ -346,13 +346,12 @@ struct sparse_matrix_csr :
   }
 
   sparse_matrix_csr& operator=(const T& _value) {
-    for (size_t i=0; i<size(); ++i)
-      a[i] = _value;
+    a.assign(a.size(),_value);
     return *this;
   }
 
   // resizing and clearing
-  sparse_matrix_csr& resize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
+  sparse_matrix_csr& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
     if (idx_t(_size_i,_size_j)==matrix_base_t::m_size) {
       return operator=(_value);
     }
@@ -361,7 +360,7 @@ struct sparse_matrix_csr :
   }
 
   sparse_matrix_csr& clear() {
-    size().invalidate();
+    matrix_base_t::m_size.invalidate();
     idx.clear();
     a.clear();
     return *this;

@@ -10,7 +10,8 @@
 
 
 #include "LibLSS.hpp"
-#include "linearsystem.hpp"
+#include "linearsystem.h"
+#include "detail/linearsystem.hpp"
 
 
 namespace cf3 {
@@ -20,38 +21,49 @@ namespace lss {
 /**
  * implementation of a serial GMRES linear system solver (double p.)
  */
-class GMRES :
-  public linearsystem< double >
+class GMRES : public
+  linearsystem,
+  detail::linearsystem< double,
+    detail::sparse_matrix_csr< double, 1 >,
+    detail::dense_matrix_v< double > >
 {
-  typedef linearsystem< double > linearsystem_t;
+  // utility definitions
+  typedef detail::sparse_matrix_csr< double, 1 > matrix_t;
+  typedef detail::dense_matrix_v< double > vector_t;
+  typedef detail::linearsystem< double, matrix_t, vector_t > linearsystem_t;
 
- public:
+
   // framework interfacing
-  static std::string type_name() { return "GMRES"; } // (mandatory!)
-  GMRES(const std::string& name);
-
  public:
-  // linear system solver addressing
-  const double& A(const size_t i) const { return m_A(i); }
-        double& A(const size_t i)       { return m_A(i); }
-  const double& A(const size_t r, const size_t c) const { return m_A(r,c); }
-        double& A(const size_t r, const size_t c)       { return m_A(r,c); }
+  static std::string type_name();
+  GMRES(const std::string& name,
+        const size_t& _size_i=size_t(),
+        const size_t& _size_j=size_t(),
+        const size_t& _size_k=1,
+        const double& _value=double() );
 
- public:
-  // linear system solver interfacing
-  size_t size()               const { return m_A.size(); }
-  size_t size(const size_t d) const { return m_A.size(d); }
+  /// Initialize the linear system (resizing consistently)
+  GMRES& initialize(
+      const size_t& _size_i,
+      const size_t& _size_j,
+      const size_t& _size_k=1,
+      const double& _value=double()) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); return *this; }
 
-  /*
-   void initialize(const std::vector< std::vector< size_t > >& nz) { m_A.initialize(nz); }
-   */
+  /// Linear system initialization from file(s)
+  GMRES& initialize(
+      const std::string& _Afname,
+      const std::string& _bfname="",
+      const std::string& _xfname="" ) { linearsystem_t::initialize(_Afname,_bfname,_xfname); return *this; }
 
-  GMRES& resize(size_t Nequations, size_t Nvariables, const double& v=double());
-  GMRES& zerorow(const size_t r);
-  GMRES& clear();
+  /// Linear system initialization from vectors of values (lists, in right context)
+  GMRES& initialize(
+      const std::vector< double >& vA,
+      const std::vector< double >& vb=std::vector< double >(),
+      const std::vector< double >& vx=std::vector< double >()) { linearsystem_t::initialize(vA,vb,vx); return *this; }
+
+  /// Linear system solving
   GMRES& solve();
 
-  void output_A(std::ostream& out) const { m_A.output(out); }
 
  private:
   // internal functions
@@ -66,13 +78,23 @@ class GMRES :
   void pgmres( int *n, int *im, double *rhs, double *sol, double *vv,
                double *eps, int *maxits, int*iout, double *aa, int *ja, int *ia,
                double *alu, int *jlu, int *ju, int *ierr );
-  void trigger_IA();
-  void trigger_JA();
 
-  // members
- private:
-  sparse_matrix_csr< double, 1 > m_A;
+
+ public:
+        matrix_t& A()       { return m_A; }
+        vector_t& b()       { return m_b; }
+        vector_t& x()       { return m_x; }
+  const matrix_t& A() const { return m_A; }
+  const vector_t& b() const { return m_b; }
+  const vector_t& x() const { return m_x; }
+
+
+ protected:
+  matrix_t m_A;
+  vector_t m_b;
+  vector_t m_x;
   int c__1;
+
 };
 
 

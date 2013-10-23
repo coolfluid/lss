@@ -10,7 +10,7 @@
 
 
 #include "LibLSS.hpp"
-#include "linearsystem.hpp"
+#include "linearsystem.h"
 #include "detail/linearsystem.hpp"
 
 
@@ -30,11 +30,9 @@ extern "C"
  * @brief example linear system solver, using LAPACK
  * (available in single and double precision, only works for square matrices)
  */
-template<
-    typename T,
-    typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end > >
+template< typename T >
 struct lss_API LAPACK : public
-  linearsystem< T, INDEX >,
+  linearsystem,
   detail::linearsystem< T,
     detail::dense_matrix_v< T, detail::column_oriented >,
     detail::dense_matrix_v< T, detail::column_oriented > >
@@ -42,54 +40,50 @@ struct lss_API LAPACK : public
   // utility definitions
   typedef detail::dense_matrix_v< T, detail::column_oriented > matrix_t;
   typedef detail::dense_matrix_v< T, detail::column_oriented > vector_t;
-  typedef linearsystem        < T, INDEX >              linearsystem_comp_t;
-  typedef detail::linearsystem< T, matrix_t, vector_t > linearsystem_base_t;
+  typedef detail::linearsystem< T, matrix_t, vector_t > linearsystem_t;
+
 
   // framework interfacing
   static std::string type_name();
-  LAPACK(const std::string& name) : linearsystem_comp_t(name) {}
-  /*
-  LAPACK(const size_t& _size_i=size_t(),
+  LAPACK(const std::string& name,
+         const size_t& _size_i=size_t(),
          const size_t& _size_j=size_t(),
          const size_t& _size_k=1,
-         const T& _value=T() ) :
-    linearsystem_comp_t(_size_i,_size_j,_size_k,_value) {}
-    */
+         const double& _value=T() ) : linearsystem(name) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); }
 
-
-  /// Linear system resizing (consistently)
-  LAPACK& resize(
+  /// Initialize the linear system (resizing consistently)
+  LAPACK& initialize(
       const size_t& _size_i,
       const size_t& _size_j,
       const size_t& _size_k=1,
-      const T& _value=T()) { linearsystem_base_t::resize(_size_i,_size_j,_size_k,_value); return *this; }
+      const double& _value=double()) { linearsystem_t::initialize(_size_i,_size_j,_size_k,static_cast< T >(_value)); return *this; }
 
   /// Linear system initialization from file(s)
   LAPACK& initialize(
       const std::string& _Afname,
       const std::string& _bfname="",
-      const std::string& _xfname="" ) { linearsystem_base_t::initialize(_Afname,_bfname,_xfname); return *this; }
+      const std::string& _xfname="" ) { linearsystem_t::initialize(_Afname,_bfname,_xfname); return *this; }
 
   /// Linear system initialization from vectors of values (lists, in right context)
   LAPACK& initialize(
-      const std::vector< T >& vA,
-      const std::vector< T >& vb=std::vector< T >(),
-      const std::vector< T >& vx=std::vector< T >()) { linearsystem_base_t::initialize(vA,vb,vx); return *this; }
+      const std::vector< double >& vA,
+      const std::vector< double >& vb=std::vector< double >(),
+      const std::vector< double >& vx=std::vector< double >()) { linearsystem_t::initialize(vA,vb,vx); return *this; }
 
   /// Linear system solving
   LAPACK& solve() {
-    int n    = static_cast< int >(this->size(0));
-    int nrhs = static_cast< int >(this->size(2));
+    int n    = static_cast< int >(linearsystem_t::size(0));
+    int nrhs = static_cast< int >(linearsystem_t::size(2));
     int err  = 0;
     std::vector< int > ipiv(n);
 
     if (!m_A.size().is_square_size()) { err = -17; }
-    else if (typeid(T)==typeid(double)) { dgesv_( &n, &nrhs, (double*) &this->m_A.a[0], &n, &ipiv[0], (double*) &this->m_b.a[0], &n, &err ); }
-    else if (typeid(T)==typeid(float))  { sgesv_( &n, &nrhs, (float*)  &this->m_A.a[0], &n, &ipiv[0], (float*)  &this->m_b.a[0], &n, &err ); }
+    else if (typeid(T)==typeid(double)) { dgesv_( &n, &nrhs, (double*) &m_A.a[0], &n, &ipiv[0], (double*) &m_b.a[0], &n, &err ); }
+    else if (typeid(T)==typeid(float))  { sgesv_( &n, &nrhs, (float*)  &m_A.a[0], &n, &ipiv[0], (float*)  &m_b.a[0], &n, &err ); }
     else { err = -42; }
 
     std::ostringstream msg;
-    err==-17? msg << "LAPACK: system matrix size must be square" :
+    err==-17? msg << "LAPACK: system matrix must be square" :
     err==-42? msg << "LAPACK: precision not implemented: " << typeid(T).name() :
     err<0?    msg << "LAPACK: invalid " << err << "'th argument to dgesv_()/sgesv_()" :
     err>0?    msg << "LAPACK: triangular factor matrix U(" << err << ',' << err << ") is zero, so A is singular (not invertible)" :
@@ -102,13 +96,6 @@ struct lss_API LAPACK : public
     b().clear();
     return *this;
   }
-
-  LAPACK& operator=(const LAPACK& _other) {
-    A() = _other.m_A;
-    return *this;
-  }
-
-  size_t size(const size_t& d) { return linearsystem_base_t::size(d); }
 
 
  public:

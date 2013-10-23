@@ -40,7 +40,7 @@ class linearsystem
       const size_t& _size_i=size_t(),
       const size_t& _size_j=size_t(),
       const size_t& _size_k=1,
-      const T& _value=T() ) { resize(_size_i,_size_j,_size_k,_value); }
+      const T& _value=T() ) { initialize(_size_i,_size_j,_size_k,_value); }
 
   /// Destruct the linear system
   virtual ~linearsystem() {}
@@ -49,16 +49,17 @@ class linearsystem
   // -- Interfacing
  public:
 
-  /// Resize the linear system (consistently)
-  linearsystem& resize(
+  /// Initialize the linear system (resizing consistently)
+  linearsystem& initialize(
       const size_t& _size_i,
       const size_t& _size_j,
       const size_t& _size_k=1,
-      const T& _value=T()) {
+      const double& _value=T()) {
     consistent(_size_i,_size_j,_size_i,_size_k,_size_j,_size_k);
-    A().resize(_size_i,_size_j,_value);
-    b().resize(_size_i,_size_k,_value);
-    x().resize(_size_j,_size_k,_value);
+    const T value(static_cast< T >(_value));
+    A().initialize(_size_i,_size_j,value);
+    b().initialize(_size_i,_size_k,value);
+    x().initialize(_size_j,_size_k,value);
     return *this;
   }
 
@@ -68,26 +69,53 @@ class linearsystem
       const std::string& _bfname="",
       const std::string& _xfname="" ) {
     if (_Afname.length()) A().initialize(_Afname);
-    if (_bfname.length()) b().initialize(_bfname); else b().resize(size(0),1);
-    if (_xfname.length()) x().initialize(_xfname); else x().resize(size(1),size(2));
+    if (_bfname.length()) b().initialize(_bfname); else b().initialize(size(0),1);
+    if (_xfname.length()) x().initialize(_xfname); else x().initialize(size(1),size(2));
     consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
     return *this;
   }
 
   /// Initialize linear system from vectors of values (lists, in the right context)
   linearsystem& initialize(
-      const std::vector< T >& vA,
-      const std::vector< T >& vb=std::vector< T >(),
-      const std::vector< T >& vx=std::vector< T >()) {
-    if (vA.size()) A().initialize(vA);
-    if (vb.size()) b().initialize(vb); else b().resize(size(0),1);
-    if (vx.size()) x().initialize(vx); else x().resize(size(1),size(2));
+      const std::vector< double >& vA,
+      const std::vector< double >& vb=std::vector< T >(),
+      const std::vector< double >& vx=std::vector< T >()) {
+
+    // input parameter type insulation from the templated base class
+    const bool conversion_needed(typeid(T)!=typeid(double));
+    std::vector< T >
+      another_A(vA.size()),
+      another_b(vb.size()),
+      another_x(vx.size());
+    if (conversion_needed) {
+      std::transform( vA.begin(),vA.end(),another_A.begin(),storage_conversion_t< double, T >() );
+      std::transform( vb.begin(),vb.end(),another_b.begin(),storage_conversion_t< double, T >() );
+      std::transform( vx.begin(),vx.end(),another_x.begin(),storage_conversion_t< double, T >() );
+    }
+
+    // propper initialization of linear system components
+    std::vector< T >&
+      correct_A(conversion_needed? another_A : (std::vector< T >&) vA),
+      correct_b(conversion_needed? another_b : (std::vector< T >&) vb),
+      correct_x(conversion_needed? another_x : (std::vector< T >&) vx);
+    if (vA.size()) A().initialize(correct_A);
+    if (vb.size()) b().initialize(correct_b); else b().initialize(size(0),1);
+    if (vx.size()) x().initialize(correct_x); else x().initialize(size(1),size(2));
+
     consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
     return *this;
   }
 
+  /// Linear system copy
+  linearsystem& operator=(const linearsystem& _other) {
+    A() = _other.A();
+    b() = _other.b();
+    x() = _other.x();
+    return *this;
+  }
+
   /// Value assignment (operator)
-  linearsystem& operator=(const T& _value) { return resize(size(0),size(1),size(2),_value); }
+  linearsystem& operator=(const T& _value) { return initialize(size(0),size(1),size(2),_value); }
 
   /// Value assignment (method)
   linearsystem& assign(const T& _value=T()) { return operator=(_value); }
@@ -97,6 +125,14 @@ class linearsystem
     A().clear();
     b().clear();
     x().clear();
+    return *this;
+  }
+
+  /// Zero row in all system components
+  linearsystem& zerorow(const size_t r) {
+    A().zerorow(r);
+    b().zerorow(r);
+    x().zerorow(r);
     return *this;
   }
 
@@ -121,6 +157,7 @@ class linearsystem
           << "x(" << xi << 'x' << xj << ") = "
           << "b(" << bi << 'x' << bj << ") ";
       throw std::runtime_error(msg.str());
+      return false;
     }
     return true;
   }
