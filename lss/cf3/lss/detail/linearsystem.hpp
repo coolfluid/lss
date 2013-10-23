@@ -40,7 +40,7 @@ class linearsystem
       const size_t& _size_i=size_t(),
       const size_t& _size_j=size_t(),
       const size_t& _size_k=1,
-      const T& _value=T() ) { resize(_size_i,_size_j,_size_k,_value); }
+      const T& _value=T() ) { initialize(_size_i,_size_j,_size_k,_value); }
 
   /// Destruct the linear system
   virtual ~linearsystem() {}
@@ -49,17 +49,17 @@ class linearsystem
   // -- Interfacing
  public:
 
-  /// Resize the linear system (consistently)
-  linearsystem& resize(
+  /// Initialize the linear system (resizing consistently)
+  linearsystem& initialize(
       const size_t& _size_i,
       const size_t& _size_j,
       const size_t& _size_k=1,
       const double& _value=T()) {
     consistent(_size_i,_size_j,_size_i,_size_k,_size_j,_size_k);
     const T value(static_cast< T >(_value));
-    A().resize(_size_i,_size_j,value);
-    b().resize(_size_i,_size_k,value);
-    x().resize(_size_j,_size_k,value);
+    A().initialize(_size_i,_size_j,value);
+    b().initialize(_size_i,_size_k,value);
+    x().initialize(_size_j,_size_k,value);
     return *this;
   }
 
@@ -69,8 +69,8 @@ class linearsystem
       const std::string& _bfname="",
       const std::string& _xfname="" ) {
     if (_Afname.length()) A().initialize(_Afname);
-    if (_bfname.length()) b().initialize(_bfname); else b().resize(size(0),1);
-    if (_xfname.length()) x().initialize(_xfname); else x().resize(size(1),size(2));
+    if (_bfname.length()) b().initialize(_bfname); else b().initialize(size(0),1);
+    if (_xfname.length()) x().initialize(_xfname); else x().initialize(size(1),size(2));
     consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
     return *this;
   }
@@ -99,15 +99,23 @@ class linearsystem
       correct_b(conversion_needed? another_b : (std::vector< T >&) vb),
       correct_x(conversion_needed? another_x : (std::vector< T >&) vx);
     if (vA.size()) A().initialize(correct_A);
-    if (vb.size()) b().initialize(correct_b); else b().resize(size(0),1);
-    if (vx.size()) x().initialize(correct_x); else x().resize(size(1),size(2));
+    if (vb.size()) b().initialize(correct_b); else b().initialize(size(0),1);
+    if (vx.size()) x().initialize(correct_x); else x().initialize(size(1),size(2));
 
     consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
     return *this;
   }
 
+  /// Linear system copy
+  linearsystem& operator=(const linearsystem& _other) {
+    A() = _other.A();
+    b() = _other.b();
+    x() = _other.x();
+    return *this;
+  }
+
   /// Value assignment (operator)
-  linearsystem& operator=(const T& _value) { return resize(size(0),size(1),size(2),_value); }
+  linearsystem& operator=(const T& _value) { return initialize(size(0),size(1),size(2),_value); }
 
   /// Value assignment (method)
   linearsystem& assign(const T& _value=T()) { return operator=(_value); }
@@ -149,6 +157,7 @@ class linearsystem
           << "x(" << xi << 'x' << xj << ") = "
           << "b(" << bi << 'x' << bj << ") ";
       throw std::runtime_error(msg.str());
+      return false;
     }
     return true;
   }

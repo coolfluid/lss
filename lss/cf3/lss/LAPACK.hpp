@@ -49,14 +49,14 @@ struct lss_API LAPACK : public
          const size_t& _size_i=size_t(),
          const size_t& _size_j=size_t(),
          const size_t& _size_k=1,
-         const double& _value=T() ) : linearsystem(name) { linearsystem_t::resize(_size_i,_size_j,_size_k,_value); }
+         const double& _value=T() ) : linearsystem(name) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); }
 
-  /// Linear system resizing (consistently)
-  LAPACK& resize(
+  /// Initialize the linear system (resizing consistently)
+  LAPACK& initialize(
       const size_t& _size_i,
       const size_t& _size_j,
       const size_t& _size_k=1,
-      const double& _value=double()) { linearsystem_t::resize(_size_i,_size_j,_size_k,static_cast< T >(_value)); return *this; }
+      const double& _value=double()) { linearsystem_t::initialize(_size_i,_size_j,_size_k,static_cast< T >(_value)); return *this; }
 
   /// Linear system initialization from file(s)
   LAPACK& initialize(
@@ -94,13 +94,6 @@ struct lss_API LAPACK : public
     // solution is in b, so swap with x (with A square, size b = size x)
     b().swap(x());
     b().clear();
-    return *this;
-  }
-
-  LAPACK& operator=(const LAPACK& _other) {
-    A() = _other.A();
-    b() = _other.b();
-    x() = _other.x();
     return *this;
   }
 

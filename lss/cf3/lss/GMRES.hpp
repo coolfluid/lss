@@ -42,12 +42,12 @@ class GMRES : public
         const size_t& _size_k=1,
         const double& _value=double() );
 
-  /// Linear system resizing (consistently)
-  GMRES& resize(
+  /// Initialize the linear system (resizing consistently)
+  GMRES& initialize(
       const size_t& _size_i,
       const size_t& _size_j,
       const size_t& _size_k=1,
-      const double& _value=double()) { linearsystem_t::resize(_size_i,_size_j,_size_k,_value); return *this; }
+      const double& _value=double()) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); return *this; }
 
   /// Linear system initialization from file(s)
   GMRES& initialize(

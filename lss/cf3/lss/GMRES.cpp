@@ -25,7 +25,7 @@ GMRES::GMRES(const std::string& name,
       const size_t& _size_k,
       const double& _value) : linearsystem(name), c__1(1)
 {
-  linearsystem_t::resize(_size_i,_size_j,_size_k,_value);
+  linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
 }
 
 
