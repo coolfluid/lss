@@ -40,6 +40,8 @@ class lss_API GaussianElimination : public
   // framework interfacing
  public:
   static std::string type_name();
+
+  /// Construction & initialization
   GaussianElimination(const std::string& name,
                       const size_t& _size_i=size_t(),
                       const size_t& _size_j=size_t(),
