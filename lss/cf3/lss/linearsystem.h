@@ -47,23 +47,16 @@ class linearsystem : public common::Action
 
 #if 0
     // configure signals
-    regist_signal("initialize")
-      .connect(   boost::bind( &linearsystem::signal_initialize,    this, _1 ))
-      .signature( boost::bind( &linearsystem::signature_ask_rc, this, _1 ));
-    regist_signal("zerorow")
-      .connect(   boost::bind( &linearsystem::signal_zerorow,  this, _1 ))
-      .signature( boost::bind( &linearsystem::signature_ask_r, this, _1 ));
+    regist_signal("initialize").connect(   boost::bind( &linearsystem::signal_initialize, this, _1 )).signature( boost::bind( &linearsystem::signature_ask_rc, this, _1 ));
+    regist_signal("zerorow")   .connect(   boost::bind( &linearsystem::signal_zerorow,    this, _1 )).signature( boost::bind( &linearsystem::signature_ask_r,  this, _1 ));
     regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this ));
     regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this ));
     regist_signal("output").connect( boost::bind( &linearsystem::signal_output, this ));
 
     // configure options
-    options().add("A",std::vector< T >()).mark_basic().link_to(&m_swap)
-      .attach_trigger(boost::bind( &linearsystem::trigger_A, this ));
-    options().add("b",std::vector< T >()).mark_basic().link_to(&m_swap)
-      .attach_trigger(boost::bind( &linearsystem::trigger_b, this ));
-    options().add("x",std::vector< T >()).mark_basic().link_to(&m_swap)
-      .attach_trigger(boost::bind( &linearsystem::trigger_x, this ));
+    options().add("A",std::vector< T >()).mark_basic().link_to(&m_swap).attach_trigger(boost::bind( &linearsystem::trigger_A, this ));
+    options().add("b",std::vector< T >()).mark_basic().link_to(&m_swap).attach_trigger(boost::bind( &linearsystem::trigger_b, this ));
+    options().add("x",std::vector< T >()).mark_basic().link_to(&m_swap).attach_trigger(boost::bind( &linearsystem::trigger_x, this ));
 #endif
   }
 
@@ -87,7 +80,7 @@ class linearsystem : public common::Action
 
   void trigger_b() { swap_lss_vector(m_b); }
   void trigger_x() { swap_lss_vector(m_x); }
-  virtual void trigger_A() {
+  void trigger_A() {
     if (m_swap.size()!=size())
       throw common::BadValue(FromHere(), "linearsystem is not of the same size as given matrix ("
         + boost::lexical_cast< std::string >(size(0)) + "*"
@@ -113,20 +106,20 @@ class linearsystem : public common::Action
   // -- Interfacing (pure)
  public:
 
-  /// Linear system resizing (consistently)
+  /// Initialize the linear system (resizing consistently)
   virtual linearsystem& initialize(
       const size_t& _size_i,
       const size_t& _size_j,
       const size_t& _size_k=1,
       const double& _value=double()) = 0;
 
-  /// Linear system initialization from file(s)
+  /// Initialize linear system from file(s)
   virtual linearsystem& initialize(
       const std::string& _Afname,
       const std::string& _bfname="",
       const std::string& _xfname="" ) = 0;
 
-  /// Linear system initialization from vectors of values (lists, in right context)
+  /// Initialize linear system from vectors of values (lists, in the right context)
   virtual linearsystem& initialize(
       const std::vector< double >& vA,
       const std::vector< double >& vb=std::vector< double >(),
