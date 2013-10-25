@@ -33,14 +33,16 @@ class GMRES : public
   typedef detail::linearsystem< double, matrix_t, vector_t > linearsystem_t;
 
 
-  // framework interfacing
  public:
+  // framework interfacing
   static std::string type_name();
+
+  /// Construction & initialization
   GMRES(const std::string& name,
         const size_t& _size_i=size_t(),
         const size_t& _size_j=size_t(),
         const size_t& _size_k=1,
-        const double& _value=double() );
+        const double& _value=double() ) : linearsystem(name), c__1(1) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); }
 
   /// Initialize the linear system (resizing consistently)
   GMRES& initialize(
