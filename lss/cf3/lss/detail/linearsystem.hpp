@@ -78,16 +78,19 @@ class linearsystem
   /// Initialize linear system from vectors of values (lists, in the right context)
   linearsystem& initialize(
       const std::vector< double >& vA,
-      const std::vector< double >& vb=std::vector< T >(),
-      const std::vector< double >& vx=std::vector< T >()) {
+      const std::vector< double >& vb=std::vector< double >(),
+      const std::vector< double >& vx=std::vector< double >()) {
 
     // input parameter type insulation from the templated base class
     const bool conversion_needed(typeid(T)!=typeid(double));
     std::vector< T >
-      another_A(vA.size()),
-      another_b(vb.size()),
-      another_x(vx.size());
+      another_A,
+      another_b,
+      another_x;
     if (conversion_needed) {
+      another_A.resize(vA.size()),
+      another_b.resize(vb.size()),
+      another_x.resize(vx.size());
       std::transform( vA.begin(),vA.end(),another_A.begin(),storage_conversion_t< double, T >() );
       std::transform( vb.begin(),vb.end(),another_b.begin(),storage_conversion_t< double, T >() );
       std::transform( vx.begin(),vx.end(),another_x.begin(),storage_conversion_t< double, T >() );
@@ -120,7 +123,7 @@ class linearsystem
   /// Value assignment (method)
   linearsystem& assign(const T& _value=T()) { return operator=(_value); }
 
-  /// Clear the contents
+  /// Clear contents in all system components
   linearsystem& clear() {
     A().clear();
     b().clear();
@@ -150,7 +153,7 @@ class linearsystem
   bool consistent(const size_t& Ai, const size_t& Aj,
                   const size_t& bi, const size_t& bj,
                   const size_t& xi, const size_t& xj) const {
-    if (Ai!=bi || Aj!=xi || bj!=xj || !(Ai*Aj*bi*bj*xi*xj)) {
+    if (Ai!=bi || Aj!=xi || bj!=xj) {
       std::ostringstream msg;
       msg << "linearsystem: size is not consistent: "
           << "A(" << Ai << 'x' << Aj << ") "
