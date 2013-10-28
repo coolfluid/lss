@@ -5,11 +5,10 @@ coolfluid3_add_library(
     LibLSS.cpp
     LibLSS.hpp
     detail/index.hpp
-    detail/linearsystem.hpp
     detail/matrix.hpp
     detail/utilities.cpp
     detail/utilities.hpp
-    linearsystem.h
+    linearsystem.hpp
 
     GMRES.cpp
     GMRES.hpp
