@@ -39,12 +39,14 @@ struct idx_t
         const size_t& _j=std::numeric_limits< size_t >::max()) : i(_i), j(_j) {}
 
   bool operator<  (const idx_t& _other) const { return (i<_other.i? true : i>_other.i? false : (j<_other.j)); }
-  bool operator>  (const idx_t& _other) const { return idx_t(_other)<*this; }
+  bool operator>  (const idx_t& _other) const { return (_other<*this); }
+  bool operator<= (const idx_t& _other) const { return (operator<(_other) || operator==(_other)); }
+  bool operator>= (const idx_t& _other) const { return (operator>(_other) || operator==(_other)); }
   bool operator== (const idx_t& _other) const { return i==_other.i && j==_other.j; }
   bool operator!= (const idx_t& _other) const { return i!=_other.i || j!=_other.j; }
 
   idx_t& invalidate() { return (*this = idx_t()); }
-  bool is_valid_size()  const { return operator>(idx_t(0,0)) && operator<(idx_t()); }
+  bool is_valid_size()  const { return operator>=(idx_t(0,0)) && operator<(idx_t()); }
   bool is_square_size() const { return i==j; }
   bool is_diagonal()    const { return is_square_size(); }
 };
