@@ -31,7 +31,7 @@ extern "C"
  * (available in single and double precision, only works for square matrices)
  */
 template< typename T >
-struct lss_API LAPACK : public
+class lss_API LAPACK : public
   linearsystem,
   detail::linearsystem< T,
     detail::dense_matrix_v< T, detail::column_oriented >,
@@ -42,9 +42,11 @@ struct lss_API LAPACK : public
   typedef detail::dense_matrix_v< T, detail::column_oriented > vector_t;
   typedef detail::linearsystem< T, matrix_t, vector_t > linearsystem_t;
 
-
+ public:
   // framework interfacing
   static std::string type_name();
+
+  /// Construction & initialization
   LAPACK(const std::string& name,
          const size_t& _size_i=size_t(),
          const size_t& _size_j=size_t(),
