@@ -37,7 +37,7 @@ enum print_t { print_auto, print_size, print_signs, print_full };
  * T: storage type
  * Impl: implementation type
  */
-template< typename T, class Impl >
+template< typename T, class IMPL >
 struct matrix
 {
   // constructor
@@ -47,14 +47,20 @@ struct matrix
     m_print(print_auto)
   {}
 
-  // initializations
-  matrix& initialize(const std::vector< T >& _vector) { return Impl::initialize(_vector); }
-  matrix& initialize(const std::string&       _fname) { return Impl::initialize(_fname); }
+  // -- functionality in remote implementation
 
-  // assignments (defer to implementation)
-  matrix& operator=(const matrix& _other)   { return Impl::operator=(_other); }
-  matrix& operator=(const T& _value)        { return Impl::initialize(m_size.i,m_size.j,_value); }
-  matrix& assign(const std::vector< T >& v) { return Impl::assign(v); }
+  // initializations
+  matrix& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) { return IMPL::initialize(_size_i,_size_j,_value); }
+  matrix& initialize(const std::vector< T >& _vector)                                   { return IMPL::initialize(_vector); }
+  matrix& initialize(const std::string& _fname)                                         { return IMPL::initialize(_fname); }
+
+  // assignments
+  matrix& assign(const std::vector< T >& v) { return IMPL::assign(v); }
+  matrix& clear()                           { return IMPL::initialize(m_size.i,m_size.j,T()); }
+  matrix& operator=(const T& _value)        { return IMPL::initialize(m_size.i,m_size.j,_value); }
+  matrix& operator=(const matrix& _other)   { return IMPL::operator=(_other); }
+  matrix& zerorow(const size_t& _i)         { return IMPL::zerorow(_i); }
+
 
   // utilities
   void swap(matrix& other) {
@@ -93,11 +99,6 @@ struct matrix
     }
     return o << " ]";
   }
-
-  // resizing and clearing (defer to implementation)
-  matrix& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) { return Impl::initialize(_size_i,_size_j,_value); }
-  matrix& clear()                   { return Impl::clear();     }
-  matrix& zerorow(const size_t& _i) { return Impl::zerorow(_i); }
 
   size_t size(const size_t& _d) const {
     return (_d==0? m_size.i :
@@ -174,9 +175,11 @@ struct dense_matrix_vv :
   // resizing and clearing
   dense_matrix_vv& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
     if (idx_t(_size_i,_size_j).is_valid_size()) {
+      clear();
       matrix_base_t::m_size = idx_t(_size_i,_size_j);
-      a.assign(ORIENT? size(0):size(1),std::vector< T >(
-               ORIENT? size(1):size(0),_value ));
+      if (size(0)*size(1))
+        a.assign(ORIENT? size(0):size(1),std::vector< T >(
+                 ORIENT? size(1):size(0),_value ));
     }
     return *this;
   }
@@ -263,8 +266,10 @@ struct dense_matrix_v :
   // resizing and clearing
   dense_matrix_v& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
     if (idx_t(_size_i,_size_j).is_valid_size()) {
+      clear();
       matrix_base_t::m_size = idx_t(_size_i,_size_j);
-      a.assign(size(0)*size(1),_value);
+      if (size(0)*size(1))
+        a.assign(size(0)*size(1),_value);
     }
     return *this;
   }

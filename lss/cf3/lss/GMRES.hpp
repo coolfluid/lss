@@ -10,8 +10,7 @@
 
 
 #include "LibLSS.hpp"
-#include "linearsystem.h"
-#include "detail/linearsystem.hpp"
+#include "linearsystem.hpp"
 
 
 namespace cf3 {
@@ -22,46 +21,28 @@ namespace lss {
  * implementation of a serial GMRES linear system solver (double p.)
  */
 class GMRES : public
-  linearsystem,
-  detail::linearsystem< double,
+  linearsystem< double,
     detail::sparse_matrix_csr< double, 1 >,
     detail::dense_matrix_v< double > >
 {
   // utility definitions
   typedef detail::sparse_matrix_csr< double, 1 > matrix_t;
   typedef detail::dense_matrix_v< double > vector_t;
-  typedef detail::linearsystem< double, matrix_t, vector_t > linearsystem_t;
+  typedef linearsystem< double, matrix_t, vector_t > linearsystem_t;
 
 
-  // framework interfacing
  public:
+  // framework interfacing
   static std::string type_name();
+
+  /// Construction
   GMRES(const std::string& name,
         const size_t& _size_i=size_t(),
         const size_t& _size_j=size_t(),
         const size_t& _size_k=1,
-        const double& _value=double() );
+        const double& _value=double() ) : linearsystem_t(name), c__1(1) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); }
 
-  /// Initialize the linear system (resizing consistently)
-  GMRES& initialize(
-      const size_t& _size_i,
-      const size_t& _size_j,
-      const size_t& _size_k=1,
-      const double& _value=double()) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); return *this; }
-
-  /// Linear system initialization from file(s)
-  GMRES& initialize(
-      const std::string& _Afname,
-      const std::string& _bfname="",
-      const std::string& _xfname="" ) { linearsystem_t::initialize(_Afname,_bfname,_xfname); return *this; }
-
-  /// Linear system initialization from vectors of values (lists, in right context)
-  GMRES& initialize(
-      const std::vector< double >& vA,
-      const std::vector< double >& vb=std::vector< double >(),
-      const std::vector< double >& vx=std::vector< double >()) { linearsystem_t::initialize(vA,vb,vx); return *this; }
-
-  /// Linear system solving
+  /// Solve
   GMRES& solve();
 
 

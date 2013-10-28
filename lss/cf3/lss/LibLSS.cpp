@@ -21,7 +21,7 @@ void LibLSS::initiate()
   if (m_is_initiated)
     return;
 
-  Handle< common::Component > lib = common::Core::instance().libraries().get_child("cf3.muphys");
+  Handle< common::Component > lib = common::Core::instance().libraries().get_child("cf3.lss");
   cf3_assert(lib);
 
   m_is_initiated = true;

@@ -13,10 +13,10 @@ namespace cf3 {
 namespace lss {
 
 
-template<> std::string GaussianElimination< double >::type_name() { return "GaussianElimination_DoubleP"; }
-template<> std::string GaussianElimination< float  >::type_name() { return "GaussianElimination_SingleP"; }
-common::ComponentBuilder< GaussianElimination< double >, common::Component, LibLSS > Builder_GaussianElimination_DoubleP;
-common::ComponentBuilder< GaussianElimination< float  >, common::Component, LibLSS > Builder_GaussianElimination_SingleP;
+template<> std::string GaussianElimination< double >::type_name() { return "GaussianElimination"; }
+template<> std::string GaussianElimination< float  >::type_name() { return "GaussianElimination_SinglePrecision"; }
+common::ComponentBuilder< GaussianElimination< double >, common::Component, LibLSS > Builder_GaussianElimination;
+common::ComponentBuilder< GaussianElimination< float  >, common::Component, LibLSS > Builder_GaussianElimination_SinglePrecision;
 
 
 }  // namespace lss

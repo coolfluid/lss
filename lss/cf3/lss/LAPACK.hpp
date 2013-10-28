@@ -10,8 +10,7 @@
 
 
 #include "LibLSS.hpp"
-#include "linearsystem.h"
-#include "detail/linearsystem.hpp"
+#include "linearsystem.hpp"
 
 
 namespace cf3 {
@@ -31,46 +30,30 @@ extern "C"
  * (available in single and double precision, only works for square matrices)
  */
 template< typename T >
-struct lss_API LAPACK : public
-  linearsystem,
-  detail::linearsystem< T,
+class lss_API LAPACK : public
+  linearsystem< T,
     detail::dense_matrix_v< T, detail::column_oriented >,
     detail::dense_matrix_v< T, detail::column_oriented > >
 {
   // utility definitions
   typedef detail::dense_matrix_v< T, detail::column_oriented > matrix_t;
   typedef detail::dense_matrix_v< T, detail::column_oriented > vector_t;
-  typedef detail::linearsystem< T, matrix_t, vector_t > linearsystem_t;
+  typedef linearsystem< T, matrix_t, vector_t > linearsystem_t;
 
-
+ public:
   // framework interfacing
   static std::string type_name();
+
+  /// Construction
   LAPACK(const std::string& name,
          const size_t& _size_i=size_t(),
          const size_t& _size_j=size_t(),
          const size_t& _size_k=1,
-         const double& _value=T() ) : linearsystem(name) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); }
+         const double& _value=T() ) : linearsystem_t(name) {
+      linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
+  }
 
-  /// Initialize the linear system (resizing consistently)
-  LAPACK& initialize(
-      const size_t& _size_i,
-      const size_t& _size_j,
-      const size_t& _size_k=1,
-      const double& _value=double()) { linearsystem_t::initialize(_size_i,_size_j,_size_k,static_cast< T >(_value)); return *this; }
-
-  /// Linear system initialization from file(s)
-  LAPACK& initialize(
-      const std::string& _Afname,
-      const std::string& _bfname="",
-      const std::string& _xfname="" ) { linearsystem_t::initialize(_Afname,_bfname,_xfname); return *this; }
-
-  /// Linear system initialization from vectors of values (lists, in right context)
-  LAPACK& initialize(
-      const std::vector< double >& vA,
-      const std::vector< double >& vb=std::vector< double >(),
-      const std::vector< double >& vx=std::vector< double >()) { linearsystem_t::initialize(vA,vb,vx); return *this; }
-
-  /// Linear system solving
+  /// Solve
   LAPACK& solve() {
     int n    = static_cast< int >(linearsystem_t::size(0));
     int nrhs = static_cast< int >(linearsystem_t::size(2));

@@ -15,18 +15,8 @@ namespace cf3 {
 namespace lss {
 
 
-common::ComponentBuilder< GMRES, common::Component, LibLSS > Builder_GMRES;
-
-
 std::string GMRES::type_name() { return "GMRES"; }
-GMRES::GMRES(const std::string& name,
-      const size_t& _size_i,
-      const size_t& _size_j,
-      const size_t& _size_k,
-      const double& _value) : linearsystem(name), c__1(1)
-{
-  linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
-}
+common::ComponentBuilder< GMRES, common::Component, LibLSS > Builder_GMRES;
 
 
 GMRES& GMRES::solve()
@@ -289,14 +279,14 @@ int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, double*& aluold,
     lenu = 1;
     lenl = 0;
     jw[ii] = ii;
-    w[ii] = (float)0.;
+    w[ii] = (double)0.;
     jw[*n + ii] = ii;
 
     i__2 = j2;
     for (j = j1; j <= i__2; ++j) {
       k = ja[j];
       t = a[j];
-      if (t == (float)0.) {
+      if (t == (double)0.) {
         goto L170;
       }
       if (k < ii) {
@@ -509,7 +499,7 @@ int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, double*& aluold,
       }
     /* L302: */
     }
-    if (w[ii] == (float)0.) {
+    if (w[ii] == (double)0.) {
       goto L999;
     }
 
