@@ -13,8 +13,7 @@
 #include "boost/progress.hpp"
 
 #include "LibLSS.hpp"
-#include "linearsystem.h"
-#include "detail/linearsystem.hpp"
+#include "linearsystem.hpp"
 
 
 namespace cf3 {
@@ -27,47 +26,27 @@ namespace lss {
  */
 template< typename T >
 class lss_API GaussianElimination : public
-  linearsystem,
-  detail::linearsystem< T,
+  linearsystem< T,
     detail::dense_matrix_v< T >,
     detail::dense_matrix_v< T > >
 {
   // utility definitions
   typedef detail::dense_matrix_v< T > matrix_t;
   typedef detail::dense_matrix_v< T > vector_t;
-  typedef detail::linearsystem< T, matrix_t, vector_t > linearsystem_t;
+  typedef linearsystem< T, matrix_t, vector_t > linearsystem_t;
 
   // framework interfacing
  public:
   static std::string type_name();
 
-  /// Construction & initialization
+  /// Construction
   GaussianElimination(const std::string& name,
                       const size_t& _size_i=size_t(),
                       const size_t& _size_j=size_t(),
                       const size_t& _size_k=1,
-                      const double& _value=T() ) : linearsystem(name) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); }
+                      const T& _value=T() ) : linearsystem_t(name) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); }
 
-  /// Initialize the linear system (resizing consistently)
-  GaussianElimination& initialize(
-      const size_t& _size_i,
-      const size_t& _size_j,
-      const size_t& _size_k=1,
-      const double& _value=double()) { linearsystem_t::initialize(_size_i,_size_j,_size_k,static_cast< T >(_value)); return *this; }
-
-  /// Linear system initialization from file(s)
-  GaussianElimination& initialize(
-      const std::string& _Afname,
-      const std::string& _bfname="",
-      const std::string& _xfname="" ) { linearsystem_t::initialize(_Afname,_bfname,_xfname); return *this; }
-
-  /// Linear system initialization from vectors of values (lists, in right context)
-  GaussianElimination& initialize(
-      const std::vector< double >& vA,
-      const std::vector< double >& vb=std::vector< double >(),
-      const std::vector< double >& vx=std::vector< double >()) { linearsystem_t::initialize(vA,vb,vx); return *this; }
-
-  /// Linear system solving
+  /// Solve
   GaussianElimination& solve() {
     const size_t N(linearsystem_t::size(0));
     double C;
