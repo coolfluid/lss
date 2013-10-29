@@ -47,9 +47,9 @@ class linearsystem : public common::Action
 
   /// Construct the linear system
   linearsystem(const std::string& name,
-               const size_t& _size_i=size_t(),
-               const size_t& _size_j=size_t(),
-               const size_t& _size_k=1,
+               const size_t& i=size_t(),
+               const size_t& j=size_t(),
+               const size_t& k=1,
                const double& _value=T() ) :
     common::Action(name),
     m_dummy_value(std::numeric_limits< T >::quiet_NaN())
@@ -57,15 +57,35 @@ class linearsystem : public common::Action
     // framework scripting: options level, signals and options
     mark_basic();
 
-    regist_signal("initialize").connect( boost::bind( &linearsystem::signal_initialize, this, _1 )).signature( boost::bind( &linearsystem::ask_ijk, this, _1 ));
-    regist_signal("zerorow")   .connect( boost::bind( &linearsystem::signal_zerorow,    this, _1 )).signature( boost::bind( &linearsystem::ask_i,   this, _1 ));
-    regist_signal("clear")     .connect( boost::bind( &linearsystem::signal_clear,      this ));
-    regist_signal("solve")     .connect( boost::bind( &linearsystem::signal_solve,      this ));
-    regist_signal("output")    .connect( boost::bind( &linearsystem::signal_output,     this ));
+    regist_signal("initialize")
+        .description("Initialize with given size (i,j,k) and value (value), or from file (A, b, and/or x)")
+        .connect   ( boost::bind( &linearsystem::signal_initialize, this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_ijkvalue,   this, _1 ));
 
-    options().add("A",std::vector< T >()).mark_basic().link_to(&m_swap).attach_trigger(boost::bind( &linearsystem::trigger_A, this ));
-    options().add("b",std::vector< T >()).mark_basic().link_to(&m_swap).attach_trigger(boost::bind( &linearsystem::trigger_b, this ));
-    options().add("x",std::vector< T >()).mark_basic().link_to(&m_swap).attach_trigger(boost::bind( &linearsystem::trigger_x, this ));
+    regist_signal("zerorow")
+        .description("Erase given row (i) in all components")
+        .connect   ( boost::bind( &linearsystem::signal_zerorow,  this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_ijkvalue, this, _1 ));
+
+    regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this )).description("Empty linear system components");
+    regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this )).description("Solve linear system, returning solution in x()");
+    regist_signal("output").connect( boost::bind( &linearsystem::signal_output, this )).description("Print a pretty linear system");
+
+    regist_signal("A").connect(boost::bind( &linearsystem::signal_A, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in matrix A, by given index (i,j) and value (value)");
+    regist_signal("b").connect(boost::bind( &linearsystem::signal_b, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in vector b, by given index (i,k) and value (value)");
+    regist_signal("x").connect(boost::bind( &linearsystem::signal_x, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in vector x, by given index (j,k) and value (value)");
+
+    options().add("A",std::vector< double >())
+        .link_to(&m_dummy_vector).mark_basic()
+        .attach_trigger(boost::bind( &linearsystem::trigger_A, this ));
+
+    options().add("b",std::vector< double >())
+        .link_to(&m_dummy_vector).mark_basic()
+        .attach_trigger(boost::bind( &linearsystem::trigger_b, this ));
+
+    options().add("x",std::vector< double >())
+        .link_to(&m_dummy_vector).mark_basic()
+        .attach_trigger(boost::bind( &linearsystem::trigger_x, this ));
 
     /*
      * note: you cannot call any pure methods (or any method that would call a
@@ -81,48 +101,66 @@ class linearsystem : public common::Action
   // -- Framework scripting
  private:
 
-  void signal_initialize (common::SignalArgs& args)
-  {
+
+  void signat_ijkvalue(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
-    initialize(
-      opts.value< size_t >("i"),
-      opts.value< size_t >("j"),
-      opts.check("k")? opts.value< size_t >("k") : 1,
-      T());
+    opts.add< unsigned >("i");
+    opts.add< unsigned >("j");
+    opts.add< unsigned >("k",1);
+    opts.add< std::string >("A");
+    opts.add< std::string >("b");
+    opts.add< std::string >("x");
+    opts.add< double >("value");
   }
 
-  void signal_zerorow    (common::SignalArgs& args) { common::XML::SignalOptions opts(args); zerorow(opts.value< unsigned int >("i")); }
-  void signal_clear  () { clear(); }
-  void signal_solve  () { solve(); }
-  void signal_output () { operator<<(std::cout,*this); }
-
-  void ask_ijk   (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("i",size_t(1)); opts.add("j",size_t(1)); opts.add("k",size_t(1));  }
-  void ask_i     (common::SignalArgs& args) { common::XML::SignalOptions opts(args); opts.add("i",size_t(1)); }
-
-  void trigger_A() { try { A().assign(m_swap); } catch(std::logic_error& e) { std::cout << "problem avoided with A" << std::endl; } }
-  void trigger_b() { try { b().assign(m_swap); } catch(std::logic_error& e) { std::cout << "problem avoided with b" << std::endl; } }
-  void trigger_x() { try { x().assign(m_swap); } catch(std::logic_error& e) { std::cout << "problem avoided with x" << std::endl; } }
-
-#if 0
-  void swap_lss_vector(std::vector< T >& v) {
-      if (m_swap.size()!=size())
-        throw common::BadValue(FromHere(), "linearsystem is not of the same size as given matrix ("
-          + boost::lexical_cast< std::string >(size(0)) + "*"
-          + boost::lexical_cast< std::string >(size(1)) + "!="
-          + boost::lexical_cast< std::string >(m_swap.size()) + ")");
-      for (size_t r=0; r<size(0); ++r)
-        for (size_t c=0; c<size(1); ++c)
-          A(r,c) = m_swap[r*size(1)+c];
-      m_swap.clear();
-
-    if (m_swap.size()!=v.size())
-      throw common::BadValue(FromHere(), "linearsystem is not of the same size as given vector ("
-        + boost::lexical_cast< std::string >(v.size()) + "!="
-        + boost::lexical_cast< std::string >(m_swap.size()) + ")");
-    m_swap.swap(v);
-    m_swap.clear();
+  void signal_initialize(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    const std::string
+        Afname(opts.value< std::string >("A")),
+        bfname(opts.value< std::string >("b")),
+        xfname(opts.value< std::string >("x"));
+    try {
+      if (Afname.length() || xfname.length() || bfname.length()) {
+        initialize(Afname,bfname,xfname);
+      }
+      else {
+        initialize(
+          opts.value< unsigned >("i"),
+          opts.value< unsigned >("j"),
+          opts.value< unsigned >("k"),
+          opts.value< double >("value") );
+      }
+    }
+    catch (const std::logic_error& e) {
+      std::cerr << "linearsystem: " << e.what() << std::endl;
+    }
   }
-#endif
+
+  void signal_zerorow(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    zerorow(opts.value< unsigned >("i"));
+  }
+
+  void signal_clear () { clear(); }
+  void signal_solve () { solve(); }
+  void signal_output() { operator<<(std::cout,*this); }
+
+  void signal_A(common::SignalArgs& args) { common::XML::SignalOptions opts(args); A().operator()(opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double   >("value"); }
+  void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); b().operator()(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }
+  void signal_x(common::SignalArgs& args) { common::XML::SignalOptions opts(args); x().operator()(opts.value< unsigned >("j"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }
+
+  void trigger_A() { set_component< MATRIX >(A(),"A"); }
+  void trigger_b() { set_component< VECTOR >(b(),"b"); }
+  void trigger_x() { set_component< VECTOR >(x(),"x"); }
+
+  template< typename COMP >
+  void set_component(COMP& c, const std::string& name) {
+    try { c.initialize(m_dummy_vector); }
+    catch (const std::logic_error& e) {
+      std::cerr << "linearsystem: " << name << ": " << e.what() << std::endl;
+    }
+    m_dummy_vector.clear();
+  }
 
 
   // -- Basic functionality
@@ -133,17 +171,14 @@ class linearsystem : public common::Action
 
   /// Initialize the linear system
   virtual linearsystem& initialize(
-      const size_t& _size_i=size_t(),
-      const size_t& _size_j=size_t(),
-      const size_t& _size_k=1,
+      const size_t& i=size_t(),
+      const size_t& j=size_t(),
+      const size_t& k=1,
       const double& _value=double())
   {
-    const T value(static_cast< T >(_value));
-    A().initialize(_size_i,_size_j,value);
-    b().initialize(_size_i,_size_k,value);
-    x().initialize(_size_j,_size_k,value);
-
-    consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
+    A().initialize(i,j,_value);
+    b().initialize(i,k,_value);
+    x().initialize(j,k,_value);
     return *this;
   }
 
@@ -155,7 +190,6 @@ class linearsystem : public common::Action
     if (_Afname.length()) A().initialize(_Afname);
     if (_bfname.length()) b().initialize(_bfname); else b().initialize(size(0),1);
     if (_xfname.length()) x().initialize(_xfname); else x().initialize(size(1),size(2));
-
     consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
     return *this;
   }
@@ -165,31 +199,9 @@ class linearsystem : public common::Action
       const std::vector< double >& vA,
       const std::vector< double >& vb=std::vector< double >(),
       const std::vector< double >& vx=std::vector< double >()) {
-
-    // input parameter type insulation from the templated base class
-    const bool conversion_needed(typeid(T)!=typeid(double));
-    std::vector< T >
-      another_A,
-      another_b,
-      another_x;
-    if (conversion_needed) {
-      another_A.resize(vA.size()),
-      another_b.resize(vb.size()),
-      another_x.resize(vx.size());
-      std::transform( vA.begin(),vA.end(),another_A.begin(),detail::storage_conversion_t< double, T >() );
-      std::transform( vb.begin(),vb.end(),another_b.begin(),detail::storage_conversion_t< double, T >() );
-      std::transform( vx.begin(),vx.end(),another_x.begin(),detail::storage_conversion_t< double, T >() );
-    }
-
-    // propper initialization of linear system components
-    std::vector< T >&
-      correct_A(conversion_needed? another_A : (std::vector< T >&) vA),
-      correct_b(conversion_needed? another_b : (std::vector< T >&) vb),
-      correct_x(conversion_needed? another_x : (std::vector< T >&) vx);
-    if (vA.size()) A().initialize(correct_A);
-    if (vb.size()) b().initialize(correct_b); else b().initialize(size(0),1);
-    if (vx.size()) x().initialize(correct_x); else x().initialize(size(1),size(2));
-
+    if (vA.size()) A().initialize(vA);
+    if (vb.size()) b().initialize(vb); else b().initialize(size(0),1);
+    if (vx.size()) x().initialize(vx); else x().initialize(size(1),size(2));
     consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
     return *this;
   }
@@ -203,10 +215,10 @@ class linearsystem : public common::Action
   }
 
   /// Zero row in all system components
-  virtual linearsystem& zerorow(const size_t r) {
-    A().zerorow(r);
-    b().zerorow(r);
-    x().zerorow(r);
+  virtual linearsystem& zerorow(const size_t& i) {
+    A().zerorow(i);
+    b().zerorow(i);
+    x().zerorow(i);
     return *this;
   }
 
@@ -249,8 +261,8 @@ class linearsystem : public common::Action
   // -- Storage
  protected:
 
-  T m_dummy_value;          // should keep NaN throughout
-  std::vector< T > m_swap;  // scripting temporary storage (to swap with internal storage)
+  T m_dummy_value;               // should keep NaN throughout
+  std::vector< double > m_dummy_vector;  // scripting temporary storage (to swap with internal storage)
 
 
   // -- Pure methods
@@ -285,26 +297,13 @@ class linearsystem : public common::Action
 };
 
 
-#if 0
-class xpto
-{
-  virtual void output_A(std::ostream& out) const { out << "[ (unavailable) ]"; }
-  virtual void output_b(std::ostream& out) const { out << "[ "; std::copy(m_b.begin(),m_b.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
-  virtual void output_x(std::ostream& out) const { out << "[ "; std::copy(m_x.begin(),m_x.end(),std::ostream_iterator< T >(out,", ")); out << ']'; }
-  friend std::ostream& operator<< < T, MATRIX, VECTOR >(std::ostream&, const linearsystem&);
-};
-#endif
-
-
 /// Output to given std::ostream (non-member version)
 template< typename T, typename MATRIX, typename VECTOR >
 std::ostream& operator<< (std::ostream& o, const linearsystem< T, MATRIX, VECTOR >& lss)
 {
-#if 0
-  o << "linearsystem: A: "; lss.output_A(o); o << std::endl;
-  o << "linearsystem: b: "; lss.output_b(o); o << std::endl;
-  o << "linearsystem: x: "; lss.output_x(o); o << std::endl;
-#endif
+  o << "linearsystem: A: "; lss.A().print(o); o << std::endl;
+  o << "linearsystem: b: "; lss.b().print(o); o << std::endl;
+  o << "linearsystem: x: "; lss.x().print(o); o << std::endl;
   return o;
 }
 
