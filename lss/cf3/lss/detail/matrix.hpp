@@ -42,34 +42,30 @@ struct matrix
 {
   // constructor
   matrix() :
-    m_size(),
     m_zero(std::numeric_limits< T >::quiet_NaN()),
+    m_size(),
     m_print(print_auto)
   {}
 
   // -- functionality in remote implementation
 
-  // initializations
-  matrix& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) { return IMPL::initialize(_size_i,_size_j,_value); }
-  matrix& initialize(const std::vector< T >& _vector)                                   { return IMPL::initialize(_vector); }
-  matrix& initialize(const std::string& _fname)                                         { return IMPL::initialize(_fname); }
+  matrix& initialize(const size_t& i, const size_t& j, const double& _value=double()) { return IMPL::initialize(i,j,_value); }
+  matrix& initialize(const std::vector< double >& _vector) { return IMPL::initialize(_vector); }
+  matrix& initialize(const std::string& _fname)            { return IMPL::initialize(_fname); }
 
-  // assignments
-  matrix& assign(const std::vector< T >& v) { return IMPL::assign(v); }
-  matrix& clear()                           { return IMPL::initialize(m_size.i,m_size.j,T()); }
-  matrix& operator=(const T& _value)        { return IMPL::initialize(m_size.i,m_size.j,_value); }
-  matrix& operator=(const matrix& _other)   { return IMPL::operator=(_other); }
-  matrix& zerorow(const size_t& _i)         { return IMPL::zerorow(_i); }
+  matrix& clear()                         { return IMPL::initialize(m_size.i,m_size.j,double()); }
+  matrix& operator=(const double& _value) { return IMPL::initialize(m_size.i,m_size.j,_value); }
+  matrix& operator=(const matrix& _other) { return IMPL::operator=(_other); }
+  matrix& zerorow(const size_t& i)        { return IMPL::zerorow(i); }
 
+  // -- intrinsic functionality
 
-  // utilities
   void swap(matrix& other) {
     std::swap(other.m_size,m_size);
     std::swap(other.m_zero,m_zero);
     std::swap(other.m_print,m_print);
   }
 
-  // printing (dense version)
   virtual std::ostream& print(std::ostream& o) const {
     const T eps = 1.e3*std::numeric_limits< T >::epsilon();
     const print_t print_level(m_print? m_print :
@@ -78,24 +74,20 @@ struct matrix
                                                             print_full )));
     o << "[ (size: " << size(0) << 'x' << size(1) << ')';
     if (print_level==print_signs) {
-
       for (size_t i=0; i<size(0); ++i) {
         std::string str(size(1),'0');
         for (size_t j=0; j<size(1); ++j)
           str[j] = (operator()(i,j)>eps? '+' : (operator()(i,j)<-eps? '-':'0'));
         o << "\n  " << str;
       }
-
     }
     else if (print_level==print_full) {
-
       for (size_t i=0; i<size(0); ++i) {
         std::ostringstream ss;
         for (size_t j=0; j<size(1); ++j)
           ss << operator()(i,j) << ", ";
         o << "\n  " << ss.str();
       }
-
     }
     return o << " ]";
   }
@@ -111,8 +103,8 @@ struct matrix
   virtual       T& operator()(const size_t& i, const size_t& j=0)       = 0;
 
   // members (implementation should maintain this)
-  idx_t m_size;
   T m_zero;
+  idx_t m_size;
   print_t m_print;
 };
 
@@ -135,8 +127,27 @@ struct dense_matrix_vv :
   typedef matrix< T, dense_matrix_vv< T > > matrix_base_t;
   using matrix_base_t::size;
 
-  // initializations
-  dense_matrix_vv& initialize(const std::vector< T >& _vector) { return assign(_vector); }
+  dense_matrix_vv& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
+    if (idx_t(i,j).is_valid_size()) {
+      clear();
+      matrix_base_t::m_size = idx_t(i,j);
+      if (size(0)*size(1))
+        a.assign(ORIENT? size(0):size(1),std::vector< T >(
+                 ORIENT? size(1):size(0),static_cast< T >(_value) ));
+    }
+    return *this;
+  }
+  dense_matrix_vv& initialize(const std::vector< double >& _vector) {
+    if (size(0)*size(1)!=_vector.size())
+      throw std::logic_error("dense_matrix_vv: assignment not consistent with current size");
+
+    const bool conversion_needed(typeid(T)!=typeid(double));
+    for (size_t i=0, k=0; i<size(0); ++i)
+      for (size_t j=0; j<size(1); ++j, ++k)
+        operator()(i,j) = (conversion_needed? static_cast< const T >(_vector[k]) : (const T) _vector[k] );
+    return *this;
+  }
+
   dense_matrix_vv& initialize(const std::string& _fname) {
     clear();
     if (!read_dense< T >(_fname,ORIENT,matrix_base_t::m_size,a))
@@ -144,56 +155,32 @@ struct dense_matrix_vv :
     return *this;
   }
 
-  // assignments
-
-  dense_matrix_vv& operator=(const dense_matrix_vv& _other) {
-    a = _other.a;
-    matrix_base_t::m_size = _other.dense_matrix_vv::matrix_base_t::m_size;
-    return *this;
-  }
-
-  dense_matrix_vv& assign(const std::vector< T >& v) {
-    if (size(0)*size(1)!=v.size())
-      throw std::logic_error("dense_matrix_vv: assignment not consistent with current size");
-    for (size_t i=0, k=0; i<size(0); ++i)
-      for (size_t j=0; j<size(1); ++j, ++k)
-        operator()(i,j) = v[k];
-    return *this;
-  }
-
-  dense_matrix_vv& operator=(const T& _value) {
-    return initialize(size(0),size(1),_value);
-  }
-
-  void swap(dense_matrix_vv& other) {
-    other.a.swap(a);
-    matrix_base_t::swap(other);
-  }
-
-  std::ostream& print(std::ostream& o) const { return matrix_base_t::print(o); }
-
-  // resizing and clearing
-  dense_matrix_vv& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
-    if (idx_t(_size_i,_size_j).is_valid_size()) {
-      clear();
-      matrix_base_t::m_size = idx_t(_size_i,_size_j);
-      if (size(0)*size(1))
-        a.assign(ORIENT? size(0):size(1),std::vector< T >(
-                 ORIENT? size(1):size(0),_value ));
-    }
-    return *this;
-  }
   dense_matrix_vv& clear() {
     a.clear();
     matrix_base_t::m_size.invalidate();
     return *this;
   }
+
+  dense_matrix_vv& operator=(const dense_matrix_vv& _other) {
+    a = _other.a;
+    matrix_base_t::m_size = _other.matrix_base_t::m_size;
+    return *this;
+  }
+
   dense_matrix_vv& zerorow(const size_t& i) {
+    if (i>=size(0))
+      throw std::logic_error("dense_matrix_vv: row index outside bounds");
     if (ORIENT) a[i].assign(size(1),T());
     else {
       for (size_t j=0; j<size(1); ++j)
         a[j][i] = T();
     }
+    return *this;
+  }
+
+  dense_matrix_vv& swap(dense_matrix_vv& other) {
+    other.a.swap(a);
+    matrix_base_t::swap(other);
     return *this;
   }
 
@@ -220,7 +207,38 @@ struct dense_matrix_v :
   using matrix_base_t::size;
 
   // initializations
-  dense_matrix_v& initialize(const std::vector< T >& _vector) { return assign(_vector); }
+
+  dense_matrix_v& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
+    if (idx_t(i,j).is_valid_size()) {
+      clear();
+      matrix_base_t::m_size = idx_t(i,j);
+      if (size(0)*size(1))
+        a.assign(size(0)*size(1),static_cast< T >(_value));
+    }
+    return *this;
+  }
+
+  dense_matrix_v& initialize(const std::vector< double >& _vector) {
+    if (a.size()!=_vector.size())
+      throw std::logic_error("dense_matrix_v: assignment not consistent with current size");
+
+    const bool conversion_needed(typeid(T)!=typeid(double));
+    std::vector< T > w;
+    if (conversion_needed) {
+      w.resize(_vector.size());
+      std::transform(_vector.begin(),_vector.end(),w.begin(),detail::storage_conversion_t< double, T >() );
+    }
+    const std::vector< T >& v(conversion_needed? w : (const std::vector< T >&) _vector);
+
+    if (ORIENT) { a = v; }
+    else {
+      for (size_t i=0, k=0; i<size(0); ++i)
+        for (size_t j=0; j<size(1); ++j, ++k)
+          operator()(i,j) = v[k];
+    }
+    return *this;
+  }
+
   dense_matrix_v& initialize(const std::string& _fname) {
     clear();
     std::vector< std::vector< T > > another_a;
@@ -240,19 +258,7 @@ struct dense_matrix_v :
     return *this;
   }
 
-  dense_matrix_v& assign(const std::vector< T >& v) {
-    if (a.size()!=v.size())
-      throw std::logic_error("dense_matrix_v: assignment not consistent with current size");
-    if (ORIENT) { a = v; }
-    else {
-      for (size_t i=0, k=0; i<size(0); ++i)
-        for (size_t j=0; j<size(1); ++j, ++k)
-          operator()(i,j) = v[k];
-    }
-    return *this;
-  }
-
-  dense_matrix_v& operator=(const T& _value) {
+  dense_matrix_v& operator=(const double& _value) {
     return initialize(size(0),size(1),_value);
   }
 
@@ -263,22 +269,17 @@ struct dense_matrix_v :
 
   std::ostream& print(std::ostream& o) const { return matrix_base_t::print(o); }
 
-  // resizing and clearing
-  dense_matrix_v& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
-    if (idx_t(_size_i,_size_j).is_valid_size()) {
-      clear();
-      matrix_base_t::m_size = idx_t(_size_i,_size_j);
-      if (size(0)*size(1))
-        a.assign(size(0)*size(1),_value);
-    }
-    return *this;
-  }
+  // clearing
+
   dense_matrix_v& clear() {
     a.clear();
     matrix_base_t::m_size.invalidate();
     return *this;
   }
+
   dense_matrix_v& zerorow(const size_t& i) {
+    if (i>=size(0))
+      throw std::logic_error("dense_matrix_v: row index outside bounds");
     if (ORIENT) std::fill_n(a.begin()+i*size(1),size(1),T());
     else {
       for (size_t j=0, k=i; j<size(1); ++j, k+=size(0))
@@ -314,10 +315,19 @@ struct sparse_matrix_csr :
   ~sparse_matrix_csr() { clear(); }
 
   // initializations
-  sparse_matrix_csr& initialize(const std::vector< T >& _vector) {
+
+  sparse_matrix_csr& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
+    if (idx_t(i,j)==matrix_base_t::m_size)
+      return operator=(_value);
+    throw std::runtime_error("sparse_matrix_csr: resizing not available");
+    return *this;
+  }
+
+  sparse_matrix_csr& initialize(const std::vector< double >& _vector) {
     throw std::runtime_error("sparse_matrix_csr::initialize is not possible from vector.");
     return *this;
   }
+
   sparse_matrix_csr& initialize(const std::string& _fname) {
     clear();
     if (!read_sparse< T >(_fname,true,BASE,matrix_base_t::m_size,a,idx.ia,idx.ja))
@@ -331,43 +341,23 @@ struct sparse_matrix_csr :
     return *this;
   }
 
-  // assignments
+  sparse_matrix_csr& clear() {
+    matrix_base_t::m_size.invalidate();
+    idx.clear();
+    a.clear();
+    return *this;
+  }
+
+  sparse_matrix_csr& operator=(const double& _value) {
+    a.assign(a.size(),static_cast< const T >(_value));
+    return *this;
+  }
 
   sparse_matrix_csr& operator=(const sparse_matrix_csr& _other) {
     clear();
     matrix_base_t::m_size = _other.matrix_base_t::m_size;
     idx = _other.idx;
     a = _other.a;
-    return *this;
-  }
-
-  sparse_matrix_csr& assign(const std::vector< T >& v) {
-    if (size(0)*size(1)!=v.size())
-      throw std::logic_error("sparse_matrix_csr: assignment not consistent with current size");
-    for (size_t i=0, k=0; i<size(0); ++i)
-      for (size_t j=0; j<size(1); ++j, ++k)
-        operator()(i,j) = v[k];
-    return *this;
-  }
-
-  sparse_matrix_csr& operator=(const T& _value) {
-    a.assign(a.size(),_value);
-    return *this;
-  }
-
-  // resizing and clearing
-  sparse_matrix_csr& initialize(const size_t& _size_i, const size_t& _size_j, const T& _value=T()) {
-    if (idx_t(_size_i,_size_j)==matrix_base_t::m_size) {
-      return operator=(_value);
-    }
-    throw std::runtime_error("sparse_matrix_csr: resizing not available");
-    return *this;
-  }
-
-  sparse_matrix_csr& clear() {
-    matrix_base_t::m_size.invalidate();
-    idx.clear();
-    a.clear();
     return *this;
   }
 
@@ -382,6 +372,36 @@ struct sparse_matrix_csr :
     other.idx.swap(idx);
     matrix_base_t::swap(other);
     return *this;
+  }
+
+  std::ostream& print(std::ostream& o) const {
+
+    const T eps = 1.e3*std::numeric_limits< T >::epsilon();
+    const print_t print_level(matrix_base_t::m_print? matrix_base_t::m_print :
+                             (matrix_base_t::m_size.i>100 || matrix_base_t::m_size.j>100? print_size  :
+                             (matrix_base_t::m_size.i> 10 || matrix_base_t::m_size.j> 10? print_signs :
+                                                                                          print_full )));
+
+    o << "[ (size: " << size(0) << 'x' << size(1) << ">=" << a.size() << ')';
+    if (print_level==print_signs) {
+      std::string str;
+      for (size_t i=0; i<size(0); ++i) {
+        str.assign(size(1),'.');
+        for (int k=idx.ia[i]-BASE; k<idx.ia[i+1]-BASE; ++k)
+          str[ idx.ja[k]-BASE ] = (a[k]>eps? '+' : (a[k]<-eps? '-' : '0' ));
+        o << "\n  " << str;
+      }
+    }
+    else if (print_level==print_full) {
+      for (size_t i=0; i<size(0); ++i) {
+        std::vector< T > row(size(1),T());
+        for (int k=idx.ia[i]-BASE; k<idx.ia[i+1]-BASE; ++k)
+          row[ idx.ja[k]-BASE ] = a[k];
+        o << "\n  ";
+        std::copy(row.begin(),row.end(),std::ostream_iterator< T >(o,", "));
+      }
+    }
+    return o << " ]";
   }
 
   // indexing
@@ -401,42 +421,7 @@ struct sparse_matrix_csr :
     return matrix_base_t::m_zero;
   }
 
-  // output
-  std::ostream& print(std::ostream& o) const {
-
-    const T eps = 1.e3*std::numeric_limits< T >::epsilon();
-    const print_t print_level(!matrix_base_t::m_print? matrix_base_t::m_print :
-                             (matrix_base_t::m_size.i>100 || matrix_base_t::m_size.j>100? print_size  :
-                             (matrix_base_t::m_size.i> 10 || matrix_base_t::m_size.j> 10? print_signs :
-                                                                                          print_full )));
-
-    o << "[ (size: " << size(0) << 'x' << size(1) << ">=" << a.size() << ')';
-    if (print_level==print_signs) {
-
-      std::string str;
-      for (size_t i=0; i<size(0); ++i) {
-        str.assign(size(1),'.');
-        for (int k=idx.ia[i]-BASE; k<idx.ia[i+1]-BASE; ++k)
-          str[ idx.ja[k]-BASE ] = (a[k]>eps? '+' : (a[k]<-eps? '-' : '0' ));
-        o << "\n  " << str;
-      }
-
-    }
-    else if (print_level==print_full) {
-
-      for (size_t i=0; i<size(0); ++i) {
-        std::vector< T > row(size(1),T());
-        for (int k=idx.ia[i]-BASE; k<idx.ia[i+1]-BASE; ++k)
-          row[ idx.ja[k]-BASE ] = a[k];
-        o << "\n  ";
-        std::copy(row.begin(),row.end(),std::ostream_iterator< T >(o,", "));
-      }
-
-    }
-    return o << " ]";
-  }
-
-  // storage and indexing
+  // storage
   std::vector< T > a;
   matrix_index_t idx;
 };
