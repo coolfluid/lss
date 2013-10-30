@@ -176,7 +176,12 @@ class linearsystem : public common::Action
  public:
 
   /// Linear system solving, aliased from execute
-  void execute() { solve(); }
+  void execute() {
+    try { solve(); }
+    catch (const std::runtime_error& e) {
+      std::cout << "linearsystem: " << e.what() << std::endl;
+    }
+  }
 
   /// Initialize the linear system
   virtual linearsystem& initialize(
