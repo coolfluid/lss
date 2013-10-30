@@ -71,11 +71,9 @@ class lss_API GaussianElimination : public
 
       // check if diagonal element is (close to) zero
       if (std::abs(C)<1.e-32) {
-        std::cerr
-          << std::endl
-          << "error: matrix is singular (line:" << m << ",C:" << std::abs(C) << ")"
-          << std::endl;
-        throw 42;
+        std::ostringstream msg;
+        msg << "error: matrix is singular (line:" << m << ",C:" << std::abs(C) << ").";
+        throw std::runtime_error(msg.str());
       }
 
       // normalize row m
