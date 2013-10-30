@@ -25,6 +25,13 @@ namespace lss {
 namespace detail {
 
 
+/* -- generic utilities ----------------------------------------------------- */
+
+/// @brief Type comparison at compilation time
+template< typename A, typename B >
+bool type_is_equal() { return (typeid(A)==typeid(B)); }
+
+
 /* -- indexing conversion/application types --------------------------------- */
 
 /// @brief Indexing base conversion tool (functor)
@@ -309,36 +316,34 @@ bool read_sparse(
  * @return if reading is successful
  */
 template< typename T >
-bool read_dense(
+void read_dense(
     const std::string& fname,
     const bool &roworiented,
     idx_t& size,
     std::vector< std::vector< T > >& a )
 {
   // if storage is of different type than double, it miraculously converts
-  const bool storage_conversion_needed(typeid(T)!=typeid(double));
   std::vector< std::vector< double > > another_a;
   std::vector< std::vector< double > >& storage(
-        storage_conversion_needed? another_a
-                                 : (std::vector< std::vector< double > >&) a);
+    type_is_equal< T, double >()? another_a
+                                : (std::vector< std::vector< double > >&) a);
 
   // read file contents
-  if      (fname.substr(fname.find_last_of("."))==".mtx") { MatrixMarket ::read_dense(fname,roworiented,size,storage); }
-  else if (fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_dense(fname,roworiented,size,storage); }
-  else if (fname.substr(fname.find_last_of("."))==".csr") { CSR          ::read_dense(fname,roworiented,size,storage); }
-  else {
-    throw std::runtime_error("file format not detected (\""+fname+"\").");
-  }
+  const bool hasdot(std::string("."+fname).find_last_of("."));
+  if      (hasdot && fname.substr(fname.find_last_of("."))==".mtx") { MatrixMarket ::read_dense(fname,roworiented,size,storage); }
+  else if (hasdot && fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_dense(fname,roworiented,size,storage); }
+  else if (hasdot && fname.substr(fname.find_last_of("."))==".csr") { CSR          ::read_dense(fname,roworiented,size,storage); }
+  else
+    throw std::runtime_error("file format not detected.");
 
   // perform storage conversion if necessary, and return
-  if (storage_conversion_needed) {
+  if (type_is_equal< T, double >()) {
     a.assign(roworiented? size.i:size.j,std::vector< T >(
              roworiented? size.j:size.i,T() ));
     for (size_t i=0; i<another_a.size(); ++i)
       transform( another_a[i].begin(),another_a[i].end(),a[i].begin(),
                  storage_conversion_t< double, T >() );
   }
-  return true;
 }
 
 
@@ -355,7 +360,7 @@ bool read_dense(
  * @return if reading is successful
  */
 template< typename T >
-bool read_sparse(
+void read_sparse(
     const std::string& fname,
     const bool& roworiented,
     const int& base,
@@ -365,26 +370,24 @@ bool read_sparse(
     std::vector< int >& ja )
 {
   // if storage is of different type than double, it miraculously converts
-  const bool storage_conversion_needed(typeid(T)!=typeid(double));
   std::vector< double > another_a;
   std::vector< double >& storage(
-        storage_conversion_needed? another_a : (std::vector< double >&) a);
+    type_is_equal< T, double >()? another_a : (std::vector< double >&) a);
 
   // read file contents
-  if      (fname.substr(fname.find_last_of("."))==".mtx") { MatrixMarket ::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
-  else if (fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
-  else if (fname.substr(fname.find_last_of("."))==".csr") { CSR          ::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
-  else {
-    throw std::runtime_error("file format not detected (\""+fname+"\").");
-  }
+  const bool hasdot(std::string("."+fname).find_last_of("."));
+  if      (hasdot && fname.substr(fname.find_last_of("."))==".mtx") { MatrixMarket ::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
+  else if (hasdot && fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
+  else if (hasdot && fname.substr(fname.find_last_of("."))==".csr") { CSR          ::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
+  else
+    throw std::runtime_error("file format not detected.");
 
   // perform storage conversion if necessary, and return
-  if (storage_conversion_needed) {
+  if (type_is_equal< T, double >()) {
     a.assign(another_a.size(),T());
     transform( another_a.begin(),another_a.end(),a.begin(),
                storage_conversion_t< double, T >() );
   }
-  return true;
 }
 
 

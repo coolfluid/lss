@@ -213,12 +213,10 @@ bool read_dense(
   size_t nnz(0);
 
   ifstream f(fname.c_str());
-  if (!f) throw runtime_error("cannot read file: \""+fname+"\"");
-
-  if (!mm::read_banner(f,t))     throw runtime_error("MatrixMarket: invalid header, \"%%MatrixMarket ...\" not found.");
+  if (!f)                                   throw runtime_error("cannot open file.");
+  if (!mm::read_banner(f,t))                throw runtime_error("MatrixMarket: invalid header, \"%%MatrixMarket ...\" not found.");
   if (!mm::read_size(f,size.i,size.j,nnz))  throw runtime_error("MatrixMarket: invalid matrix/array size.");
-  if (!t.is_real() || !t.is_general())
-    throw runtime_error("MatrixMarket: only \"(coordinate|array) real general\" supported.");
+  if (!t.is_real() || !t.is_general())      throw runtime_error("MatrixMarket: only \"(coordinate|array) real general\" supported.");
 
   // read into row/column-oriented dense matrix, line by line
   a.assign(roworiented? size.i:size.j, vector< double >(
@@ -266,12 +264,10 @@ bool read_sparse(
   mm::typecode_t t;
   size_t nnz(0);
   ifstream f(fname.c_str());
-  if (!f) throw runtime_error("cannot read file: \""+fname+"\"");
-
-  if (!mm::read_banner(f,t))  throw runtime_error("MatrixMarket: invalid header, \"%%MatrixMarket ...\" not found.");
+  if (!f)                                   throw runtime_error("cannot open file.");
+  if (!mm::read_banner(f,t))                throw runtime_error("MatrixMarket: invalid header, \"%%MatrixMarket ...\" not found.");
   if (!mm::read_size(f,size.i,size.j,nnz))  throw runtime_error("MatrixMarket: invalid matrix/array size.");
-  if (!t.is_real() || !t.is_general())
-    throw runtime_error("MatrixMarket: only \"(coordinate|array) real general\" supported.");
+  if (!t.is_real() || !t.is_general())      throw runtime_error("MatrixMarket: only \"(coordinate|array) real general\" supported.");
 
   coord_t p = make_pair(idx_t(1,1),0.);
   string line;
@@ -366,7 +362,7 @@ bool read_dense(
     std::vector< std::vector< double > >& a )
 {
   //FIXME lorem ipsum
-  throw std::runtime_error("not implemented");
+  throw std::runtime_error("not implemented.");
   return true;
 }
 
@@ -381,7 +377,7 @@ bool read_sparse(
     std::vector< int >& ja )
 {
   //FIXME lorem ipsum
-  throw std::runtime_error("not implemented");
+  throw std::runtime_error("not implemented.");
   return true;
 }
 
@@ -408,7 +404,7 @@ bool read_dense(
   // open file and read matrix size
   std::string line;
   std::ifstream f(fname.c_str());
-  if (!f) throw runtime_error("cannot read file: \""+fname+"\"");
+  if (!f) throw runtime_error("cannot open file.");
   while (!size.is_valid_size()) {
     if (std::getline(f,line) && line.find_first_of("%")!=0)
       std::istringstream(line) >> size.i >> size.j;
@@ -459,7 +455,7 @@ bool read_sparse(
   // open file and read matrix size
   string line;
   ifstream f(fname.c_str());
-  if (!f) throw runtime_error("cannot read file: \""+fname+"\"");
+  if (!f) throw runtime_error("cannot open file.");
   while (!size.is_valid_size()) {
     if (getline(f,line) && line.find_first_of("%")!=0)
       istringstream(line) >> size.i >> size.j;
