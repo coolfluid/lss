@@ -35,8 +35,9 @@ struct idx_t
 {
 //  size_t ij[2];  // TODO: check this option too?
   size_t i, j;
-  idx_t(const size_t& _i=std::numeric_limits< size_t >::max(),
-        const size_t& _j=std::numeric_limits< size_t >::max()) : i(_i), j(_j) {}
+  idx_t(const size_t& _i=0, const size_t& _j=0) : i(_i), j(_j) {}
+  idx_t& invalidate() { i=std::numeric_limits< size_t >::max(); j=i; return *this; }
+  idx_t& clear     () { i=0;                                    j=i; return *this; }
 
   bool operator<  (const idx_t& _other) const { return (i<_other.i? true : i>_other.i? false : (j<_other.j)); }
   bool operator>  (const idx_t& _other) const { return (_other<*this); }
@@ -45,8 +46,7 @@ struct idx_t
   bool operator== (const idx_t& _other) const { return i==_other.i && j==_other.j; }
   bool operator!= (const idx_t& _other) const { return i!=_other.i || j!=_other.j; }
 
-  idx_t& invalidate() { return (*this = idx_t()); }
-  bool is_valid_size()  const { return operator>=(idx_t(0,0)) && operator<(idx_t()); }
+  bool is_valid_size()  const { return operator>=(idx_t(0,0)) && operator<(idx_t().invalidate()); }
   bool is_square_size() const { return i==j; }
   bool is_diagonal()    const { return is_square_size(); }
 };
