@@ -69,7 +69,7 @@ class lss_API LAPACK : public
     err==-17? msg << "LAPACK: system matrix must be square." :
     err==-42? msg << "LAPACK: precision not implemented." :
     err<0?    msg << "LAPACK: invalid " << err << "'th argument to dgesv_()/sgesv_()." :
-    err>0?    msg << "LAPACK: triangular factor matrix U(" << err << ',' << err << ") is zero, so A is singular (not invertible)." :
+    err>0?    msg << "LAPACK: triangular factor matrix U(" << (err-1) << ',' << (err-1) << ") is zero, so A is singular (not invertible)." :
               msg;
     if (err)
       throw std::runtime_error(msg.str());
