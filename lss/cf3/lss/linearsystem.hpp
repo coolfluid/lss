@@ -13,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "common/BasicExceptions.hpp"
 #include "common/Signal.hpp"
 #include "common/Action.hpp"
 
@@ -46,11 +47,7 @@ class linearsystem : public common::Action
  public:
 
   /// Construct the linear system
-  linearsystem(const std::string& name,
-               const size_t& i=size_t(),
-               const size_t& j=size_t(),
-               const size_t& k=1,
-               const double& _value=T() ) :
+  linearsystem(const std::string& name) :
     common::Action(name),
     m_dummy_value(std::numeric_limits< T >::quiet_NaN())
   {
@@ -119,22 +116,24 @@ class linearsystem : public common::Action
         Afname(opts.value< std::string >("A")),
         bfname(opts.value< std::string >("b")),
         xfname(opts.value< std::string >("x"));
-    try {
+    const double value(opts.value< double >("value"));
       if (Afname.length() || xfname.length() || bfname.length()) {
-        initialize(Afname,bfname,xfname);
+        if (Afname.length()) component_initialize_with_file(A(),"A",Afname);
+        if (bfname.length()) component_initialize_with_file(b(),"b",bfname); else b().initialize(size(0),1);
+        if (xfname.length()) component_initialize_with_file(x(),"x",xfname); else x().initialize(size(1),size(2));
+//        consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
       }
       else {
-        initialize(
-          opts.value< unsigned >("i"),
-          opts.value< unsigned >("j"),
-          opts.value< unsigned >("k"),
-          opts.value< double >("value") );
+        const unsigned
+            i(opts.value< unsigned >("i")),
+            j(opts.value< unsigned >("j")),
+            k(opts.value< unsigned >("k"));
+        A().initialize(i,j,value);
+        b().initialize(i,k,value);
+        x().initialize(j,k,value);
       }
-    }
-    catch (const std::logic_error& e) {
-      std::cerr << "linearsystem: " << e.what() << std::endl;
-    }
   }
+
 
   void signal_zerorow(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
@@ -149,15 +148,25 @@ class linearsystem : public common::Action
   void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); b().operator()(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }
   void signal_x(common::SignalArgs& args) { common::XML::SignalOptions opts(args); x().operator()(opts.value< unsigned >("j"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }
 
-  void trigger_A() { set_component< MATRIX >(A(),"A"); }
-  void trigger_b() { set_component< VECTOR >(b(),"b"); }
-  void trigger_x() { set_component< VECTOR >(x(),"x"); }
+  void trigger_A() { component_initialize_with_vector< MATRIX >(A(),"A"); }
+  void trigger_b() { component_initialize_with_vector< VECTOR >(b(),"b"); }
+  void trigger_x() { component_initialize_with_vector< VECTOR >(x(),"x"); }
+
 
   template< typename COMP >
-  void set_component(COMP& c, const std::string& name) {
+  void component_initialize_with_vector(COMP& c, const std::string& name) {
     try { c.initialize(m_dummy_vector); }
-    catch (const std::logic_error& e) {
-      std::cerr << "linearsystem: " << name << ": " << e.what() << std::endl;
+    catch (const std::runtime_error& e) {
+      std::cout << "linearsystem: " << name << ": " << e.what() << std::endl;
+    }
+    m_dummy_vector.clear();
+  }
+
+  template< typename COMP >
+  void component_initialize_with_file(COMP& c, const std::string& name, const std::string& fname) {
+    try { c.initialize(fname); }
+    catch (const std::runtime_error& e) {
+      std::cout << "linearsystem: " << name << ": " << e.what() << std::endl;
     }
     m_dummy_vector.clear();
   }
@@ -245,7 +254,7 @@ class linearsystem : public common::Action
       msg << "linearsystem: size is not consistent: "
           << "A(" << Ai << 'x' << Aj << ") "
           << "x(" << xi << 'x' << xj << ") = "
-          << "b(" << bi << 'x' << bj << ") ";
+          << "b(" << bi << 'x' << bj << ").";
       throw std::runtime_error(msg.str());
       return false;
     }
