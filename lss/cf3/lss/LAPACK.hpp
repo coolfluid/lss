@@ -61,22 +61,22 @@ class lss_API LAPACK : public
     std::vector< int > ipiv(n);
 
     if (!m_A.size().is_square_size()) { err = -17; }
-    else if (typeid(T)==typeid(double)) { dgesv_( &n, &nrhs, (double*) &m_A.a[0], &n, &ipiv[0], (double*) &m_b.a[0], &n, &err ); }
-    else if (typeid(T)==typeid(float))  { sgesv_( &n, &nrhs, (float*)  &m_A.a[0], &n, &ipiv[0], (float*)  &m_b.a[0], &n, &err ); }
+    else if (detail::type_is_equal< T, double >()) { dgesv_( &n, &nrhs, (double*) &m_A.a[0], &n, &ipiv[0], (double*) &m_b.a[0], &n, &err ); }
+    else if (detail::type_is_equal< T, float  >()) { sgesv_( &n, &nrhs, (float*)  &m_A.a[0], &n, &ipiv[0], (float*)  &m_b.a[0], &n, &err ); }
     else { err = -42; }
 
     std::ostringstream msg;
-    err==-17? msg << "LAPACK: system matrix must be square" :
-    err==-42? msg << "LAPACK: precision not implemented: " << typeid(T).name() :
-    err<0?    msg << "LAPACK: invalid " << err << "'th argument to dgesv_()/sgesv_()" :
-    err>0?    msg << "LAPACK: triangular factor matrix U(" << err << ',' << err << ") is zero, so A is singular (not invertible)" :
+    err==-17? msg << "LAPACK: system matrix must be square." :
+    err==-42? msg << "LAPACK: precision not implemented." :
+    err<0?    msg << "LAPACK: invalid " << err << "'th argument to dgesv_()/sgesv_()." :
+    err>0?    msg << "LAPACK: triangular factor matrix U(" << err << ',' << err << ") is zero, so A is singular (not invertible)." :
               msg;
     if (err)
       throw std::runtime_error(msg.str());
 
-    // solution is in b, so swap with x (with A square, size b = size x)
+    // solution is in b so swap with x and zero it (A square => size b = size x)
     b().swap(x());
-    b().clear();
+    b() = T();
     return *this;
   }
 
