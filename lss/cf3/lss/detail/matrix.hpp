@@ -30,6 +30,8 @@ namespace detail {
 // utilities
 enum orientation_t { column_oriented=0, row_oriented=1 };
 enum print_t { print_auto, print_size, print_signs, print_full };
+print_t print_level(const int& i);
+
 
 /**
  * @brief Generic matrix basic interface, based on class template implementation
@@ -137,27 +139,29 @@ struct dense_matrix_vv :
     }
     return *this;
   }
+
   dense_matrix_vv& initialize(const std::vector< double >& _vector) {
     if (size(0)*size(1)!=_vector.size())
-      throw std::logic_error("dense_matrix_vv: assignment not consistent with current size");
-
-    const bool conversion_needed(typeid(T)!=typeid(double));
+      throw std::runtime_error("dense_matrix_vv: assignment not consistent with current size.");
     for (size_t i=0, k=0; i<size(0); ++i)
       for (size_t j=0; j<size(1); ++j, ++k)
-        operator()(i,j) = (conversion_needed? static_cast< const T >(_vector[k]) : (const T) _vector[k] );
+        operator()(i,j) = (type_is_equal< T, double >()? (const T) _vector[k]
+                                                       : static_cast< const T >(_vector[k]) );
     return *this;
   }
 
   dense_matrix_vv& initialize(const std::string& _fname) {
     clear();
-    if (!read_dense< T >(_fname,ORIENT,matrix_base_t::m_size,a))
-      throw std::runtime_error("cannot read file.");
+    try { read_dense< T >(_fname,ORIENT,matrix_base_t::m_size,a); }
+    catch (const std::runtime_error& e) {
+      throw std::runtime_error("dense_matrix_vv: " + std::string(e.what()) + " cannot read file.");
+    }
     return *this;
   }
 
   dense_matrix_vv& clear() {
     a.clear();
-    matrix_base_t::m_size.invalidate();
+    matrix_base_t::m_size.clear();
     return *this;
   }
 
@@ -169,7 +173,7 @@ struct dense_matrix_vv :
 
   dense_matrix_vv& zerorow(const size_t& i) {
     if (i>=size(0))
-      throw std::logic_error("dense_matrix_vv: row index outside bounds");
+      throw std::runtime_error("dense_matrix_vv: row index outside bounds.");
     if (ORIENT) a[i].assign(size(1),T());
     else {
       for (size_t j=0; j<size(1); ++j)
@@ -220,15 +224,14 @@ struct dense_matrix_v :
 
   dense_matrix_v& initialize(const std::vector< double >& _vector) {
     if (a.size()!=_vector.size())
-      throw std::logic_error("dense_matrix_v: assignment not consistent with current size");
+      throw std::runtime_error("dense_matrix_v: assignment not consistent with current size.");
 
-    const bool conversion_needed(typeid(T)!=typeid(double));
     std::vector< T > w;
-    if (conversion_needed) {
+    if (!type_is_equal< T, double >()) {
       w.resize(_vector.size());
-      std::transform(_vector.begin(),_vector.end(),w.begin(),detail::storage_conversion_t< double, T >() );
+      std::transform(_vector.begin(),_vector.end(),w.begin(),type_conversion_t< double, T >() );
     }
-    const std::vector< T >& v(conversion_needed? w : (const std::vector< T >&) _vector);
+    const std::vector< T >& v(type_is_equal< T, double >()? (const std::vector< T >&) _vector : w);
 
     if (ORIENT) { a = v; }
     else {
@@ -242,8 +245,10 @@ struct dense_matrix_v :
   dense_matrix_v& initialize(const std::string& _fname) {
     clear();
     std::vector< std::vector< T > > another_a;
-    if (!read_dense< T >(_fname,ORIENT,matrix_base_t::m_size,another_a))
-      throw std::runtime_error("cannot read file.");
+    try { read_dense< T >(_fname,ORIENT,matrix_base_t::m_size,another_a); }
+    catch (const std::runtime_error& e) {
+      throw std::runtime_error("dense_matrix_v: " + std::string(e.what()) + " cannot read file.");
+    }
     a.resize(size(0)*size(1));
     for (size_t i=0, k=0; i<(ORIENT? size(0):size(1)); ++i, k+=(ORIENT? size(1):size(0)))
       std::copy(another_a[i].begin(),another_a[i].end(),a.begin()+k);
@@ -273,13 +278,13 @@ struct dense_matrix_v :
 
   dense_matrix_v& clear() {
     a.clear();
-    matrix_base_t::m_size.invalidate();
+    matrix_base_t::m_size.clear();
     return *this;
   }
 
   dense_matrix_v& zerorow(const size_t& i) {
     if (i>=size(0))
-      throw std::logic_error("dense_matrix_v: row index outside bounds");
+      throw std::runtime_error("dense_matrix_v: row index outside bounds.");
     if (ORIENT) std::fill_n(a.begin()+i*size(1),size(1),T());
     else {
       for (size_t j=0, k=i; j<size(1); ++j, k+=size(0))
@@ -319,30 +324,32 @@ struct sparse_matrix_csr :
   sparse_matrix_csr& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
     if (idx_t(i,j)==matrix_base_t::m_size)
       return operator=(_value);
-    throw std::runtime_error("sparse_matrix_csr: resizing not available");
+    throw std::runtime_error("sparse_matrix_csr: resizing not available.");
     return *this;
   }
 
   sparse_matrix_csr& initialize(const std::vector< double >& _vector) {
-    throw std::runtime_error("sparse_matrix_csr::initialize is not possible from vector.");
+    throw std::runtime_error("sparse_matrix_csr: initialize from vector is not possible.");
     return *this;
   }
 
   sparse_matrix_csr& initialize(const std::string& _fname) {
     clear();
-    if (!read_sparse< T >(_fname,true,BASE,matrix_base_t::m_size,a,idx.ia,idx.ja))
-      throw std::runtime_error("cannot read file.");
+    try { read_sparse< T >(_fname,true,BASE,matrix_base_t::m_size,a,idx.ia,idx.ja); }
+    catch (const std::runtime_error& e) {
+      throw std::runtime_error("sparse_matrix_csr: " + std::string(e.what()) + " cannot read file.");
+    }
     idx.nnu = static_cast< int >(idx.ia.size())-1;
     idx.nnz = static_cast< int >(idx.ja.size());
     if (idx.ja.size()!=a.size()
      || size(0)!=idx.nnu
      || size(1)<=*std::max_element(idx.ja.begin(),idx.ja.end())-BASE)
-      throw std::runtime_error("after reading file, indexing not correct.");
+      throw std::runtime_error("sparse_matrix_csr: after reading file, indexing not correct.");
     return *this;
   }
 
   sparse_matrix_csr& clear() {
-    matrix_base_t::m_size.invalidate();
+    matrix_base_t::m_size.clear();
     idx.clear();
     a.clear();
     return *this;
@@ -409,7 +416,7 @@ struct sparse_matrix_csr :
     idx_t ij(_i,_j);
     if (idx.dereference(ij)<matrix_base_t::m_size)
       return a[ij.i];
-    throw std::out_of_range("sparse_matrix_csr: index not available");
+    throw std::runtime_error("sparse_matrix_csr: index not available.");
     return matrix_base_t::m_zero;
   }
 
@@ -417,7 +424,7 @@ struct sparse_matrix_csr :
     idx_t ij(_i,_j);
     if (idx.dereference(ij)<matrix_base_t::m_size)
       return a[ij.i];
-    throw std::out_of_range("sparse_matrix_csr: index not available");
+    throw std::runtime_error("sparse_matrix_csr: index not available.");
     return matrix_base_t::m_zero;
   }
 

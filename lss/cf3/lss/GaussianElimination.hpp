@@ -48,7 +48,10 @@ class lss_API GaussianElimination : public
 
   /// Solve
   GaussianElimination& solve() {
-    const size_t N(linearsystem_t::size(0));
+    const size_t
+      N(linearsystem_t::size(0)),
+      K(linearsystem_t::size(2));
+
     double C;
     m_x = m_b;
 
@@ -64,40 +67,43 @@ class lss_API GaussianElimination : public
             m_A(m,p) = m_A(n,p);
             m_A(n,p) = C;
           }
-          std::swap( m_x(m), m_x(n) );
+          for (size_t k=0; k<K; ++k)
+            std::swap( m_x(m,k), m_x(n,k) );
           C = m_A(m,m);
         }
       }
 
       // check if diagonal element is (close to) zero
       if (std::abs(C)<1.e-32) {
-        std::cerr
-          << std::endl
-          << "error: matrix is singular (line:" << m << ",C:" << std::abs(C) << ")"
-          << std::endl;
-        throw 42;
+        std::ostringstream msg;
+        msg << "error: matrix is singular (line:" << m << ",C:" << std::abs(C) << ").";
+        throw std::runtime_error(msg.str());
       }
 
       // normalize row m
       for (size_t n=m+1; n<N; ++n)
         m_A(m,n) /= C;
-      m_x(m) /= C;
+      for (size_t k=0; k<K; ++k)
+        m_x(m,k) /= C;
 
       // subtract row m from subsequent rows
       for (size_t n=m+1; n<N; ++n) {
         C = m_A(n,m);
         for (size_t p=m+1; p<N; ++p)
           m_A(n,p) -= C*m_A(m,p);
-        m_x(n) -= C * m_x(m);
+        for (size_t k=0; k<K; ++k)
+          m_x(n,k) -= C * m_x(m,k);
       }
     }
 
     // solve by back substitution
-    m_x(N-1) /= m_A(N-1,N-1);
+    for (size_t k=0; k<K; ++k)
+      m_x(N-1,k) /= m_A(N-1,N-1);
     for (size_t p=0; p<N-1; ++p) {
       size_t m = N-p-2;
       for (size_t n=m+1; n<N; ++n)
-        m_x(m) -= m_A(m,n) * m_x(n);
+        for (size_t k=0; k<K; ++k)
+          m_x(m,k) -= m_A(m,n) * m_x(n,k);
     }
 
     return *this;

@@ -13,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "common/BasicExceptions.hpp"
 #include "common/Signal.hpp"
 #include "common/Action.hpp"
 
@@ -46,11 +47,7 @@ class linearsystem : public common::Action
  public:
 
   /// Construct the linear system
-  linearsystem(const std::string& name,
-               const size_t& i=size_t(),
-               const size_t& j=size_t(),
-               const size_t& k=1,
-               const double& _value=T() ) :
+  linearsystem(const std::string& name) :
     common::Action(name),
     m_dummy_value(std::numeric_limits< T >::quiet_NaN())
   {
@@ -67,9 +64,13 @@ class linearsystem : public common::Action
         .connect   ( boost::bind( &linearsystem::signal_zerorow,  this, _1 ))
         .signature ( boost::bind( &linearsystem::signat_ijkvalue, this, _1 ));
 
+    regist_signal("output")
+        .description("Print a pretty system matrix, at print level per component (0:auto, 1:size, 2:signs, 3:full), where (A:1, b:1 and x:0)")
+        .connect   ( boost::bind( &linearsystem::signal_output, this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_abc,    this, _1 ));
+
     regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this )).description("Empty linear system components");
     regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this )).description("Solve linear system, returning solution in x()");
-    regist_signal("output").connect( boost::bind( &linearsystem::signal_output, this )).description("Print a pretty linear system");
 
     regist_signal("A").connect(boost::bind( &linearsystem::signal_A, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in matrix A, by given index (i,j) and value (value)");
     regist_signal("b").connect(boost::bind( &linearsystem::signal_b, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in vector b, by given index (i,k) and value (value)");
@@ -113,51 +114,77 @@ class linearsystem : public common::Action
     opts.add< double >("value");
   }
 
+  void signat_abc(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    opts.add< int >("A",detail::print_size);
+    opts.add< int >("b",detail::print_size);
+    opts.add< int >("x",detail::print_auto);
+  }
+
   void signal_initialize(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
     const std::string
         Afname(opts.value< std::string >("A")),
         bfname(opts.value< std::string >("b")),
         xfname(opts.value< std::string >("x"));
-    try {
+    const double value(opts.value< double >("value"));
       if (Afname.length() || xfname.length() || bfname.length()) {
-        initialize(Afname,bfname,xfname);
+        if (Afname.length()) component_initialize_with_file(A(),"A",Afname);
+        if (bfname.length()) component_initialize_with_file(b(),"b",bfname); else b().initialize(size(0),1);
+        if (xfname.length()) component_initialize_with_file(x(),"x",xfname); else x().initialize(size(1),size(2));
+        consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
       }
       else {
-        initialize(
-          opts.value< unsigned >("i"),
-          opts.value< unsigned >("j"),
-          opts.value< unsigned >("k"),
-          opts.value< double >("value") );
+        const unsigned
+            i(opts.value< unsigned >("i")),
+            j(opts.value< unsigned >("j")),
+            k(opts.value< unsigned >("k"));
+        A().initialize(i,j,value);
+        b().initialize(i,k,value);
+        x().initialize(j,k,value);
       }
-    }
-    catch (const std::logic_error& e) {
-      std::cerr << "linearsystem: " << e.what() << std::endl;
-    }
   }
+
 
   void signal_zerorow(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
     zerorow(opts.value< unsigned >("i"));
   }
 
+  void signal_output(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    A().m_print = detail::print_level(opts.value< int >("A"));
+    b().m_print = detail::print_level(opts.value< int >("b"));
+    x().m_print = detail::print_level(opts.value< int >("x"));
+    operator<<(std::cout,*this);
+  }
+
   void signal_clear () { clear(); }
-  void signal_solve () { solve(); }
-  void signal_output() { operator<<(std::cout,*this); }
+  void signal_solve () { execute(); }
 
   void signal_A(common::SignalArgs& args) { common::XML::SignalOptions opts(args); A().operator()(opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double   >("value"); }
   void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); b().operator()(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }
   void signal_x(common::SignalArgs& args) { common::XML::SignalOptions opts(args); x().operator()(opts.value< unsigned >("j"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }
 
-  void trigger_A() { set_component< MATRIX >(A(),"A"); }
-  void trigger_b() { set_component< VECTOR >(b(),"b"); }
-  void trigger_x() { set_component< VECTOR >(x(),"x"); }
+  void trigger_A() { component_initialize_with_vector< MATRIX >(A(),"A"); }
+  void trigger_b() { component_initialize_with_vector< VECTOR >(b(),"b"); }
+  void trigger_x() { component_initialize_with_vector< VECTOR >(x(),"x"); }
+
 
   template< typename COMP >
-  void set_component(COMP& c, const std::string& name) {
+  void component_initialize_with_vector(COMP& c, const std::string& name) {
     try { c.initialize(m_dummy_vector); }
-    catch (const std::logic_error& e) {
-      std::cerr << "linearsystem: " << name << ": " << e.what() << std::endl;
+    catch (const std::runtime_error& e) {
+      std::cout << "linearsystem: " << name << ": " << e.what() << std::endl;
+    }
+    m_dummy_vector.clear();
+  }
+
+  template< typename COMP >
+  void component_initialize_with_file(COMP& c, const std::string& name, const std::string& fname) {
+    try { c.initialize(fname); }
+    catch (const std::runtime_error& e) {
+      std::cout << "linearsystem: " << name << ": " << e.what() << std::endl;
     }
     m_dummy_vector.clear();
   }
@@ -167,7 +194,14 @@ class linearsystem : public common::Action
  public:
 
   /// Linear system solving, aliased from execute
-  void execute() { solve(); }
+  void execute() {
+    std::cout << "linearsystem: solve..." << std::endl;
+    try { solve(); }
+    catch (const std::runtime_error& e) {
+      std::cout << "linearsystem: " << e.what() << std::endl;
+    }
+    std::cout << "linearsystem: solve." << std::endl;
+  }
 
   /// Initialize the linear system
   virtual linearsystem& initialize(
@@ -245,7 +279,7 @@ class linearsystem : public common::Action
       msg << "linearsystem: size is not consistent: "
           << "A(" << Ai << 'x' << Aj << ") "
           << "x(" << xi << 'x' << xj << ") = "
-          << "b(" << bi << 'x' << bj << ") ";
+          << "b(" << bi << 'x' << bj << ").";
       throw std::runtime_error(msg.str());
       return false;
     }

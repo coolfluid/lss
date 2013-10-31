@@ -1,11 +1,14 @@
 
 coolfluid3_add_library(
   TARGET coolfluid_lss
+  LIBS ${LAPACK_LIBRARIES}
+
   SOURCES
     LibLSS.cpp
     LibLSS.hpp
     detail/index.hpp
     detail/matrix.hpp
+    detail/matrix.cpp
     detail/utilities.cpp
     detail/utilities.hpp
     linearsystem.hpp
@@ -18,11 +21,4 @@ coolfluid3_add_library(
     LAPACK.hpp
   )
 
-coolfluid_mark_not_orphan(
-  reference/linearsystem.hpp
-  reference/lss_matrix.hpp
-  reference/mlinearsystem.cpp
-  reference/mlinearsystem.h
-  reference/mmatrix.h
-  )
-
+coolfluid_mark_not_orphan( reference/mmatrix.h )
