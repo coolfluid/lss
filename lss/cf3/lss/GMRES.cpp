@@ -60,17 +60,10 @@ GMRES& GMRES::solve()
   delete[] levs;
 
   double *vv = new double[n*(im+1)];
-  std::vector< double >
-    dblRES(n,0.),
-    dblRHS(n);
-  for (size_t i=0; i<n; ++i)
-    dblRHS[i] = b().operator()(i);
+  x() = 0.;
 
-  pgmres(&n,&im,&dblRHS[0],&dblRES[0],vv,&eps,&maxits,&iout,
+  pgmres(&n,&im,&(b().a[0]),&(x().a[0]),vv,&eps,&maxits,&iout,
          &m_A.a[0],&m_A.idx.ja[0],&m_A.idx.ia[0],alu,jlu,ju,&ierr);
-
-  for (size_t i=0; i<m_A.size(0); ++i)
-    x().operator()(i) = dblRES[i];
 
   delete [] alu;
   delete [] jlu;
