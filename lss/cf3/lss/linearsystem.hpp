@@ -160,7 +160,7 @@ class linearsystem : public common::Action
   }
 
   void signal_clear () { clear(); }
-  void signal_solve () { solve(); }
+  void signal_solve () { execute(); }
 
   void signal_A(common::SignalArgs& args) { common::XML::SignalOptions opts(args); A().operator()(opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double   >("value"); }
   void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); b().operator()(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }
@@ -195,10 +195,12 @@ class linearsystem : public common::Action
 
   /// Linear system solving, aliased from execute
   void execute() {
+    std::cout << "linearsystem: solve..." << std::endl;
     try { solve(); }
     catch (const std::runtime_error& e) {
       std::cout << "linearsystem: " << e.what() << std::endl;
     }
+    std::cout << "linearsystem: solve." << std::endl;
   }
 
   /// Initialize the linear system
