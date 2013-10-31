@@ -1,5 +1,4 @@
 
-coolfluid_add_test( ATEST      atest-lss
-                    PYTHON     atest-lss.py
-                    LIBS       cf3_lss )
+coolfluid_add_test( ATEST atest-lss-simple    PYTHON atest-lss-simple.py    LIBS cf3_lss )
+coolfluid_add_test( ATEST atest-lss-matrices  PYTHON atest-lss-matrices.py  LIBS cf3_lss )
 
