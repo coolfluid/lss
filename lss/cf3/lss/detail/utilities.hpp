@@ -32,6 +32,14 @@ template< typename A, typename B >
 bool type_is_equal() { return (typeid(A)==typeid(B)); }
 
 
+/// @brief Type conversion functor (POD to POD, no fancy stuff)
+template< typename Tin, typename Tout >
+struct type_conversion_t
+{
+  Tout operator()(const Tin& in) { return static_cast< Tout >(in); }
+};
+
+
 /* -- indexing conversion/application types --------------------------------- */
 
 /// @brief Indexing base conversion tool (functor)
@@ -40,14 +48,6 @@ struct base_conversion_t
   base_conversion_t(const int& _diff) : diff (_diff) {}
   int& operator()(int& v) { return (v+=diff); }
   const int& diff;
-};
-
-
-/// @brief Storage type conversion (POD to POD, no fancy stuff) (functor)
-template< typename Tin, typename Tout >
-struct storage_conversion_t
-{
-  Tout operator()(const Tin& in) { return static_cast< Tout >(in); }
 };
 
 
@@ -325,8 +325,8 @@ void read_dense(
   // if storage is of different type than double, it miraculously converts
   std::vector< std::vector< double > > another_a;
   std::vector< std::vector< double > >& storage(
-    type_is_equal< T, double >()? another_a
-                                : (std::vector< std::vector< double > >&) a);
+    type_is_equal< T, double >()? (std::vector< std::vector< double > >&) a
+                                : another_a);
 
   // read file contents
   const bool hasdot(std::string("."+fname).find_last_of("."));
@@ -337,12 +337,12 @@ void read_dense(
     throw std::runtime_error("file format not detected.");
 
   // perform storage conversion if necessary, and return
-  if (type_is_equal< T, double >()) {
+  if (!type_is_equal< T, double >()) {
     a.assign(roworiented? size.i:size.j,std::vector< T >(
              roworiented? size.j:size.i,T() ));
     for (size_t i=0; i<another_a.size(); ++i)
       transform( another_a[i].begin(),another_a[i].end(),a[i].begin(),
-                 storage_conversion_t< double, T >() );
+                 type_conversion_t< double, T >() );
   }
 }
 
@@ -372,7 +372,7 @@ void read_sparse(
   // if storage is of different type than double, it miraculously converts
   std::vector< double > another_a;
   std::vector< double >& storage(
-    type_is_equal< T, double >()? another_a : (std::vector< double >&) a);
+    type_is_equal< T, double >()? (std::vector< double >&) a : another_a);
 
   // read file contents
   const bool hasdot(std::string("."+fname).find_last_of("."));
@@ -383,10 +383,10 @@ void read_sparse(
     throw std::runtime_error("file format not detected.");
 
   // perform storage conversion if necessary, and return
-  if (type_is_equal< T, double >()) {
+  if (!type_is_equal< T, double >()) {
     a.assign(another_a.size(),T());
     transform( another_a.begin(),another_a.end(),a.begin(),
-               storage_conversion_t< double, T >() );
+               type_conversion_t< double, T >() );
   }
 }
 

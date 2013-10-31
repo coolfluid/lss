@@ -64,9 +64,13 @@ class linearsystem : public common::Action
         .connect   ( boost::bind( &linearsystem::signal_zerorow,  this, _1 ))
         .signature ( boost::bind( &linearsystem::signat_ijkvalue, this, _1 ));
 
+    regist_signal("output")
+        .description("Print a pretty system matrix, at print level per component (0:auto, 1:size, 2:signs, 3:full), where (A:1, b:1 and x:0)")
+        .connect   ( boost::bind( &linearsystem::signal_output, this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_abc,    this, _1 ));
+
     regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this )).description("Empty linear system components");
     regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this )).description("Solve linear system, returning solution in x()");
-    regist_signal("output").connect( boost::bind( &linearsystem::signal_output, this )).description("Print a pretty linear system");
 
     regist_signal("A").connect(boost::bind( &linearsystem::signal_A, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in matrix A, by given index (i,j) and value (value)");
     regist_signal("b").connect(boost::bind( &linearsystem::signal_b, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in vector b, by given index (i,k) and value (value)");
@@ -110,6 +114,13 @@ class linearsystem : public common::Action
     opts.add< double >("value");
   }
 
+  void signat_abc(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    opts.add< int >("A",detail::print_size);
+    opts.add< int >("b",detail::print_size);
+    opts.add< int >("x",detail::print_auto);
+  }
+
   void signal_initialize(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
     const std::string
@@ -121,7 +132,7 @@ class linearsystem : public common::Action
         if (Afname.length()) component_initialize_with_file(A(),"A",Afname);
         if (bfname.length()) component_initialize_with_file(b(),"b",bfname); else b().initialize(size(0),1);
         if (xfname.length()) component_initialize_with_file(x(),"x",xfname); else x().initialize(size(1),size(2));
-//        consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
+        consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
       }
       else {
         const unsigned
@@ -140,9 +151,16 @@ class linearsystem : public common::Action
     zerorow(opts.value< unsigned >("i"));
   }
 
+  void signal_output(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    A().m_print = detail::print_level(opts.value< int >("A"));
+    b().m_print = detail::print_level(opts.value< int >("b"));
+    x().m_print = detail::print_level(opts.value< int >("x"));
+    operator<<(std::cout,*this);
+  }
+
   void signal_clear () { clear(); }
   void signal_solve () { solve(); }
-  void signal_output() { operator<<(std::cout,*this); }
 
   void signal_A(common::SignalArgs& args) { common::XML::SignalOptions opts(args); A().operator()(opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double   >("value"); }
   void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); b().operator()(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }

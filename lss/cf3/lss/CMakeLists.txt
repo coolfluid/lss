@@ -8,6 +8,7 @@ coolfluid3_add_library(
     LibLSS.hpp
     detail/index.hpp
     detail/matrix.hpp
+    detail/matrix.cpp
     detail/utilities.cpp
     detail/utilities.hpp
     linearsystem.hpp

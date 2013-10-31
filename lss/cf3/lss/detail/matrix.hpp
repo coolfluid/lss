@@ -30,6 +30,8 @@ namespace detail {
 // utilities
 enum orientation_t { column_oriented=0, row_oriented=1 };
 enum print_t { print_auto, print_size, print_signs, print_full };
+print_t print_level(const int& i);
+
 
 /**
  * @brief Generic matrix basic interface, based on class template implementation
@@ -137,12 +139,14 @@ struct dense_matrix_vv :
     }
     return *this;
   }
+
   dense_matrix_vv& initialize(const std::vector< double >& _vector) {
     if (size(0)*size(1)!=_vector.size())
       throw std::runtime_error("dense_matrix_vv: assignment not consistent with current size.");
     for (size_t i=0, k=0; i<size(0); ++i)
       for (size_t j=0; j<size(1); ++j, ++k)
-        operator()(i,j) = (type_is_equal< T, double >()? static_cast< const T >(_vector[k]) : (const T) _vector[k] );
+        operator()(i,j) = (type_is_equal< T, double >()? (const T) _vector[k]
+                                                       : static_cast< const T >(_vector[k]) );
     return *this;
   }
 
@@ -223,11 +227,11 @@ struct dense_matrix_v :
       throw std::runtime_error("dense_matrix_v: assignment not consistent with current size.");
 
     std::vector< T > w;
-    if (type_is_equal< T, double >()) {
+    if (!type_is_equal< T, double >()) {
       w.resize(_vector.size());
-      std::transform(_vector.begin(),_vector.end(),w.begin(),storage_conversion_t< double, T >() );
+      std::transform(_vector.begin(),_vector.end(),w.begin(),type_conversion_t< double, T >() );
     }
-    const std::vector< T >& v(type_is_equal< T, double >()? w : (const std::vector< T >&) _vector);
+    const std::vector< T >& v(type_is_equal< T, double >()? (const std::vector< T >&) _vector : w);
 
     if (ORIENT) { a = v; }
     else {
