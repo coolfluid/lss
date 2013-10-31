@@ -61,8 +61,8 @@ class lss_API LAPACK : public
     std::vector< int > ipiv(n);
 
     if (!m_A.size().is_square_size()) { err = -17; }
-    else if (detail::type_is_equal< T, double >()) { dgesv_( &n, &nrhs, (double*) &m_A.a[0], &n, &ipiv[0], (double*) &m_b.a[0], &n, &err ); }
-    else if (detail::type_is_equal< T, float  >()) { sgesv_( &n, &nrhs, (float*)  &m_A.a[0], &n, &ipiv[0], (float*)  &m_b.a[0], &n, &err ); }
+    else if (detail::type_is_equal< T, double >()) { x()=b(); dgesv_( &n, &nrhs, (double*) &m_A.a[0], &n, &ipiv[0], (double*) &m_x.a[0], &n, &err ); }
+    else if (detail::type_is_equal< T, float  >()) { x()=b(); sgesv_( &n, &nrhs, (float*)  &m_A.a[0], &n, &ipiv[0], (float*)  &m_x.a[0], &n, &err ); }
     else { err = -42; }
 
     std::ostringstream msg;
@@ -73,10 +73,6 @@ class lss_API LAPACK : public
               msg;
     if (err)
       throw std::runtime_error(msg.str());
-
-    // solution is in b so swap with x and zero it (A square => size b = size x)
-    b().swap(x());
-    b() = T();
     return *this;
   }
 
