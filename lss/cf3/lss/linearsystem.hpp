@@ -128,21 +128,22 @@ class linearsystem : public common::Action
         bfname(opts.value< std::string >("b")),
         xfname(opts.value< std::string >("x"));
     const double value(opts.value< double >("value"));
-      if (Afname.length() || xfname.length() || bfname.length()) {
-        if (Afname.length()) component_initialize_with_file(A(),"A",Afname);
-        if (bfname.length()) component_initialize_with_file(b(),"b",bfname); else b().initialize(size(0),1);
-        if (xfname.length()) component_initialize_with_file(x(),"x",xfname); else x().initialize(size(1),size(2));
-        consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
+    if (Afname.length()) {
+      if (component_initialize_with_file(A(),"A",Afname)) {
+        if (bfname.length() && !component_initialize_with_file(b(),"b",bfname) || !bfname.length()) b().initialize(size(0),1);
+        if (xfname.length() && !component_initialize_with_file(x(),"x",xfname) || !xfname.length()) x().initialize(size(1),size(2));
       }
-      else {
-        const unsigned
-            i(opts.value< unsigned >("i")),
-            j(opts.value< unsigned >("j")),
-            k(opts.value< unsigned >("k"));
-        A().initialize(i,j,value);
-        b().initialize(i,k,value);
-        x().initialize(j,k,value);
-      }
+      consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
+    }
+    else {
+      const unsigned
+          i(opts.value< unsigned >("i")),
+          j(opts.value< unsigned >("j")),
+          k(opts.value< unsigned >("k"));
+      A().initialize(i,j,value);
+      b().initialize(i,k,value);
+      x().initialize(j,k,value);
+    }
   }
 
 
@@ -181,12 +182,14 @@ class linearsystem : public common::Action
   }
 
   template< typename COMP >
-  void component_initialize_with_file(COMP& c, const std::string& name, const std::string& fname) {
+  bool component_initialize_with_file(COMP& c, const std::string& name, const std::string& fname) {
     try { c.initialize(fname); }
     catch (const std::runtime_error& e) {
       std::cout << "linearsystem: " << name << ": " << e.what() << std::endl;
+      return false;
     }
     m_dummy_vector.clear();
+    return true;
   }
 
 
