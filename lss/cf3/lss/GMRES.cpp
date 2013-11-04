@@ -27,48 +27,29 @@ GMRES& GMRES::solve()
   double eps = 1e-5;  // tolerance, process is stopped when eps>=||current residual||/||initial residual||
   int im     = 50;    // size of krylov subspace (should not exceed 50)
   int maxits = 50;    // maximum number of iterations allowed
+  int newiwk = 0; newiwk=newiwk;
   int iout   = 1;
   int lfil   = 3;
 
-  double *alu = new double[iwk];
-  int *jlu = new int[iwk];
-  int *levs = new int[iwk];
-  for (register int i=0; i<iwk; i++) {
-    alu[i] = 0.;
-    jlu[i] = 0;
+  std::vector< double > alu(iwk,0.);
+  std::vector< int >
+    jlu(iwk+1,0),
+    ju(n+1,0);
+
+  {
+    std::vector< double > w(n+1,0.);
+    std::vector< int >
+      levs(iwk),
+      jw(n*3,0);
+    /*newiwk =*/ iluk(&n,&m_A.a[0],&m_A.idx.ja[0],&m_A.idx.ia[0],&lfil,alu,jlu,
+      &ju[0],&levs[0],&iwk,&w[0],&jw[0],&ierr);
   }
-
-  int *ju = new int[n+1];
-  for (register int i=0; i<n; i++)
-    ju[i] = 0;
-
-  double *w = new double[n+1];
-  int *jw = new int[n*3];
-  for (register int i=0; i<n; i++) {
-    w[i] = 0.;
-    jw[i] = 0;
-    jw[n+i] = 0;
-    jw[2*n+i] = 0;
+  {
+    std::vector< double > vv(n*(im+1));
+    x() = 0.;
+    pgmres(&n,&im,&(b().a[0]),&(x().a[0]),&vv[0],&eps,&maxits,&iout,
+           &m_A.a[0],&m_A.idx.ja[0],&m_A.idx.ia[0],&alu[0],&jlu[0],&ju[0],&ierr);
   }
-
-  /*int newiwk = 0;*/
-  /*int newiwk =*/ iluk(&n,&m_A.a[0],&m_A.idx.ja[0],&m_A.idx.ia[0],&lfil,
-                alu,jlu,ju,levs,&iwk,w,jw,&ierr);
-
-  delete[] w;
-  delete[] jw;
-  delete[] levs;
-
-  double *vv = new double[n*(im+1)];
-  x() = 0.;
-
-  pgmres(&n,&im,&(b().a[0]),&(x().a[0]),vv,&eps,&maxits,&iout,
-         &m_A.a[0],&m_A.idx.ja[0],&m_A.idx.ia[0],alu,jlu,ju,&ierr);
-
-  delete [] alu;
-  delete [] jlu;
-  delete [] ju;
-  delete [] vv;
 
   return *this;
 }
@@ -213,7 +194,7 @@ L40:
  * All the diagonal elements of the input matrix must be  nonzero.         *
  *                                                                         *
  *=========================================================================*/
-int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, double*& aluold, int*& jluold, int *ju, int*& levsold, int *iwk, double *w, int *jw, int *ierr)
+int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, std::vector<double>& aluold, std::vector<int>& jluold, int *ju, int* levsold, int *iwk, double *w, int *jw, int *ierr)
 {
   /* System generated locals */
   int i__1, i__2, i__3, i__4;
@@ -507,6 +488,7 @@ int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, double*& aluold,
 /* L500: */
     }
 
+#if 0
   delete [] aluold;
   delete [] jluold;
   //delete [] levsold;
@@ -529,6 +511,9 @@ int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, double*& aluold,
     jluold[i] = jlu[i+1];
     //levsold[i] = levs[i+1];
   }
+#endif
+  aluold = alu;
+  jluold = jlu;
 
     *ierr = 0;
   return *iwk;

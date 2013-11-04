@@ -50,7 +50,7 @@ class lss_API LAPACK : public
          const size_t& _size_j=size_t(),
          const size_t& _size_k=1,
          const double& _value=T() ) : linearsystem_t(name) {
-      linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
+    linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
   }
 
   /// Solve

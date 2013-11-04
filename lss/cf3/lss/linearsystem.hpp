@@ -128,11 +128,10 @@ class linearsystem : public common::Action
         bfname(opts.value< std::string >("b")),
         xfname(opts.value< std::string >("x"));
     const double value(opts.value< double >("value"));
-    if (Afname.length()) {
-      if (component_initialize_with_file(A(),"A",Afname)) {
-        if (bfname.length() && !component_initialize_with_file(b(),"b",bfname) || !bfname.length()) b().initialize(size(0),1);
-        if (xfname.length() && !component_initialize_with_file(x(),"x",xfname) || !xfname.length()) x().initialize(size(1),size(2));
-      }
+    if (Afname.length() || bfname.length() || xfname.length()) {
+      if (Afname.length()) component_initialize_with_file(A(),"A",Afname);
+      if (bfname.length() && !component_initialize_with_file(b(),"b",bfname) || !bfname.length()) b().initialize(size(0),1,      value);
+      if (xfname.length() && !component_initialize_with_file(x(),"x",xfname) || !xfname.length()) x().initialize(size(1),size(2),value);
       consistent(A().size(0),A().size(1),b().size(0),b().size(1),x().size(0),x().size(1));
     }
     else {
@@ -174,6 +173,10 @@ class linearsystem : public common::Action
 
   template< typename COMP >
   void component_initialize_with_vector(COMP& c, const std::string& name) {
+    if (m_dummy_vector.size()==1) {
+      c.operator=(m_dummy_vector[0]);
+      return;
+    }
     try { c.initialize(m_dummy_vector); }
     catch (const std::runtime_error& e) {
       std::cout << "linearsystem: " << name << ": " << e.what() << std::endl;
