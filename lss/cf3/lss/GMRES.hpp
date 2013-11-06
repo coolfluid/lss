@@ -20,7 +20,7 @@ namespace lss {
 /**
  * implementation of a serial GMRES linear system solver (double p.)
  */
-class GMRES : public
+class lss_API GMRES : public
   linearsystem< double,
     detail::sparse_matrix_csr< double, 1 >,
     detail::dense_matrix_v< double > >
