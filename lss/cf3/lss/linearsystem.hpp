@@ -201,12 +201,10 @@ class linearsystem : public common::Action
 
   /// Linear system solving, aliased from execute
   void execute() {
-    std::cout << "linearsystem: solve..." << std::endl;
     try { solve(); }
     catch (const std::runtime_error& e) {
       std::cout << "linearsystem: " << e.what() << std::endl;
     }
-    std::cout << "linearsystem: solve." << std::endl;
   }
 
   /// Initialize the linear system
