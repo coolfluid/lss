@@ -1,0 +1,5 @@
+% source: http://software.intel.com/sites/products/documentation/hpc/mkl/mklman/GUID-9FCEB1C4-670D-4738-81D2-F378013412B0.htm
+5 5 13
+1 4 6 9 12 14
+1   2   4   1   2   3   4   5   1   3   4   2   5
+1. -1. -3. -2.  5.  4.  6.  4. -4.  2.  7.  8. -5
