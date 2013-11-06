@@ -9,8 +9,6 @@
 #define cf3_lss_pardiso_h
 
 
-#include <cstdio>  // for sscanf
-
 #include "LibLSS_PARDISO.hpp"
 #include "../../../lss/cf3/lss/linearsystem.hpp"
 
@@ -20,16 +18,20 @@ namespace lss {
 
 
 /**
- * implementation of ...
+ * @brief Interface to Pardiso linear system solver (U. Basel version).
+ * @note the matrix structure is expected as:
+ * - including a diagonal entry for each row
+ * - row indices sorted in increasing order
+ * @author Pedro Maciel
  */
 class lss_pardiso_API pardiso : public
   linearsystem< double,
-    detail::sparse_matrix_csr< double, 1 >,
-    detail::dense_matrix_v< double > >
+    detail::sparse_matrix_csr< double, 1, detail::vector_sorted_with_diagonal_t >,
+    detail::dense_matrix_v< double, detail::column_oriented > >
 {
   // utility definitions
-  typedef detail::sparse_matrix_csr< double, 1 > matrix_t;
-  typedef detail::dense_matrix_v< double > vector_t;
+  typedef detail::sparse_matrix_csr< double, 1, detail::vector_sorted_with_diagonal_t > matrix_t;
+  typedef detail::dense_matrix_v< double, detail::column_oriented > vector_t;
   typedef linearsystem< double, matrix_t, vector_t > linearsystem_t;
 
 
@@ -40,27 +42,10 @@ class lss_pardiso_API pardiso : public
 
   /// Construction
   pardiso(const std::string& name,
-        const size_t& _size_i=size_t(),
-        const size_t& _size_j=size_t(),
-        const size_t& _size_k=1,
-        const double& _value=double() ) : linearsystem_t(name) {
-
-    for (int i=0; i<64; ++i)  iparm[i] = 0;
-    for (int i=0; i<64; ++i)  dparm[i] = 0.;
-
-    char* nthreads = getenv("OMP_NUM_THREADS");
-    sscanf(nthreads? nthreads:"1","%d",&iparm[2]);
-    std::cout << "info: number of threads: " << iparm[2] << " (OMP_NUM_THREADS: " << (nthreads? "":"not ") << "set)" << std::endl;
-
-    iparm[ 7] = 0;  // max numbers of iterative refinement steps
-    iparm[31] = 0;  // [0|1] sparse direct solver or multi-recursive iterative solver
-    maxfct    = 1,  // maximum number of numerical factorizations
-    mnum      = 1,  // which factorization to use
-    mtype     = 1,  // real structurally symmetric matrix
-    nrhs      = 1;  // number of right hand sides
-
-    linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
-  }
+    const size_t& _size_i=size_t(),
+    const size_t& _size_j=size_t(),
+    const size_t& _size_k=1,
+    const double& _value=double() );
 
   /// Solve
   pardiso& solve();
@@ -68,8 +53,9 @@ class lss_pardiso_API pardiso : public
 
   // internal functions
  private:
-  int call_pardisoinit();
-  int call_pardiso(int phase, int msglvl);
+  int call_pardiso_printstats();
+  int call_pardiso_init();
+  int call_pardiso(int _phase, int _msglvl);
 
 
   // linear system components access
@@ -87,16 +73,16 @@ class lss_pardiso_API pardiso : public
   matrix_t m_A;
   vector_t m_b;
   vector_t m_x;
-std::vector< int > ia, ja;
-std::vector< double > va, vb, vx;
 
   void*  pt[64];  // internal memory pointer (void* for both 32/64-bit)
-  int    iparm[64];
   double dparm[64];
-  int    maxfct,
+  int    iparm[64],
+         err,
+         maxfct,
          mnum,
          mtype,
-         nrhs;
+         nrhs,
+         phase;
 
 };
 
