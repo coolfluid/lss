@@ -306,7 +306,7 @@ struct dense_matrix_v :
  * T: storage type
  * BASE: column & row numbering base (0 or 1, other bases probably won't work)
  */
-template< typename T, int BASE=0 >
+template< typename T, int BASE=0, typename ROWSORT=vector_sorted_with_diagonal_first_t >
 struct sparse_matrix_csr :
     matrix< T,sparse_matrix_csr< T, BASE > >
 {

@@ -341,8 +341,14 @@ bool read_sparse(
   }
 
   // conversion to intended indexing base
+#if 0
   for_each(ja.begin(),ja.end(),base_conversion_t(base-1));
   for_each(ia.begin(),ia.end(),base_conversion_t(base-1));
+#else
+  vector_apply_diff transf;
+  transf.apply(ja,base-1);
+  transf.apply(ia,base-1);
+#endif
   return true;
 }
 
@@ -402,30 +408,36 @@ bool read_dense(
   a.clear();
 
   // open file and read matrix size
-  std::string line;
-  std::ifstream f(fname.c_str());
+  string line;
+  ifstream f(fname.c_str());
   if (!f) throw runtime_error("cannot open file.");
   while (!size.is_valid_size()) {
-    if (std::getline(f,line) && line.find_first_of("%")!=0)
-      std::istringstream(line) >> size.i >> size.j;
+    if (getline(f,line) && line.find_first_of("%")!=0)
+      istringstream(line) >> size.i >> size.j;
   }
 
   // read rows and column indices, converting to base 0 (easier)
-  std::vector< int > ia;
+  vector< int > ia;
   ia.reserve(size.i+1);
   for (int i; ia.size()<size.i+1 && f >> i;)
     ia.push_back(i);
 
-  std::vector< int > ja;
+  vector< int > ja;
   ja.reserve(ia.back()-ia.front());
   for (int i; ja.size()<ia.back()-ia.front() && f >> i;)
     ja.push_back(i);
 
-  std::for_each(ja.begin(),ja.end(),base_conversion_t(-ia.front()));
-  std::for_each(ia.begin(),ia.end(),base_conversion_t(-ia.front()));
+#if 0
+  for_each(ja.begin(),ja.end(),base_conversion_t(-ia.front()));
+  for_each(ia.begin(),ia.end(),base_conversion_t(-ia.front()));
+#else
+  vector_apply_diff transf;
+  transf.apply(ja,-ia.front());
+  transf.apply(ia,-ia.front());
+#endif
 
   // populate per row
-  a.assign(roworiented? size.i:size.j,std::vector< double >(
+  a.assign(roworiented? size.i:size.j,vector< double >(
            roworiented? size.j:size.i,double() ));
   for (int i=0; i<static_cast< int >(size.i); ++i)
     for (int k=ia[i]; k<ia[i+1]; ++k)
@@ -471,8 +483,14 @@ bool read_sparse(
   for (int i; ja.size()<static_cast< int >(nnz) && f >> i;)
     ja.push_back(i);
 
+#if 0
   for_each(ja.begin(),ja.end(),base_conversion_t(base-ia.front()));
   for_each(ia.begin(),ia.end(),base_conversion_t(base-ia.front()));
+#else
+  vector_apply_diff transf;
+  transf.apply(ja,base-ia.front());
+  transf.apply(ia,base-ia.front());
+#endif
 
   // populate directly
   a.reserve(nnz);

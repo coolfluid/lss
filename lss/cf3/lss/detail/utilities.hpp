@@ -42,15 +42,6 @@ struct type_conversion_t
 
 /* -- indexing conversion/application types --------------------------------- */
 
-/// @brief Indexing base conversion tool (functor)
-struct base_conversion_t
-{
-  base_conversion_t(const int& _diff) : diff (_diff) {}
-  int& operator()(int& v) { return (v+=diff); }
-  const int& diff;
-};
-
-
 /// @brief Composite indexing: index hierarchy type list termination type
 struct index_hierarchy_t_end
 {
@@ -73,79 +64,87 @@ struct index_hierarchy_t
 /* -- vector transformations by type ---------------------------------------- */
 /* (common operations for building row or column-oriented sparsity patterns)  */
 
-/// @brief Type for recursive application of vector transformations
-struct transform_list_t_end
+#if 0
+/// @brief Indexing base conversion tool (functor)
+struct base_conversion_t
 {
-  static void apply(std::vector< size_t >&, size_t) {}
+  base_conversion_t(const int& _diff) : diff (_diff) {}
+  int& operator()(int& v) { return (v+=diff); }
+  const int& diff;
 };
+#endif
 
 
-/// @brief Type for recursive application of vector transformations
-template<
-    typename Transf,
-    typename TransfNested=transform_list_t_end >
-struct transform_list_t
-{
-  static void apply(std::vector< size_t >& v, int e) {
-    TransfNested::apply(v,e);
-    Transf::apply(v,e);
-  }
-};
-
-
-/// @brief Vector transformation: sort, removing duplicate entries
+/// @brief Elementary vector transformation: sort, removing duplicate entries
 struct vector_sort_unique
 {
-  static void apply(std::vector< size_t >& v, int) {
+  void apply(std::vector< int >& v, int) {
     std::sort(v.begin(),v.end());
     v.erase(std::unique(v.begin(),v.end()),v.end());
   }
 };
 
 
-/// @brief Vector transformation: add vector entry at start
+/// @brief Elementary vector transformation: add vector entry at start
 struct vector_element_push_front
 {
-  static void apply(std::vector< size_t >& v, size_t e) { v.insert(v.begin(),e); }
+  void apply(std::vector< int >& v, int e) { v.insert(v.begin(),e); }
 };
 
 
-/// @brief Vector transformation: add vector entry at end
+/// @brief Elementary vector transformation: add vector entry at end
 struct vector_element_push_back
 {
-  static void apply(std::vector< size_t >& v, int e) { v.push_back(e); }
+  void apply(std::vector< int >& v, int e) { v.push_back(e); }
 };
 
 
-/// @brief Vector transformation: remove entries of specific value, if existing
+/// @brief Elementary vector transformation: remove entries of specific value, if existing
 struct vector_element_remove
 {
   struct equal_to
   {
-    equal_to(const size_t& _elem) : elem(_elem) {}
-    bool operator()(const size_t& _elem) const { return elem==_elem; }
-    const size_t elem;
+    equal_to(const int& _elem) : elem(_elem) {}
+    bool operator()(const int& _elem) const { return elem==_elem; }
+    const int elem;
   };
-  static void apply(std::vector< size_t >& v, int e) {
-    v.erase(std::remove_if(v.begin(),v.end(),
-      equal_to(static_cast< size_t >(e))),v.end());
+  void apply(std::vector< int >& v, int e) {
+    v.erase(std::remove_if(v.begin(),v.end(),equal_to(e)),v.end());
   }
 };
 
 
-/// @brief Vector transformation: sort, removing duplicate entries
-struct vector_add_value
+/// @brief Elementary vector transformation: apply supplied difference to vector
+struct vector_apply_diff
 {
-  struct add_value
+  struct apply_diff
   {
-    add_value(const int& _diff) : diff(_diff) {}
-    size_t operator()(size_t &v) const {
-      return static_cast< size_t >(static_cast< int >(v)+diff);
-    }
+    apply_diff(const int& _diff) : diff(_diff) {}
+    int operator()(int &v) const { return (v+diff); }
     const int diff;
   };
-  static void apply(std::vector< size_t >& v, int e) {
-    std::for_each(v.begin(),v.end(),add_value(e));
+  void apply(std::vector< int >& v, int e) {
+    std::for_each(v.begin(),v.end(),apply_diff(e));
+  }
+};
+
+
+/// @brief Type for recursive application of vector transformations
+struct vector_transform_t
+{
+  virtual void apply(std::vector< int >&, int) {}
+};
+
+
+/// @brief Type for recursive application of vector transformations
+template<
+    typename Transf,
+    typename TransfNested=vector_transform_t >
+struct vector_transform_list_t : vector_transform_t
+{
+  void apply(std::vector< int >& v, int e) {
+    TransfNested::apply(v,e);
+    Transf::apply(v,e);
   }
 };
 
@@ -154,18 +153,18 @@ struct vector_add_value
  * @brief Vector transformation: sorted indices vector
  * (useful for specific CSR/CSC matrix linear solvers)
  */
-typedef transform_list_t< vector_sort_unique,
-        transform_list_t< vector_element_push_back > >
-  vector_sorted_t;
+typedef vector_transform_list_t< vector_sort_unique,
+        vector_transform_list_t< vector_element_push_back > >
+  vector_sorted_with_diagonal_t;
 
 /**
  * @brief Vector transformation: sorted indices vector with specific entry at start
  * (useful for specific CSR/CSC matrix linear solvers)
  */
-typedef transform_list_t< vector_element_push_front,
-        transform_list_t< vector_sort_unique,
-        transform_list_t< vector_element_remove > > >
-  vector_sorted_diagonal_first_t;
+typedef vector_transform_list_t< vector_element_push_front,
+        vector_transform_list_t< vector_sort_unique,
+        vector_transform_list_t< vector_element_remove > > >
+  vector_sorted_with_diagonal_first_t;
 
 
 /* -- Matrix Market I/O (or, say, just I) ----------------------------------- */
