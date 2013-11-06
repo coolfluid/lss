@@ -11,7 +11,7 @@
 
 #include <cstdio>  // for sscanf
 
-#include "LibLSS_pardiso.hpp"
+#include "LibLSS_PARDISO.hpp"
 #include "../../../lss/cf3/lss/linearsystem.hpp"
 
 
@@ -22,7 +22,7 @@ namespace lss {
 /**
  * implementation of ...
  */
-class pardiso : public
+class lss_pardiso_API pardiso : public
   linearsystem< double,
     detail::sparse_matrix_csr< double, 1 >,
     detail::dense_matrix_v< double > >
@@ -35,7 +35,8 @@ class pardiso : public
 
  public:
   // framework interfacing
-  static std::string type_name();
+  static std::string type_name() { return "pardiso"; }
+
 
   /// Construction
   pardiso(const std::string& name,
@@ -86,6 +87,8 @@ class pardiso : public
   matrix_t m_A;
   vector_t m_b;
   vector_t m_x;
+std::vector< int > ia, ja;
+std::vector< double > va, vb, vx;
 
   void*  pt[64];  // internal memory pointer (void* for both 32/64-bit)
   int    iparm[64];

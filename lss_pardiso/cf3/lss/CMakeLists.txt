@@ -1,7 +1,7 @@
 
 list( APPEND pardiso_files
-  LibLSS_pardiso.cpp
-  LibLSS_pardiso.hpp
+  LibLSS_PARDISO.cpp
+  LibLSS_PARDISO.hpp
   pardiso.cpp
   pardiso.hpp )
 
