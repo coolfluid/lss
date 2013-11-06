@@ -49,23 +49,14 @@ struct lss_API LibLSS :
   /// Constructor
   LibLSS(const std::string& name) : cf3::common::Library(name) {}
 
-  /// @return string of the library namespace
-  static std::string library_namespace() { return "cf3.lss"; }
-
-  /// @return name of the library
-  // (must be implemented for Library registration)
-  static std::string library_name() { return "lss"; }
-
-  /// @return description of the library
-  // (must be implemented for Library registration)
-  static std::string library_description() { return "This library provides a bare-bones interface to linear system solvers."; }
-
-  /// Gets the Class name
-  static std::string type_name() { return "LibLSS"; }
+  /// @return library namespace, name, description and class name
+  static std::string library_namespace()    { return "cf3.lss"; }
+  static std::string library_name()         { return "lss"; }
+  static std::string library_description()  { return "Basic interface to linear system solvers."; }
+  static std::string type_name()            { return "LibLSS"; }
 
   /// Initiate library
   void initiate();
-
 };
 
 
