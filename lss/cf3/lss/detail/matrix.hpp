@@ -74,8 +74,9 @@ struct matrix
                              (m_size.i>100 || m_size.j>100? print_size  :
                              (m_size.i> 10 || m_size.j> 10? print_signs :
                                                             print_full )));
-    o << "[ (size: " << size(0) << 'x' << size(1) << ')';
-    if (print_level==print_signs) {
+    o << "(" << size(0) << 'x' << size(1) << ") [ ";
+    if      (print_level==print_size)  { o << "..."; }
+    else if (print_level==print_signs) {
       for (size_t i=0; i<size(0); ++i) {
         std::string str(size(1),'0');
         for (size_t j=0; j<size(1); ++j)
@@ -272,8 +273,6 @@ struct dense_matrix_v :
     matrix_base_t::swap(other);
   }
 
-  std::ostream& print(std::ostream& o) const { return matrix_base_t::print(o); }
-
   // clearing
 
   dense_matrix_v& clear() {
@@ -389,8 +388,9 @@ struct sparse_matrix_csr :
                              (matrix_base_t::m_size.i> 10 || matrix_base_t::m_size.j> 10? print_signs :
                                                                                           print_full )));
 
-    o << "[ (size: " << size(0) << 'x' << size(1) << ">=" << a.size() << ')';
-    if (print_level==print_signs) {
+    o << "(" << size(0) << 'x' << size(1) << ">=" << a.size() << ") [ ";
+    if      (print_level==print_size)  { o << "..."; }
+    else if (print_level==print_signs) {
       std::string str;
       for (size_t i=0; i<size(0); ++i) {
         str.assign(size(1),'.');
