@@ -64,7 +64,6 @@ struct index_hierarchy_t
 /* -- vector transformations by type ---------------------------------------- */
 /* (common operations for building row or column-oriented sparsity patterns)  */
 
-#if 0
 /// @brief Indexing base conversion tool (functor)
 struct base_conversion_t
 {
@@ -72,7 +71,6 @@ struct base_conversion_t
   int& operator()(int& v) { return (v+=diff); }
   const int& diff;
 };
-#endif
 
 
 /// @brief Elementary vector transformation: sort, removing duplicate entries
@@ -212,51 +210,6 @@ bool read_sparse(
 }
 
 
-/* -- Harwell-Boeing I/O (or, say again, just I) ---------------------------- */
-
-namespace HarwellBoeing
-{
-
-
-/**
- * @brief read_dense: read Harwell-Boeing file format to dense structure
- * @param fname: input filename
- * @param roworiented: if result should be row (most common) or column oriented
- * @param size: output matrix/array size
- * @param a: output dense matrix/array
- * @return if reading is successful
- */
-bool read_dense(
-    const std::string& fname,
-    const bool &roworiented,
-    idx_t& size,
-    std::vector< std::vector< double > >& a );
-
-
-/**
- * @brief read_sparse: read Harwell-Boeing file format to sparse structure
- * @param fname: input filename
- * @param roworiented: if result should be row (most common) or column oriented
- * @param base: sparse structure index base
- * @param size: output matrix/array size
- * @param a: output sparse matrix/array
- * @param ia: output i-coordinate indices
- * @param ja: output j-coordinate indices
- * @return if reading is successful
- */
-bool read_sparse(
-    const std::string& fname,
-    const bool& roworiented,
-    const int& base,
-    idx_t& size,
-    std::vector< double >& a,
-    std::vector< int >& ia,
-    std::vector< int >& ja );
-
-
-}
-
-
 /* -- CSR I/O (just I) ------------------------------------------------------ */
 
 namespace CSR
@@ -281,7 +234,6 @@ bool read_dense(
 /**
  * @brief read_sparse: read CSR file format (a hack on MM) to sparse structure
  * @param fname: input filename
- * @param roworiented: if result should be row (most common) or column oriented
  * @param base: sparse structure index base
  * @param size: output matrix/array size
  * @param a: output sparse matrix/array
@@ -289,9 +241,7 @@ bool read_dense(
  * @param ja: output j-coordinate indices
  * @return if reading is successful
  */
-bool read_sparse(
-    const std::string& fname,
-    const bool& roworiented,
+bool read_sparse(const std::string& fname,
     const int& base,
     idx_t& size,
     std::vector< double >& a,
@@ -330,8 +280,8 @@ void read_dense(
   // read file contents
   const bool hasdot(std::string("."+fname).find_last_of("."));
   if      (hasdot && fname.substr(fname.find_last_of("."))==".mtx") { MatrixMarket ::read_dense(fname,roworiented,size,storage); }
-  else if (hasdot && fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_dense(fname,roworiented,size,storage); }
   else if (hasdot && fname.substr(fname.find_last_of("."))==".csr") { CSR          ::read_dense(fname,roworiented,size,storage); }
+/*else if (hasdot && fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_dense(fname,roworiented,size,storage); }*/
   else
     throw std::runtime_error("file format not detected.");
 
@@ -376,8 +326,8 @@ void read_sparse(
   // read file contents
   const bool hasdot(std::string("."+fname).find_last_of("."));
   if      (hasdot && fname.substr(fname.find_last_of("."))==".mtx") { MatrixMarket ::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
-  else if (hasdot && fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
-  else if (hasdot && fname.substr(fname.find_last_of("."))==".csr") { CSR          ::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
+  else if (hasdot && fname.substr(fname.find_last_of("."))==".csr") { CSR          ::read_sparse(fname,            base,size,storage,ia,ja); }
+/*else if (hasdot && fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_sparse(fname,roworiented,base,size,storage,ia,ja); }*/
   else
     throw std::runtime_error("file format not detected.");
 

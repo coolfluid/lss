@@ -11,6 +11,7 @@
 #include <stdexcept>
 
 
+#include "common/Log.hpp"
 #include "utilities.hpp"
 
 
@@ -33,7 +34,8 @@ typedef std::pair< idx_t, double > coord_t;
 struct coord_ordering_by_row_t
 {
   bool operator()(const coord_t& a, const coord_t& b) const {
-    return (a.first) < (b.first);
+    return (a.first.i<b.first.i? true  :
+           (a.first.i>b.first.i? false : (a.first.j<b.first.j)));
   }
 };
 
@@ -271,6 +273,7 @@ bool read_sparse(
 
   coord_t p = make_pair(idx_t(1,1),0.);
   string line;
+  size_t fixes(0);
   if (roworiented) {
 
     // read into ordered set, line by line
@@ -292,10 +295,19 @@ bool read_sparse(
       }
     }
 
+    // force diagonal entries and structural symmetry
+    for (int i=1; i<=size.i; ++i)
+      entries.insert(make_pair(idx_t(i,i),0.)).second? ++fixes:fixes;
+    for (bool modif=true; modif;) {
+      modif = false;
+      for (set_t::const_reverse_iterator c=entries.rbegin(); !modif && c!=entries.rend(); ++c)
+        (modif = entries.insert(make_pair(idx_t(c->first.j,c->first.i),0.)).second)? ++fixes:fixes;
+    }
+
     // compress each row, then set indices and values
     ia.reserve(size.i+1);
-    ja.reserve(nnz);
-    a.reserve(nnz);
+    ja.reserve(entries.size());
+    a .reserve(entries.size());
     ia.push_back(1);  // (base is always 1 in this format)
     for (size_t r=1; r<=size.i; ++r)
       ia.push_back(ia.back() + count_if(entries.begin(),entries.end(),coord_row_equal_to_t(r)));
@@ -326,10 +338,19 @@ bool read_sparse(
       }
     }
 
+    // force diagonal entries and structural symmetry
+    for (int i=1; i<=size.i; ++i)
+      entries.insert(make_pair(idx_t(i,i),0.)).second? ++fixes:fixes;
+    for (bool modif=true; modif;) {
+      modif = false;
+      for (set_t::const_reverse_iterator c=entries.rbegin(); !modif && c!=entries.rend(); ++c)
+        (modif = entries.insert(make_pair(idx_t(c->first.j,c->first.i),0.)).second)? ++fixes:fixes;
+    }
+
     // compress each column, then set indices and values
     ja.reserve(size.i+1);
-    ia.reserve(nnz);
-    a.reserve(nnz);
+    ia.reserve(entries.size());
+    a .reserve(entries.size());
     ja.push_back(1);  // (base is always 1 in this format)
     for (size_t c=1; c<=size.j; ++c)
       ja.push_back(ja.back() + count_if(entries.begin(),entries.end(),coord_column_equal_to_t(c)));
@@ -339,56 +360,18 @@ bool read_sparse(
     }
 
   }
+  if (fixes) {
+    CFdebug << "MatrixMarket::read_sparse: additional entries to preserve symmetry: " << fixes << CFendl;
+  }
 
   // conversion to intended indexing base
-#if 0
   for_each(ja.begin(),ja.end(),base_conversion_t(base-1));
   for_each(ia.begin(),ia.end(),base_conversion_t(base-1));
-#else
-  vector_apply_diff transf;
-  transf.apply(ja,base-1);
-  transf.apply(ia,base-1);
-#endif
   return true;
 }
 
 
 }  // namespace MatrixMarket
-
-
-/* -- Harwell-Boeing I/O helper structures ---------------------------------- */
-
-namespace HarwellBoeing {
-
-
-bool read_dense(
-    const std::string& fname,
-    const bool &roworiented,
-    idx_t& size,
-    std::vector< std::vector< double > >& a )
-{
-  //FIXME lorem ipsum
-  throw std::runtime_error("not implemented.");
-  return true;
-}
-
-
-bool read_sparse(
-    const std::string& fname,
-    const bool& roworiented,
-    const int& base,
-    idx_t& size,
-    std::vector< double >& a,
-    std::vector< int >& ia,
-    std::vector< int >& ja )
-{
-  //FIXME lorem ipsum
-  throw std::runtime_error("not implemented.");
-  return true;
-}
-
-
-}  // namespace HarwellBoeing
 
 
 /* -- CSR I/O helper structures --------------------------------------------- */
@@ -427,14 +410,8 @@ bool read_dense(
   for (int i; ja.size()<ia.back()-ia.front() && f >> i;)
     ja.push_back(i);
 
-#if 0
   for_each(ja.begin(),ja.end(),base_conversion_t(-ia.front()));
   for_each(ia.begin(),ia.end(),base_conversion_t(-ia.front()));
-#else
-  vector_apply_diff transf;
-  transf.apply(ja,-ia.front());
-  transf.apply(ia,-ia.front());
-#endif
 
   // populate per row
   a.assign(roworiented? size.i:size.j,vector< double >(
@@ -450,7 +427,6 @@ bool read_dense(
 
 bool read_sparse(
     const std::string& fname,
-    const bool& roworiented,
     const int& base,
     idx_t& size,
     std::vector< double >& a,
@@ -465,57 +441,70 @@ bool read_sparse(
   ja.clear();
 
   // open file and read matrix size
-  string line;
   ifstream f(fname.c_str());
-  if (!f) throw runtime_error("cannot open file.");
-  while (!size.is_valid_size()) {
-    if (getline(f,line) && line.find_first_of("%")!=0)
-      istringstream(line) >> size.i >> size.j;
+  {
+    string line;
+    if (!f)
+      return false;
+    while (!size.is_valid_size()) {
+      if (getline(f,line) && line.find_first_of("%")!=0)
+        istringstream(line) >> size.i >> size.j;
+    }
   }
 
-  // read rows and column indices, converting to intended base
+  // read ia and ja arrays and convert to intended base
+  // (ia has indices in increasing order, ja first entry read while building ia)
   ia.reserve(size.i+1);
-  for (int i; ia.size()<size.i+1 && f >> i;)
-    ia.push_back(i);
+  ja.push_back(0);
+  for (int &i=ja[0], j=-1; f>>i && j<i;)
+    ia.push_back(j=i);
 
-  const size_t nnz(ia.back()-ia.front());
+  const int
+      nnu(ia.size()-1),
+      nnz(ia.back()-ia.front());
+
   ja.reserve(nnz);
-  for (int i; ja.size()<static_cast< int >(nnz) && f >> i;)
+  for (int i; ja.size()<nnz && f>>i;)
     ja.push_back(i);
 
-#if 0
   for_each(ja.begin(),ja.end(),base_conversion_t(base-ia.front()));
   for_each(ia.begin(),ia.end(),base_conversion_t(base-ia.front()));
-#else
-  vector_apply_diff transf;
-  transf.apply(ja,base-ia.front());
-  transf.apply(ia,base-ia.front());
-#endif
 
-  // populate directly
-  a.reserve(nnz);
-  for (double v; a.size()<static_cast< int >(nnz) && f >> v;)
-    a.push_back(v);
-
-  // if requested, duplicate into column-ordered set and compress column indices
-  if (!roworiented) {
-    typedef set< coord_t, coord_ordering_by_column_t > set_t;
-    set_t entries;
-    for (size_t i=0; i<size.i; ++i)
-      for (int k=ia[i]-base; k<ia[i+1]-base; ++k)
-        entries.insert(make_pair(idx_t( i+base, static_cast< size_t >(ja[k]) ), a[k] ));
-    a.clear();  a.reserve(nnz);
-    ia.clear(); ia.reserve(nnz);
-    ja.clear(); ja.reserve(size.j+1);
-
-    ja.push_back(base);
-    for (size_t j=0; j<size.j; ++j)
-      ja.push_back(ja.back() + count_if(entries.begin(),entries.end(),coord_column_equal_to_t(j+base)));
-    for (set_t::const_iterator e=entries.begin(); e!=entries.end(); ++e) {
-      ia.push_back(e->first.i);
-      a.push_back(e->second);
+  // create a coordinate matrix, forcing diagonal entry and structural symmetry
+  typedef set< coord_t, coord_ordering_by_row_t > set_t;
+  set_t entries;
+  for (int i=0; i<nnu; ++i) {
+    coord_t p = make_pair(idx_t(),0.);
+    for (int j=ia[i]; j<ia[i+1] && f>>p.second; ++j) {      
+      p.first.i = i + base;
+      p.first.j = ja[j-base];
+      entries.insert(p);
     }
+  }
 
+  // force diagonal entries and structural symmetry
+  size_t fixes(0);
+  for (int i=0; i<nnu; ++i)
+    entries.insert(make_pair(idx_t(i+base,i+base),0.)).second? ++fixes:fixes;
+  for (bool modif=true; modif;) {
+    modif = false;
+    for (set_t::const_reverse_iterator c=entries.rbegin(); !modif && c!=entries.rend(); ++c)
+      (modif = entries.insert(make_pair(idx_t(c->first.j,c->first.i),0.)).second)? ++fixes:fixes;
+  }
+  if (fixes) {
+    CFdebug << "CSR::read_sparse: additional entries to preserve symmetry: " << fixes << CFendl;
+  }
+
+  // recompress row indices, and rebuild column indices and matrix values
+  ia.clear();  ia.reserve(nnu);
+  ja.clear();  ja.reserve(entries.size());
+               a .reserve(entries.size());
+  ia.push_back(base);
+  for (int i=0; i<nnu; ++i)
+    ia.push_back(ia.back() + count_if(entries.begin(),entries.end(),coord_row_equal_to_t(i+base)));
+  for (set_t::const_iterator c=entries.begin(); c!=entries.end(); ++c) {
+    ja.push_back(c->first.j);
+    a .push_back(c->second);
   }
 
   return true;
