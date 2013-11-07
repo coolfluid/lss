@@ -20,7 +20,7 @@ namespace lss {
 /**
  * implementation of a serial GMRES linear system solver (double p.)
  */
-class GMRES : public
+class lss_API GMRES : public
   linearsystem< double,
     detail::sparse_matrix_csr< double, 1 >,
     detail::dense_matrix_v< double > >
@@ -49,8 +49,10 @@ class GMRES : public
  private:
   // internal functions
   int daxpy(int *n, double *da, double *dx, int *incx, double *dy, int *incy);
-  int iluk( int *n, double *a, int *ja, int *ia, int *lfil, double*& aluold,
-            int*& jluold, int *ju, int*& levsold, int *iwk, double *w, int *jw,
+  int iluk( int *n, double *a, int *ja, int *ia, int *lfil,
+            std::vector< double >& aluold,
+            std::vector< int >& jluold,
+            int *ju, int* levsold, int *iwk, double *w, int *jw,
             int *ierr );
   double ddot(int *n, double *dx, int *incx, double *dy, int *incy);
   double dnrm2(int *n, double *dx, int *incx);

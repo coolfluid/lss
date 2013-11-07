@@ -21,4 +21,13 @@ coolfluid3_add_library(
     LAPACK.hpp
   )
 
-coolfluid_mark_not_orphan( reference/mmatrix.h )
+coolfluid_mark_not_orphan(
+  reference/a.cpp
+  reference/b.cpp
+  reference/c.cpp
+  reference/linearsystem.hpp
+  reference/lss_index.hpp
+  reference/lss_matrix.hpp
+  reference/lss_utilities.hpp
+  reference/mmatrix.h
+  )
