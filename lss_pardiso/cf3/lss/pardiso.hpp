@@ -55,7 +55,7 @@ class lss_pardiso_API pardiso : public
  private:
   int call_pardiso_printstats();
   int call_pardiso_init();
-  int call_pardiso(int _phase, int _msglvl);
+  int call_pardiso(int _phase);
 
 
   // linear system components access
@@ -80,6 +80,7 @@ class lss_pardiso_API pardiso : public
          err,
          maxfct,
          mnum,
+         msglvl,
          mtype,
          nrhs,
          phase;

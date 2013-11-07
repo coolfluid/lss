@@ -39,6 +39,7 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
   iparm[31] = 0;  // [0|1] sparse direct solver or multi-recursive iterative solver
   maxfct    = 1;  // maximum number of numerical factorizations
   mnum      = 1;  // which factorization to use
+  msglvl    = 1;  // message level: output statistical information
   mtype     = 1;  // real structurally symmetric matrix
 
   linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
@@ -50,10 +51,10 @@ pardiso& pardiso::solve()
   nrhs = static_cast< int >(b().size(1));
   if (call_pardiso_init()       &&  // setup
       call_pardiso_printstats() &&  // check for matrix/vector consistency
-      call_pardiso(11,1)        &&  // 11: reordering and symbolic factorization
-      call_pardiso(22,1)        &&  // 22: numerical factorization and
-      call_pardiso(33,1)        &&  // 33: back substitution and iterative refinement
-      call_pardiso(-1,1))           // -1: termination and release of memory
+      call_pardiso(11)          &&  // 11: reordering and symbolic factorization
+      call_pardiso(22)          &&  // 22: numerical factorization and
+      call_pardiso(33)          &&  // 33: back substitution and iterative refinement
+      call_pardiso(-1))             // -1: termination and release of memory
   {
     std::ostringstream msg;
     msg << "pardiso: phase " << phase << " error" << err << ": ";
@@ -98,14 +99,14 @@ int pardiso::call_pardiso_init() {
 }
 
 
-int pardiso::call_pardiso(int _phase, int _msglvl)
+int pardiso::call_pardiso(int _phase)
 {
   err = 0;
   phase = _phase;
   pardiso_(
     pt, &maxfct, &mnum, &mtype, &phase,
     &m_A.idx.nnu, &m_A.a[0], &m_A.idx.ia[0], &m_A.idx.ja[0],
-    NULL, &nrhs, iparm, &_msglvl, &m_b.a[0], &m_x.a[0], &err, dparm );
+    NULL, &nrhs, iparm, &msglvl, &m_b.a[0], &m_x.a[0], &err, dparm );
   return err;
 }
 
