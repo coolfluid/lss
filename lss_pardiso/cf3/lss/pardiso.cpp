@@ -51,9 +51,13 @@ pardiso& pardiso::solve()
   nrhs = static_cast< int >(b().size(1));
   if (call_pardiso_init()       ||  // setup
       call_pardiso_printstats() ||  // check for matrix/vector consistency
+#if 0
       call_pardiso(11)          ||  // 11: reordering and symbolic factorization
       call_pardiso(22)          ||  // 22: numerical factorization and
       call_pardiso(33)          ||  // 33: back substitution and iterative refinement
+#else
+      call_pardiso(13)          ||
+#endif
       call_pardiso(-1))             // -1: termination and release of memory
   {
     std::ostringstream msg;
