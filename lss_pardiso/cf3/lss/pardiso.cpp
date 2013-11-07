@@ -33,7 +33,7 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
 
   char* nthreads = getenv("OMP_NUM_THREADS");
   sscanf(nthreads? nthreads:"1","%d",&iparm[2]);
-  std::cout << "info: number of threads: " << iparm[2] << " (OMP_NUM_THREADS: " << (nthreads? "":"not ") << "set)" << std::endl;
+  std::cout << "pardiso: number of threads: " << iparm[2] << " (OMP_NUM_THREADS: " << (nthreads? "set)":"not set)") << std::endl;
 
   iparm[ 7] = 0;  // max numbers of iterative refinement steps
   iparm[31] = 0;  // [0|1] sparse direct solver or multi-recursive iterative solver
@@ -49,15 +49,15 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
 pardiso& pardiso::solve()
 {
   nrhs = static_cast< int >(b().size(1));
-  if (call_pardiso_init()       &&  // setup
-      call_pardiso_printstats() &&  // check for matrix/vector consistency
-      call_pardiso(11)          &&  // 11: reordering and symbolic factorization
-      call_pardiso(22)          &&  // 22: numerical factorization and
-      call_pardiso(33)          &&  // 33: back substitution and iterative refinement
+  if (call_pardiso_init()       ||  // setup
+      call_pardiso_printstats() ||  // check for matrix/vector consistency
+      call_pardiso(11)          ||  // 11: reordering and symbolic factorization
+      call_pardiso(22)          ||  // 22: numerical factorization and
+      call_pardiso(33)          ||  // 33: back substitution and iterative refinement
       call_pardiso(-1))             // -1: termination and release of memory
   {
     std::ostringstream msg;
-    msg << "pardiso: phase " << phase << " error" << err << ": ";
+    msg << "pardiso: phase " << phase << " error " << err << ": ";
     err==  -1? msg << "input inconsistent." :
     err==  -2? msg << "not enough memory."  :
     err==  -3? msg << "reordering problem." :
