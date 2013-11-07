@@ -6,46 +6,42 @@ import math
 import time
 
 
-cf.env.log_level = 4 #  1=error, 2=warning, 3=info, 4=debug
+cf.env.log_level = 3 #  1=error, 2=warning, 3=info, 4=debug
 
 
-list_of_solvers = [
-  #'LAPACK',
+solvers = [
+# 'LAPACK',
 # 'LAPACK_SinglePrecision',
 # 'GaussianElimination',
 # 'GaussianElimination_SinglePrecision',
-  'GMRES',
-  'pardiso',
+# 'GMRES',
+  'pardiso.pardiso',
   ]
 
-list_of_matrices = []
-list_of_vectors  = []
-#list_of_matrices.extend([ 'matrices/'+a for a in [ 'simple_sparse_matrix_base_0.csr','simple_sparse_matrix_base_1.csr','simple_dense_matrix.mtx' ]])
-#list_of_vectors .extend([ None, None, None ])
-#list_of_matrices.extend([ 'matrices/fidap/'  +a+'.mtx'      for a in [ 'fidapm03','fidapm13','fidapm33' ]])
-#list_of_vectors .extend([ 'matrices/fidap/'  +a+'_rhs1.mtx' for a in [ 'fidapm03','fidapm13','fidapm33' ]])
-list_of_matrices.extend([ 'matrices/drivcav/'+a+'.mtx'      for a in [ 'e05r0100','e05r0500' ]]) #,'e40r0100','e40r0500' ]])
-list_of_vectors .extend([ 'matrices/drivcav/'+a+'_rhs1.mtx' for a in [ 'e05r0100','e05r0500' ]]) #,'e40r0100','e40r0500' ]])
+systems=[
+  ('matrices/intel_mkl_simple_sparse_matrix.csr', ''),
+  ('matrices/samg_demo_matrix.csr', 'matrices/samg_demo_rhs.mtx'),
+  ('matrices/drivcav/e05r0100.mtx', 'matrices/drivcav/e05r0100_rhs1.mtx'),
+  ('matrices/drivcav/e05r0500.mtx', 'matrices/drivcav/e05r0500_rhs1.mtx'),
+# ('matrices/drivcav/e40r0500.mtx', 'matrices/drivcav/e40r0500_rhs1.mtx'),
+# ('matrices/drivcav/e40r0100.mtx', 'matrices/drivcav/e40r0100_rhs1.mtx'),
+  ('matrices/fidap/fidapm03.mtx',   'matrices/fidap/fidapm03_rhs1.mtx'),
+  ('matrices/fidap/fidapm13.mtx',   'matrices/fidap/fidapm13_rhs1.mtx'),
+  ('matrices/fidap/fidapm33.mtx',   'matrices/fidap/fidapm33_rhs1.mtx'),
+  ]
+for t in solvers:
+  lss = cf.root.create_component('Solver_'+t,'cf3.lss.'+t)
+  for s in systems:
+    print 'test: (solver:'+t + ' matrix:'+s[0] + ' rhs:'+s[1]+')...'
 
+    d=time.time()
+    lss.initialize(A=s[0],b=s[1])
+    print 'initialize time: %.2fs.'%(time.time()-d)
 
-for solver in list_of_solvers:
-  lss = cf.root.create_component('Solver_'+solver,'cf3.lss.'+solver)
-  for system in zip(list_of_matrices,list_of_vectors):
-    mat = system[0] if system[0] else ''
-    vec = system[1] if system[1] else ''
-    print 'test: (solver:'+solver + ' matrix:'+mat + ' rhs:'+vec+')...'
-
-    print 'test initialize...'; d=time.time()
-    lss.initialize(A=mat,b=vec)
-    print 'test initialize. time: %.2fs.'%(time.time()-d)
-
-    print 'test solve...'; d=time.time()
-    lss.b = [1]
+    d=time.time()
     lss.solve()
-    print 'test solve. time: %.2fs.'%(time.time()-d)
- 
-    lss.output(A=1,b=1,x=1)
-    lss.A = [ 0 ]
-    print 'test.'
+    print 'solve time: %.2fs.'%(time.time()-d)
+
+    #lss.output(A=1,b=1,x=3)
   lss.delete_component()
 
