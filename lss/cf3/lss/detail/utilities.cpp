@@ -309,8 +309,16 @@ bool read_sparse(
     ja.reserve(entries.size());
     a .reserve(entries.size());
     ia.push_back(1);  // (base is always 1 in this format)
+#if 0
     for (size_t r=1; r<=size.i; ++r)
       ia.push_back(ia.back() + count_if(entries.begin(),entries.end(),coord_row_equal_to_t(r)));
+#else
+    set_t::const_iterator c=entries.begin();
+    for (size_t r=1, count; r<=size.i; ++r) {
+      for (count=0; r==(c->first.i) && c!=entries.end(); ++c, ++count) {}
+      ia.push_back(ia.back() + count);
+    }
+#endif
     for (set_t::const_iterator c=entries.begin(); c!=entries.end(); ++c) {
       ja.push_back(c->first.j);
       a.push_back(c->second);
@@ -352,8 +360,16 @@ bool read_sparse(
     ia.reserve(entries.size());
     a .reserve(entries.size());
     ja.push_back(1);  // (base is always 1 in this format)
+#if 0
     for (size_t c=1; c<=size.j; ++c)
       ja.push_back(ja.back() + count_if(entries.begin(),entries.end(),coord_column_equal_to_t(c)));
+#else
+    set_t::const_iterator c=entries.begin();
+    for (size_t j=1, count; j<=size.j; ++j) {
+      for (count=0; j==(c->first.j) && c!=entries.end(); ++c, ++count) {}
+      ja.push_back(ja.back() + count);
+    }
+#endif
     for (set_t::const_iterator c=entries.begin(); c!=entries.end(); ++c) {
       ia.push_back(c->first.i);
       a.push_back(c->second);
@@ -500,8 +516,16 @@ bool read_sparse(
   ja.clear();  ja.reserve(entries.size());
                a .reserve(entries.size());
   ia.push_back(base);
+#if 0
   for (int i=0; i<nnu; ++i)
     ia.push_back(ia.back() + count_if(entries.begin(),entries.end(),coord_row_equal_to_t(i+base)));
+#else
+  set_t::const_iterator c=entries.begin();
+  for (int i=0, count; i<nnu; ++i) {
+    for (count=0; (i+base)==(c->first.i) && c!=entries.end(); ++c, ++count) {}
+    ia.push_back(ia.back() + count);
+  }
+#endif
   for (set_t::const_iterator c=entries.begin(); c!=entries.end(); ++c) {
     ja.push_back(c->first.j);
     a .push_back(c->second);

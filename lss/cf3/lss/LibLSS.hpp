@@ -16,17 +16,14 @@
 #include "cf3/common/Library.hpp"
 
 
-/// Define the macro lss_API
-/// @note build system defines COOLFLUID_LSS_EXPORTS when compiling lss files
 #ifdef COOLFLUID_LSS_EXPORTS
-#   define lss_API      CF3_EXPORT_API
-#   define lss_TEMPLATE
+#  define lss_API      CF3_EXPORT_API
+#  define lss_TEMPLATE
 #else
-#   define lss_API      CF3_IMPORT_API
-#   define lss_TEMPLATE CF3_TEMPLATE_EXTERN
+#  define lss_API      CF3_IMPORT_API
+#  define lss_TEMPLATE CF3_TEMPLATE_EXTERN
 #endif
 
-////////////////////////////////////////////////////////////////////////////////
 
 namespace cf3 {
 
