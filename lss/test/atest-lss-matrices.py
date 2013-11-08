@@ -16,6 +16,7 @@ solvers = [
 # 'GaussianElimination_SinglePrecision',
 # 'GMRES',
   'pardiso.pardiso',
+  'wsmp.wsmp',
   ]
 
 systems=[
@@ -23,8 +24,8 @@ systems=[
   ('matrices/samg_demo_matrix.csr', 'matrices/samg_demo_rhs.mtx'),
   ('matrices/drivcav/e05r0100.mtx', 'matrices/drivcav/e05r0100_rhs1.mtx'),
   ('matrices/drivcav/e05r0500.mtx', 'matrices/drivcav/e05r0500_rhs1.mtx'),
-# ('matrices/drivcav/e40r0500.mtx', 'matrices/drivcav/e40r0500_rhs1.mtx'),
-# ('matrices/drivcav/e40r0100.mtx', 'matrices/drivcav/e40r0100_rhs1.mtx'),
+  ('matrices/drivcav/e40r0500.mtx', 'matrices/drivcav/e40r0500_rhs1.mtx'),
+  ('matrices/drivcav/e40r0100.mtx', 'matrices/drivcav/e40r0100_rhs1.mtx'),
   ('matrices/fidap/fidapm03.mtx',   'matrices/fidap/fidapm03_rhs1.mtx'),
   ('matrices/fidap/fidapm13.mtx',   'matrices/fidap/fidapm13_rhs1.mtx'),
   ('matrices/fidap/fidapm33.mtx',   'matrices/fidap/fidapm33_rhs1.mtx'),
@@ -36,11 +37,11 @@ for t in solvers:
 
     d=time.time()
     lss.initialize(A=s[0],b=s[1])
-    print 'initialize time: %.2fs.'%(time.time()-d)
+    print '  initialize time: %.2fs.'%(time.time()-d)
 
     d=time.time()
     lss.solve()
-    print 'solve time: %.2fs.'%(time.time()-d)
+    print '  solve time: %.2fs.'%(time.time()-d)
 
     #lss.output(A=1,b=1,x=3)
   lss.delete_component()
