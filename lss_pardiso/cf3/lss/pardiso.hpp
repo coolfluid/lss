@@ -24,7 +24,7 @@ namespace lss {
  * - row indices sorted in increasing order
  * @author Pedro Maciel
  */
-class lss_pardiso_API pardiso : public
+class lss_API pardiso : public
   linearsystem< double,
     detail::sparse_matrix_csr< double, 1, detail::vector_sorted_with_diagonal_t >,
     detail::dense_matrix_v< double, detail::column_oriented > >
