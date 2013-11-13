@@ -27,9 +27,10 @@ namespace lss {
 common::ComponentBuilder< WSMP, common::Component, LibLSS_WSMP > Builder_WSMP;
 
 
-WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value) : linearsystem_t(name) {
-
-  char
+WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
+  : linearsystem_t(name)
+{
+  const char
      *nthreads   = getenv("WSMP_NUM_THREADS"),
      *licpath    = getenv("WSMPLICPATH"),
      *wincoremem = getenv("WINCOREMEM"),
@@ -41,12 +42,12 @@ WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j
   sscanf(nthreads? nthreads:"1","%d",&nthd);
   wsetmaxthrds_(&nthd);
 
-  CFinfo  << "WSMP_NUM_THREADS:       " << nthd << " (" << (nthreads? "set)":"not set)") << CFendl
-          << "WSMPLICPATH:            " << (licpath? licpath:"(WSMPLICPATH: not set)")   << CFendl
-          << "MALLOC_TRIM_THRESHOLD_: " << (malloc_trh? "(set)":"(not set)") << CFendl
-          << "MALLOC_MMAP_MAX_:       " << (malloc_max? "(set)":"(not set)") << CFendl;
-  CFdebug << "WINCOREMEM:             " << (wincoremem? wincoremem : "(not set)") << CFendl
-          << "WOOCDIR0:               " << (woocdir0?   woocdir0   : "(not set)") << CFendl;
+  CFinfo  << "WSMP: WSMP_NUM_THREADS: " << nthd << (nthreads? " (set)":" (not set)") << CFendl
+          << "WSMP: WSMPLICPATH:      "       << (licpath?    licpath    : "(not set)") << CFendl;
+  CFdebug << "WSMP: WINCOREMEM:             " << (wincoremem? wincoremem : "(not set)") << CFendl
+          << "WSMP: WOOCDIR0:               " << (woocdir0?   woocdir0   : "(not set)") << CFendl
+          << "WSMP: MALLOC_TRIM_THRESHOLD_: " << (malloc_trh? malloc_trh : "(not set)") << CFendl
+          << "WSMP: MALLOC_MMAP_MAX_:       " << (malloc_max? malloc_max : "(not set)") << CFendl;
 
   // iparm/dparm defaults
   for (int i=0; i<64; ++i)  iparm[i] = 0;
@@ -109,7 +110,7 @@ int WSMP::call_wsmp(int _task)
 
   iparm[1] = iparm[2] = task = _task;
   wgsmp_(
-    &m_A.idx.nnu,&m_A.idx.ia[0],&m_A.idx.ja[0],&m_A.a[0],
+    &m_A.nnu,&m_A.ia[0],&m_A.ja[0],&m_A.a[0],
     &m_b.a[0],&ldb,&nrhs,NULL,iparm,dparm);
 
   iparm[63] = (iparm[63]>0 && ldlt_pivot? 0 : iparm[63]);

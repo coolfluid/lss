@@ -22,12 +22,12 @@ namespace lss {
  */
 class lss_API GMRES : public
   linearsystem< double,
-    detail::sparse_matrix_csr< double, 1 >,
-    detail::dense_matrix_v< double > >
+    detail::sparse_matrix< double, 1>,
+    detail::dense_matrix_v< double, detail::sort_by_row > >
 {
   // utility definitions
-  typedef detail::sparse_matrix_csr< double, 1 > matrix_t;
-  typedef detail::dense_matrix_v< double > vector_t;
+  typedef detail::sparse_matrix< double, 1> matrix_t;
+  typedef detail::dense_matrix_v< double, detail::sort_by_row > vector_t;
   typedef linearsystem< double, matrix_t, vector_t > linearsystem_t;
 
 

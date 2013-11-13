@@ -32,12 +32,12 @@ extern "C"
 template< typename T >
 class lss_API LAPACK : public
   linearsystem< T,
-    detail::dense_matrix_v< T, detail::column_oriented >,
-    detail::dense_matrix_v< T, detail::column_oriented > >
+    detail::dense_matrix_v< T >,
+    detail::dense_matrix_v< T > >
 {
   // utility definitions
-  typedef detail::dense_matrix_v< T, detail::column_oriented > matrix_t;
-  typedef detail::dense_matrix_v< T, detail::column_oriented > vector_t;
+  typedef detail::dense_matrix_v< T > matrix_t;
+  typedef detail::dense_matrix_v< T > vector_t;
   typedef linearsystem< T, matrix_t, vector_t > linearsystem_t;
 
  public:

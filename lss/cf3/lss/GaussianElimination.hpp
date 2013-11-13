@@ -27,12 +27,12 @@ namespace lss {
 template< typename T >
 class lss_API GaussianElimination : public
   linearsystem< T,
-    detail::dense_matrix_v< T >,
-    detail::dense_matrix_v< T > >
+    detail::dense_matrix_v< T, detail::sort_by_row >,
+    detail::dense_matrix_v< T, detail::sort_by_row > >
 {
   // utility definitions
-  typedef detail::dense_matrix_v< T > matrix_t;
-  typedef detail::dense_matrix_v< T > vector_t;
+  typedef detail::dense_matrix_v< T, detail::sort_by_row > matrix_t;
+  typedef detail::dense_matrix_v< T, detail::sort_by_row > vector_t;
   typedef linearsystem< T, matrix_t, vector_t > linearsystem_t;
 
   // framework interfacing
