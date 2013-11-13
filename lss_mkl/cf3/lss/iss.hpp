@@ -65,6 +65,9 @@ class lss_API iss : public
   vector_t m_b;
   vector_t m_x;
 
+  int ipar[128];
+  double dpar[128];
+
 };
 
 
