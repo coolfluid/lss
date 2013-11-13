@@ -23,12 +23,12 @@ namespace lss {
  */
 class lss_API WSMP : public
   linearsystem< double,
-    detail::sparse_matrix_csr< double, 0 >,
-    detail::dense_matrix_v< double, detail::column_oriented > >
+    detail::sparse_matrix< double >,
+    detail::dense_matrix_v< double > >
 {
   // utility definitions
-  typedef detail::sparse_matrix_csr< double, 0 > matrix_t;
-  typedef detail::dense_matrix_v< double, detail::column_oriented > vector_t;
+  typedef detail::sparse_matrix< double > matrix_t;
+  typedef detail::dense_matrix_v< double > vector_t;
   typedef linearsystem< double, matrix_t, vector_t > linearsystem_t;
 
 
