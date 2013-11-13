@@ -65,6 +65,11 @@ class lss_API dss : public
   vector_t m_b;
   vector_t m_x;
 
+  void *handle;
+  int nrhs,
+      opt,
+      sym,
+      type;
 };
 
 
