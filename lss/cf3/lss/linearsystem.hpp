@@ -9,10 +9,6 @@
 #define cf3_lss_linearsystem_hpp
 
 
-#include <limits>
-#include <sstream>
-#include <stdexcept>
-
 #include "common/BasicExceptions.hpp"
 #include "common/Signal.hpp"
 #include "common/Action.hpp"

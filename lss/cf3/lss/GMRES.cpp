@@ -22,7 +22,7 @@ common::ComponentBuilder< GMRES, common::Component, LibLSS > Builder_GMRES;
 GMRES& GMRES::solve()
 {
   int n = m_A.size(0);
-  int iwk = m_A.idx.nnz;
+  int iwk = m_A.nnz;
   int ierr;
   double eps = 1e-5;  // tolerance, process is stopped when eps>=||current residual||/||initial residual||
   int im     = 50;    // size of krylov subspace (should not exceed 50)
@@ -41,14 +41,14 @@ GMRES& GMRES::solve()
     std::vector< int >
       levs(iwk),
       jw(n*3,0);
-    /*newiwk =*/ iluk(&n,&m_A.a[0],&m_A.idx.ja[0],&m_A.idx.ia[0],&lfil,alu,jlu,
+    /*newiwk =*/ iluk(&n,&m_A.a[0],&m_A.ja[0],&m_A.ia[0],&lfil,alu,jlu,
       &ju[0],&levs[0],&iwk,&w[0],&jw[0],&ierr);
   }
   {
     std::vector< double > vv(n*(im+1));
     x() = 0.;
     pgmres(&n,&im,&(b().a[0]),&(x().a[0]),&vv[0],&eps,&maxits,&iout,
-           &m_A.a[0],&m_A.idx.ja[0],&m_A.idx.ia[0],&alu[0],&jlu[0],&ju[0],&ierr);
+           &m_A.a[0],&m_A.ja[0],&m_A.ia[0],&alu[0],&jlu[0],&ju[0],&ierr);
   }
 
   return *this;

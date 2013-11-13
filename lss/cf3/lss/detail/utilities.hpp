@@ -10,12 +10,12 @@
 
 
 #include <algorithm>
-#include <functional>
-#include <limits>
 #include <stdexcept>
 #include <string>
 #include <typeinfo>
-#include <vector>
+#include <fstream>
+#include <set>
+#include <sstream>
 
 #include "index.hpp"
 
@@ -23,6 +23,100 @@
 namespace cf3 {
 namespace lss {
 namespace detail {
+
+
+/* -- coordinate matrix helper structures ----------------------------------- */
+
+template< typename T >
+struct coord_t : std::pair< idx_t, T > {
+  coord_t(const idx_t& _idx, const T& _value) : std::pair< idx_t, T >(_idx,_value) {}
+};
+
+
+/// @brief Coordinate matrix sorting and compression tool, by row (functor)
+template< typename _Key >
+struct sort_by_row_t
+{
+  virtual bool operator()(const _Key& a, const _Key& b) const {
+    return (a.first.i<b.first.i? true  :
+           (a.first.i>b.first.i? false :
+           (a.first.j<b.first.j) ));
+  }
+  static int compress(
+      const std::set< _Key, sort_by_row_t< _Key > >& _entries,
+      std::vector< int >& ia,
+      std::vector< int >& ja) {
+    typename std::set< _Key, sort_by_row_t< _Key > >::const_iterator it=_entries.begin();
+    ia.clear();  ia.push_back(it->first.i);
+    ja.clear();  ja.reserve(_entries.size());
+    for (size_t count,
+         r =  _entries.begin() ->first.i;
+         r <= _entries.rbegin()->first.i;
+         ++r) {
+      for (count=0; r==(it->first.i) && it!=_entries.end(); ++it, ++count)
+        ja.push_back(it->first.j);
+      ia.push_back(ia.back() + count);
+    }
+    return static_cast< int >(ia.size()? ia.size()-1:0);
+  }
+};
+
+
+/// @brief Coordinate matrix sorting and compression tool, by column (functor)
+template< typename _Key >
+struct sort_by_column_t
+{
+  virtual bool operator()(const _Key& a, const _Key& b) const {
+    return (a.first.j<b.first.j? true  :
+           (a.first.j>b.first.j? false :
+           (a.first.i<b.first.i)));
+  }
+  static int compress(
+      const std::set< _Key, sort_by_row_t< _Key > >& _entries,
+      std::vector< int >& ia,
+      std::vector< int >& ja) {
+    typename std::set< _Key, sort_by_row_t< _Key > >::const_iterator it=_entries.begin();
+    ia.clear();  ia.reserve(_entries.size());
+    ja.clear();  ja.push_back(it->first.j);
+    for (size_t count,
+         c =  _entries.begin() ->first.j;
+         c <= _entries.rbegin()->first.j;
+         ++c) {
+      for (count=0; c==(it->first.j) && it!=_entries.end(); ++it, ++count)
+        ia.push_back(it->first.i);
+      ja.push_back(ja.back() + count);
+    }
+    return static_cast< int >(ja.size()? ja.size()-1:0);
+  }
+};
+
+
+/// @brief Coordinate matrix sorting and compression tool, by row (functor),
+/// prioritizing diagonal entries
+template< typename _Key >
+struct sort_by_row_diagonal_first_t : public sort_by_row_t< _Key > {
+  bool operator()(const _Key& a, const _Key& b) const {
+    // FIXME Not implemented
+    throw std::runtime_error("Not implemented!");
+    return (a.first.i<b.first.i? true  :
+           (a.first.i>b.first.i? false :
+           /*here goes all the fun*/true ));
+  }
+};
+
+
+/// @brief Coordinate matrix sorting and compression tool, by column (functor),
+/// prioritizing diagonal entries
+template< typename _Key >
+struct sort_by_column_diagonal_first_t : public sort_by_column_t< _Key > {
+  bool operator()(const _Key& a, const _Key& b) const {
+    // FIXME Not implemented
+    throw std::runtime_error("Not implemented!");
+    return (a.first.j<b.first.j? true  :
+           (a.first.j>b.first.j? false :
+           /*here goes all the fun*/true));
+  }
+};
 
 
 /* -- generic utilities ----------------------------------------------------- */
@@ -73,102 +167,75 @@ struct base_conversion_t
 };
 
 
-/// @brief Elementary vector transformation: sort, removing duplicate entries
-struct vector_sort_unique
-{
-  void apply(std::vector< int >& v, int) {
-    std::sort(v.begin(),v.end());
-    v.erase(std::unique(v.begin(),v.end()),v.end());
-  }
-};
-
-
-/// @brief Elementary vector transformation: add vector entry at start
-struct vector_element_push_front
-{
-  void apply(std::vector< int >& v, int e) { v.insert(v.begin(),e); }
-};
-
-
-/// @brief Elementary vector transformation: add vector entry at end
-struct vector_element_push_back
-{
-  void apply(std::vector< int >& v, int e) { v.push_back(e); }
-};
-
-
-/// @brief Elementary vector transformation: remove entries of specific value, if existing
-struct vector_element_remove
-{
-  struct equal_to
-  {
-    equal_to(const int& _elem) : elem(_elem) {}
-    bool operator()(const int& _elem) const { return elem==_elem; }
-    const int elem;
-  };
-  void apply(std::vector< int >& v, int e) {
-    v.erase(std::remove_if(v.begin(),v.end(),equal_to(e)),v.end());
-  }
-};
-
-
-/// @brief Elementary vector transformation: apply supplied difference to vector
-struct vector_apply_diff
-{
-  struct apply_diff
-  {
-    apply_diff(const int& _diff) : diff(_diff) {}
-    int operator()(int &v) const { return (v+diff); }
-    const int diff;
-  };
-  void apply(std::vector< int >& v, int e) {
-    std::for_each(v.begin(),v.end(),apply_diff(e));
-  }
-};
-
-
-/// @brief Type for recursive application of vector transformations
-struct vector_transform_t
-{
-  virtual void apply(std::vector< int >&, int) {}
-};
-
-
-/// @brief Type for recursive application of vector transformations
-template<
-    typename Transf,
-    typename TransfNested=vector_transform_t >
-struct vector_transform_list_t : vector_transform_t
-{
-  void apply(std::vector< int >& v, int e) {
-    TransfNested::apply(v,e);
-    Transf::apply(v,e);
-  }
-};
-
-
-/**
- * @brief Vector transformation: sorted indices vector
- * (useful for specific CSR/CSC matrix linear solvers)
- */
-typedef vector_transform_list_t< vector_sort_unique,
-        vector_transform_list_t< vector_element_push_back > >
-  vector_sorted_with_diagonal_t;
-
-/**
- * @brief Vector transformation: sorted indices vector with specific entry at start
- * (useful for specific CSR/CSC matrix linear solvers)
- */
-typedef vector_transform_list_t< vector_element_push_front,
-        vector_transform_list_t< vector_sort_unique,
-        vector_transform_list_t< vector_element_remove > > >
-  vector_sorted_with_diagonal_first_t;
-
-
 /* -- Matrix Market I/O (or, say, just I) ----------------------------------- */
 
 namespace MatrixMarket
 {
+
+
+// matrix typecodes
+enum type     { no_type, matrix, all_types };
+enum format   { no_format, coordinate, array, all_formats };
+enum field    { no_field, real, integer, cmplex, pattern, all_fields };
+enum symmetry { no_symmetry, general, symmetric, skew_symmetric, hermitian, all_symmetries };
+
+
+// matrix typecode manipulator
+struct typecode_t {
+
+  type     m_type;
+  format   m_format;
+  field    m_field;
+  symmetry m_symmetry;
+
+  typecode_t() { clear(); }
+  void clear() {
+    m_type     = no_type;
+    m_format   = no_format;
+    m_field    = no_field;
+    m_symmetry = general;
+  }
+
+  // -- typecode query functions
+
+  bool is_matrix()     { return m_type==matrix; }
+
+  bool is_sparse()     { return m_format==coordinate; }
+  bool is_coordinate() { return m_format==coordinate; }
+  bool is_dense()      { return m_format==array; }
+  bool is_array()      { return m_format==array; }
+
+  bool is_complex()    { return m_field==cmplex; }
+  bool is_real()       { return m_field==real; }
+  bool is_pattern()    { return m_field==pattern; }
+  bool is_integer()    { return m_field==integer; }
+
+  bool is_symmetric()  { return m_symmetry==symmetric; }
+  bool is_general()    { return m_symmetry==general; }
+  bool is_skew()       { return m_symmetry==skew_symmetric; }
+  bool is_hermitian()  { return m_symmetry==hermitian; }
+
+  bool is_valid() {
+    return is_matrix()
+        && !(is_complex())  // (NOTE: not supported in my implementation!)
+        && !(is_dense() && is_pattern())
+        && !(is_real() && is_hermitian())
+        && !(is_pattern() && (is_hermitian() || is_skew()));
+  }
+
+  // -- typecode modify functions
+
+  void set_type     (const type&     i) { m_type=i;     }
+  void set_format   (const format&   i) { m_format=i;   }
+  void set_field    (const field&    i) { m_field=i;    }
+  void set_symmetry (const symmetry& i) { m_symmetry=i; }
+
+};
+
+
+// read file utility: process file header and matrix/array size
+bool read_banner(std::ifstream& f, typecode_t& t);
+bool read_size(std::ifstream& f, size_t& i, size_t& j, int& nz);
 
 
 /**
@@ -186,28 +253,7 @@ bool read_dense(
     std::vector< std::vector< double > >& a );
 
 
-/**
- * @brief read_sparse: read MatrixMarket file to sparse structure
- * @param fname: input filename
- * @param roworiented: if result should be row (most common) or column oriented
- * @param base: sparse structure index base
- * @param size: output matrix/array size
- * @param a: output sparse matrix/array
- * @param ia: output i-coordinate indices
- * @param ja: output j-coordinate indices
- * @return if reading is successful
- */
-bool read_sparse(
-    const std::string& fname,
-    const bool& roworiented,
-    const int& base,
-    idx_t& size,
-    std::vector< double >& a,
-    std::vector< int >& ia,
-    std::vector< int >& ja );
-
-
-}
+}  // namespace MatrixMarket
 
 
 /* -- CSR I/O (just I) ------------------------------------------------------ */
@@ -229,24 +275,6 @@ bool read_dense(
     const bool &roworiented,
     idx_t& size,
     std::vector< std::vector< double > >& a );
-
-
-/**
- * @brief read_sparse: read CSR file format (a hack on MM) to sparse structure
- * @param fname: input filename
- * @param base: sparse structure index base
- * @param size: output matrix/array size
- * @param a: output sparse matrix/array
- * @param ia: output i-coordinate indices
- * @param ja: output j-coordinate indices
- * @return if reading is successful
- */
-bool read_sparse(const std::string& fname,
-    const int& base,
-    idx_t& size,
-    std::vector< double >& a,
-    std::vector< int >& ia,
-    std::vector< int >& ja );
 
 
 }
@@ -292,50 +320,6 @@ void read_dense(
     for (size_t i=0; i<another_a.size(); ++i)
       transform( another_a[i].begin(),another_a[i].end(),a[i].begin(),
                  type_conversion_t< double, T >() );
-  }
-}
-
-
-/**
- * @brief read_sparse: interface reading of files in different formats to sparse
- * data structure, templasized with the container storage type
- * @param fname: input filename
- * @param roworiented: if result should be row (most common) or column oriented
- * @param base: sparse structure index base
- * @param size: output matrix/array size
- * @param a: output sparse matrix/array
- * @param ia: output i-coordinate indices
- * @param ja: output j-coordinate indices
- * @return if reading is successful
- */
-template< typename T >
-void read_sparse(
-    const std::string& fname,
-    const bool& roworiented,
-    const int& base,
-    idx_t& size,
-    std::vector< T >& a,
-    std::vector< int >& ia,
-    std::vector< int >& ja )
-{
-  // if storage is of different type than double, it miraculously converts
-  std::vector< double > another_a;
-  std::vector< double >& storage(
-    type_is_equal< T, double >()? (std::vector< double >&) a : another_a);
-
-  // read file contents
-  const bool hasdot(std::string("."+fname).find_last_of("."));
-  if      (hasdot && fname.substr(fname.find_last_of("."))==".mtx") { MatrixMarket ::read_sparse(fname,roworiented,base,size,storage,ia,ja); }
-  else if (hasdot && fname.substr(fname.find_last_of("."))==".csr") { CSR          ::read_sparse(fname,            base,size,storage,ia,ja); }
-/*else if (hasdot && fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_sparse(fname,roworiented,base,size,storage,ia,ja); }*/
-  else
-    throw std::runtime_error("file format not detected.");
-
-  // perform storage conversion if necessary, and return
-  if (!type_is_equal< T, double >()) {
-    a.assign(another_a.size(),T());
-    transform( another_a.begin(),another_a.end(),a.begin(),
-               type_conversion_t< double, T >() );
   }
 }
 
