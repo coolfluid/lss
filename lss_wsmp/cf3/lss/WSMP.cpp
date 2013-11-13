@@ -27,9 +27,10 @@ namespace lss {
 common::ComponentBuilder< WSMP, common::Component, LibLSS_WSMP > Builder_WSMP;
 
 
-WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value) : linearsystem_t(name) {
-
-  char
+WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
+  : linearsystem_t(name)
+{
+  const char
      *nthreads   = getenv("WSMP_NUM_THREADS"),
      *licpath    = getenv("WSMPLICPATH"),
      *wincoremem = getenv("WINCOREMEM"),
