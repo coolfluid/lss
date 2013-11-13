@@ -85,7 +85,7 @@ int pardiso::call_pardiso_printstats() {
   phase = 0;
   pardiso_printstats_(
     &mtype,
-    &m_A.idx.nnu, &m_A.a[0], &m_A.idx.ia[0], &m_A.idx.ja[0],
+    &m_A.nnu, &m_A.a[0], &m_A.ia[0], &m_A.ja[0],
     &nrhs, &m_b.a[0], &err );
   return err;
 }
@@ -105,7 +105,7 @@ int pardiso::call_pardiso(int _phase)
   phase = _phase;
   pardiso_(
     pt, &maxfct, &mnum, &mtype, &phase,
-    &m_A.idx.nnu, &m_A.a[0], &m_A.idx.ia[0], &m_A.idx.ja[0],
+    &m_A.nnu, &m_A.a[0], &m_A.ia[0], &m_A.ja[0],
     NULL, &nrhs, iparm, &msglvl, &m_b.a[0], &m_x.a[0], &err, dparm );
   return err;
 }

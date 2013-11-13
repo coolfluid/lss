@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_pardiso_h
-#define cf3_lss_pardiso_h
+#ifndef cf3_lss_pardiso_hpp
+#define cf3_lss_pardiso_hpp
 
 
 #include "LibLSS_PARDISO.hpp"
@@ -26,12 +26,12 @@ namespace lss {
  */
 class lss_API pardiso : public
   linearsystem< double,
-    detail::sparse_matrix_csr< double, 1, detail::vector_sorted_with_diagonal_t >,
-    detail::dense_matrix_v< double, detail::column_oriented > >
+    detail::sparse_matrix< double, 1>,
+    detail::dense_matrix_v< double > >
 {
   // utility definitions
-  typedef detail::sparse_matrix_csr< double, 1, detail::vector_sorted_with_diagonal_t > matrix_t;
-  typedef detail::dense_matrix_v< double, detail::column_oriented > vector_t;
+  typedef detail::sparse_matrix< double, 1> matrix_t;
+  typedef detail::dense_matrix_v< double > vector_t;
   typedef linearsystem< double, matrix_t, vector_t > linearsystem_t;
 
 
