@@ -47,6 +47,9 @@ class lss_API pardiso : public
     const size_t& _size_k=1,
     const double& _value=double() );
 
+  /// Destruction
+  ~pardiso();
+
   /// Solve
   pardiso& solve();
 
