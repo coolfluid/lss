@@ -69,7 +69,7 @@ struct matrix
 
   virtual std::ostream& print(std::ostream& o) const {
     const T eps = 1.e3*std::numeric_limits< T >::epsilon();
-    const print_t print_level(m_print? m_print :
+    const print_t print_level(m_print? std::min(m_print,print_full) :
                              (m_size.i>100 || m_size.j>100? print_size  :
                              (m_size.i> 10 || m_size.j> 10? print_signs :
                                                             print_full )));
@@ -117,10 +117,8 @@ struct matrix
   }
 
   size_t size(const size_t& _d) const {
-    return (_d==0? m_size.i :
-           (_d==1? m_size.j : std::numeric_limits< size_t >::max()));
+    return (_d==0? m_size.i : (_d==1? m_size.j : 0));
   }
-  const idx_t& size() const { return m_size; }
 
   // indexing (defer to implementation)
   virtual const T& operator()(const size_t& i, const size_t& j=0) const = 0;
@@ -528,6 +526,7 @@ struct sparse_matrix :
   }
 
   sparse_matrix& zerorow(const size_t& _i) {
+    //FIXME
     std::fill_n(a.begin()+ia[_i]-BASE,ia[_i+1]-ia[_i],T());
     return *this;
   }
@@ -547,7 +546,7 @@ struct sparse_matrix :
     const idx_t& size = matrix_base_t::m_size;
 
     const T eps = 1.e3*numeric_limits< T >::epsilon();
-    const print_t print_level(matrix_base_t::m_print?   matrix_base_t::m_print :
+    const print_t print_level(matrix_base_t::m_print?   min(matrix_base_t::m_print,print_full) :
                              (size.i>100 || size.j>100? print_size  :
                              (size.i> 10 || size.j> 10? print_signs :
                                                         print_full )));
@@ -584,17 +583,17 @@ struct sparse_matrix :
     if (hasdot && _fname.substr(_fname.find_last_of("."))==".csr") {
 
       // compress to temporary memory if necessary (to go around the "const" qualifier)
-      std::vector< int > another_ia;
-      std::vector< int > another_ja;
-      std::vector< T   > another_a;
+      vector< int > another_ia;
+      vector< int > another_ja;
+      vector< T   > another_a;
       if (!is_compressed()) {
         SORT::compress(entries,another_ia,another_ja);
         for (typename set_t::const_iterator c=entries.begin(); c!=entries.end(); ++c)
           another_a.push_back(c->second);
       }
-      const std::vector< int >& my_ia = is_compressed()? ia : another_ia;
-      const std::vector< int >& my_ja = is_compressed()? ja : another_ja;
-      const std::vector< T   >& my_a  = is_compressed()? a  : another_a;
+      const vector< int >& my_ia = is_compressed()? ia : another_ia;
+      const vector< int >& my_ja = is_compressed()? ja : another_ja;
+      const vector< T   >& my_a  = is_compressed()? a  : another_a;
 
       // output
       f << matrix_base_t::size(0) << ' ' << matrix_base_t::size(1) << '\n';

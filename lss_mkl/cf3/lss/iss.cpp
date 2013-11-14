@@ -8,8 +8,10 @@
 #include <cstdio>  // for sscanf
 
 #include "mkl_rci.h" 
+#include "mkl_service.h"
 
 #include "common/Builder.hpp"
+#include "common/Log.hpp"
 #include "iss.hpp"
 
 
@@ -21,25 +23,23 @@ namespace mkl {
 common::ComponentBuilder< iss, common::Component, LibLSS_MKL > Builder_MKL_iss;
 
 
-iss::iss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value) : linearsystem_t(name)
+iss::iss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
+  : linearsystem< double >(name)
 {
-  char* nthreads = getenv("OMP_NUM_THREADS");
-  int nthr = 1;
-  sscanf(nthreads? nthreads:"1","%d",&nthr);
-  std::cout << "mkl dss: number of threads: " << nthr << " (OMP_NUM_THREADS: " << (nthreads? "set)":"not set)") << std::endl;
+  const char *nthreads = getenv("OMP_NUM_THREADS");
+  int nthd = 1;
+  sscanf(nthreads? nthreads:"1","%d",&nthd);
+  mkl_set_num_threads(nthd);
 
-  linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
+  CFinfo  << "mkl iss: OMP_NUM_THREADS: " << nthd << (nthreads? " (set)":" (not set)") << CFendl;
+
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
 
 
 iss& iss::solve()
 {
-//  nrhs = static_cast< int >(b().size(1));
-  if (false) {
-    std::ostringstream msg;
-//    msg << "mkl iss: phase " << phase << " error " << err << ".";
-    throw std::runtime_error(msg.str());
-  }
+//nrhs = static_cast< int >(m_b.size(1));
   return *this;
 }
 

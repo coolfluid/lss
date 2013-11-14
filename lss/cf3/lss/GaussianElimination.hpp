@@ -25,15 +25,10 @@ namespace lss {
  * (precision is configurable)
  */
 template< typename T >
-class lss_API GaussianElimination : public
-  linearsystem< T,
-    detail::dense_matrix_v< T, detail::sort_by_row >,
-    detail::dense_matrix_v< T, detail::sort_by_row > >
+class lss_API GaussianElimination : public linearsystem< T >
 {
   // utility definitions
   typedef detail::dense_matrix_v< T, detail::sort_by_row > matrix_t;
-  typedef detail::dense_matrix_v< T, detail::sort_by_row > vector_t;
-  typedef linearsystem< T, matrix_t, vector_t > linearsystem_t;
 
   // framework interfacing
  public:
@@ -44,22 +39,23 @@ class lss_API GaussianElimination : public
                       const size_t& _size_i=size_t(),
                       const size_t& _size_j=size_t(),
                       const size_t& _size_k=1,
-                      const T& _value=T() ) : linearsystem_t(name) { linearsystem_t::initialize(_size_i,_size_j,_size_k,_value); }
+                      const T& _value=T() ) : linearsystem< T >(name) {
+    linearsystem< T >::initialize(_size_i,_size_j,_size_k,_value);
+  }
 
   /// Solve
   GaussianElimination& solve() {
     const size_t
-      N(linearsystem_t::size(0)),
-      K(linearsystem_t::size(2));
+      N(linearsystem< T >::size(0)),
+      K(linearsystem< T >::size(2));
 
-    double C;
-    m_x = m_b;
+    this->m_x = this->m_b;
 
     boost::progress_display pbar(N-1);
     for (size_t m=0; m<N-1; ++m, ++pbar) {
 
       // put row with highest diagonal element on top
-      C = m_A(m,m);
+      T C = m_A(m,m);
       for (size_t n=m+1; n<N; ++n) {
         if (std::abs(m_A(n,m)) > std::abs(C)) {
           for (size_t p=m; p<N; ++p) {
@@ -68,7 +64,7 @@ class lss_API GaussianElimination : public
             m_A(n,p) = C;
           }
           for (size_t k=0; k<K; ++k)
-            std::swap( m_x(m,k), m_x(n,k) );
+            std::swap( this->x(m,k), this->x(n,k) );
           C = m_A(m,m);
         }
       }
@@ -84,7 +80,7 @@ class lss_API GaussianElimination : public
       for (size_t n=m+1; n<N; ++n)
         m_A(m,n) /= C;
       for (size_t k=0; k<K; ++k)
-        m_x(m,k) /= C;
+        this->x(m,k) /= C;
 
       // subtract row m from subsequent rows
       for (size_t n=m+1; n<N; ++n) {
@@ -92,37 +88,48 @@ class lss_API GaussianElimination : public
         for (size_t p=m+1; p<N; ++p)
           m_A(n,p) -= C*m_A(m,p);
         for (size_t k=0; k<K; ++k)
-          m_x(n,k) -= C * m_x(m,k);
+          this->x(n,k) -= C * this->x(m,k);
       }
     }
 
     // solve by back substitution
     for (size_t k=0; k<K; ++k)
-      m_x(N-1,k) /= m_A(N-1,N-1);
+      this->x(N-1,k) /= m_A(N-1,N-1);
     for (size_t p=0; p<N-1; ++p) {
       size_t m = N-p-2;
       for (size_t n=m+1; n<N; ++n)
         for (size_t k=0; k<K; ++k)
-          m_x(m,k) -= m_A(m,n) * m_x(n,k);
+          this->x(m,k) -= m_A(m,n) * this->x(n,k);
     }
 
     return *this;
   }
 
 
- public:
-        matrix_t& A()       { return m_A; }
-        vector_t& b()       { return m_b; }
-        vector_t& x()       { return m_x; }
-  const matrix_t& A() const { return m_A; }
-  const vector_t& b() const { return m_b; }
-  const vector_t& x() const { return m_x; }
+ protected:
+  // linear system matrix interfacing
+
+  /// matrix indexing
+  const T& A(const size_t& i, const size_t& j) const { return m_A(i,j); }
+        T& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
+
+  /// matrix modifiers
+  void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
+  void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
+  void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
+  void A___clear()                    { m_A.clear();    }
+  void A___zerorow(const size_t& i)   { m_A.zerorow(i); }
+  void A___print_level(const int& _l) { m_A.m_print = detail::print_level(_l); }
+
+  /// matrix inspecting
+  void          A___print(std::string& _fname) const { m_A.print(_fname);   }
+  std::ostream& A___print(std::ostream& o)     const { return m_A.print(o); }
+  size_t        A___size(const size_t& d)      const { return m_A.size(d);  }
 
 
  protected:
+  // storage
   matrix_t m_A;
-  vector_t m_b;
-  vector_t m_x;
 
 };
 

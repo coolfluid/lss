@@ -19,20 +19,12 @@ namespace lss {
 
 /**
  * @brief Interface to Pardiso linear system solver (U. Basel version).
- * @note the matrix structure is expected as:
- * - including a diagonal entry for each row
- * - row indices sorted in increasing order
  * @author Pedro Maciel
  */
-class lss_API pardiso : public
-  linearsystem< double,
-    detail::sparse_matrix< double, 1>,
-    detail::dense_matrix_v< double > >
+class lss_API pardiso : public linearsystem< double >
 {
   // utility definitions
-  typedef detail::sparse_matrix< double, 1> matrix_t;
-  typedef detail::dense_matrix_v< double > vector_t;
-  typedef linearsystem< double, matrix_t, vector_t > linearsystem_t;
+  typedef detail::sparse_matrix< double, 1 > matrix_t;
 
 
  public:
@@ -54,29 +46,34 @@ class lss_API pardiso : public
   pardiso& solve();
 
 
-  // internal functions
  private:
+  // internal functions
   int call_pardiso_printstats();
   int call_pardiso_init();
   int call_pardiso(int _phase);
 
 
-  // linear system components access
- public:
-        matrix_t& A()       { return m_A; }
-        vector_t& b()       { return m_b; }
-        vector_t& x()       { return m_x; }
-  const matrix_t& A() const { return m_A; }
-  const vector_t& b() const { return m_b; }
-  const vector_t& x() const { return m_x; }
-
-
-  // members
  protected:
-  matrix_t m_A;
-  vector_t m_b;
-  vector_t m_x;
+  // linear system matrix interfacing
 
+  const double& A(const size_t& i, const size_t& j) const { return m_A(i,j); }
+        double& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
+
+  void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
+  void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
+  void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
+  void A___clear()                    { m_A.clear();    }
+  void A___zerorow(const size_t& i)   { m_A.zerorow(i); }
+  void A___print_level(const int& _l) { m_A.m_print = detail::print_level(_l); }
+
+  void          A___print(std::string& _fname) const { m_A.print(_fname);   }
+  std::ostream& A___print(std::ostream& o)     const { return m_A.print(o); }
+  size_t        A___size(const size_t& d)      const { return m_A.size(d);  }
+
+
+ protected:
+  // storage
+  matrix_t m_A;
   void*  pt[64];  // internal memory pointer (void* for both 32/64-bit)
   double dparm[64];
   int    iparm[64],

@@ -27,7 +27,9 @@ namespace lss {
 common::ComponentBuilder< pardiso, common::Component, LibLSS_PARDISO > Builder_pardiso;
 
 
-pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value) : linearsystem_t(name) {
+pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
+  : linearsystem< double >(name)
+{
 
   char* nthreads = getenv("OMP_NUM_THREADS");
   sscanf(nthreads? nthreads:"1","%d",&iparm[2]);
@@ -53,7 +55,7 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
     throw std::runtime_error(msg.str());
   }
 
-  linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
 
 
@@ -65,7 +67,7 @@ pardiso::~pardiso()
 
 pardiso& pardiso::solve()
 {
-  nrhs = static_cast< int >(b().size(1));
+  nrhs = static_cast< int >(m_b.size(1));
   if
 #if 0
      (call_pardiso_printstats() ||  // check for matrix/vector consistency

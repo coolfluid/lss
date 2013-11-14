@@ -8,30 +8,31 @@
 #include <cstdio>  // for sscanf
 
 #include "common/Builder.hpp"
-#include "PETSc.hpp"
+#include "PETSc_Seq.hpp"
 
 
 namespace cf3 {
 namespace lss {
 
 
-common::ComponentBuilder< PETSc, common::Component, LibLSS_PETSC > Builder_PETSc;
+common::ComponentBuilder< PETSc_Seq, common::Component, LibLSS_PETSC > Builder_PETSc_Seq;
 
 
-PETSc::PETSc(
+PETSc_Seq::PETSc_Seq(
     const std::string& name,
     const size_t& _size_i,
     const size_t& _size_j,
     const size_t& _size_k,
-    const double& _value) : linearsystem_t(name)
+    const double& _value)
+  : linearsystem< double >(name)
 {
-  linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
 
 
-PETSc& PETSc::solve()
+PETSc_Seq& PETSc_Seq::solve()
 {
-//  nrhs = static_cast< int >(b().size(1));
+//  nrhs = static_cast< int >(m_b.size(1));
   return *this;
 }
 
