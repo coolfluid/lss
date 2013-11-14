@@ -21,118 +21,77 @@ common::ComponentBuilder< GMRES, common::Component, LibLSS > Builder_GMRES;
 
 GMRES& GMRES::solve()
 {
-  int n = m_A.size(0);
+  int n = static_cast< int >(size(0));
+  int err;
   int iwk = m_A.nnz;
-  int ierr;
   double eps = 1e-5;  // tolerance, process is stopped when eps>=||current residual||/||initial residual||
   int im     = 50;    // size of krylov subspace (should not exceed 50)
   int maxits = 50;    // maximum number of iterations allowed
-  int newiwk = 0; newiwk=newiwk;
   int iout   = 1;
   int lfil   = 3;
 
-  std::vector< double > alu(iwk,0.);
-  std::vector< int >
-    jlu(iwk+1,0),
-    ju(n+1,0);
+  double *alu = new double[iwk];
+  int *jlu = new int[iwk];
+  for (register int i=0; i<iwk; i++) {
+    alu[i] = 0.;
+    jlu[i] = 0;
+  }
 
-  {
-    std::vector< double > w(n+1,0.);
-    std::vector< int >
-      levs(iwk),
-      jw(n*3,0);
-    /*newiwk =*/ iluk(&n,&m_A.a[0],&m_A.ja[0],&m_A.ia[0],&lfil,alu,jlu,
-      &ju[0],&levs[0],&iwk,&w[0],&jw[0],&ierr);
+  int *ju = new int[n+1];
+  for (register int i=0; i<n; i++)
+    ju[i] = 0;
+
+  double *w = new double[n+1];
+  int *jw = new int[n*3];
+  for (register int i=0; i<n; i++) {
+    w[i] = 0.;
+    jw[i] = 0;
+    jw[n+i] = 0;
+    jw[2*n+i] = 0;
   }
-  {
-    std::vector< double > vv(n*(im+1));
-    x() = 0.;
-    pgmres(&n,&im,&(b().a[0]),&(x().a[0]),&vv[0],&eps,&maxits,&iout,
-           &m_A.a[0],&m_A.ja[0],&m_A.ia[0],&alu[0],&jlu[0],&ju[0],&ierr);
+
+
+  int *levs = new int[iwk];
+
+  err = 0;
+  int newiwk = 0;
+  newiwk = iluk(&n,&m_A.a[0],&m_A.ja[0],&m_A.ia[0],&lfil,alu,jlu,ju,levs,&iwk,w,jw,&err);
+  if (err) {
+    std::ostringstream msg;
+    msg << "GMRES: iluk error " << err << ": ";
+    err>  0? msg << "zero pivot encountered at step number " << (err-1) << '.' :
+    err==-1? msg << "input matrix may be wrong. the elimination process has generated a row in L or U whose length is .gt. n." :
+    err==-2? msg << "the matrix L overflows the array al." :
+    err==-3? msg << "the matrix U overflows the array alu." :
+    err==-4? msg << "illegal value for lfil." :
+    err==-5? msg << "zero row encountered in A or U." :
+             msg << "unknown error.";
+    throw std::runtime_error(msg.str());
   }
+
+  delete[] levs;
+  delete[] w;
+  delete[] jw;
+
+  double *vv = new double[n*(im+1)];
+
+  err = 0;
+  pgmres(&n,&im,&m_b.a[0],&m_x.a[0],vv,&eps,&maxits,&iout,&m_A.a[0],&m_A.ja[0],&m_A.ia[0],alu,jlu,ju,&err);
+  if (err) {
+    std::ostringstream msg;
+    msg << "GMRES: pgmres error " << err << ": ";
+    err==-1? msg << "the initial guess seems to be the exact solution (initial residual computed was zero)." :
+    err== 1? msg << "convergence not achieved in itmax iterations." :
+             msg << "unknown error.";
+    throw std::runtime_error(msg.str());
+  }
+
+  delete [] vv;
+  delete [] alu;
+  delete [] jlu;
+  delete [] ju;
 
   return *this;
-}
-
-
-int GMRES::daxpy(int *n, double *da, double *dx, int *incx, double *dy, int *incy)
-{
-    /* System generated locals */
-    int i__1;
-
-    /* Local variables */
-    static int i__, m, ix, iy, mp1;
-
-
-/*     constant times a vector plus a vector. */
-/*     uses unrolled loops for increments equal to one. */
-/*     jack dongarra, linpack, 3/11/78. */
-
-
-    /* Parameter adjustments */
-    --dy;
-    --dx;
-
-    /* Function Body */
-    if (*n <= 0) {
-  return 0;
-    }
-    if (*da == 0.) {
-  return 0;
-    }
-    if (*incx == 1 && *incy == 1) {
-  goto L20;
-    }
-
-/*        code for unequal increments or equal increments */
-/*          not equal to 1 */
-
-    ix = 1;
-    iy = 1;
-    if (*incx < 0) {
-  ix = (-(*n) + 1) * *incx + 1;
-    }
-    if (*incy < 0) {
-  iy = (-(*n) + 1) * *incy + 1;
-    }
-    i__1 = *n;
-    for (i__ = 1; i__ <= i__1; ++i__) {
-  dy[iy] += *da * dx[ix];
-  ix += *incx;
-  iy += *incy;
-/* L10: */
-    }
-    return 0;
-
-/*        code for both increments equal to 1 */
-
-
-/*        clean-up loop */
-
-L20:
-    m = *n % 4;
-    if (m == 0) {
-  goto L40;
-    }
-    i__1 = m;
-    for (i__ = 1; i__ <= i__1; ++i__) {
-  dy[i__] += *da * dx[i__];
-/* L30: */
-    }
-    if (*n < 4) {
-  return 0;
-    }
-L40:
-    mp1 = m + 1;
-    i__1 = *n;
-    for (i__ = mp1; i__ <= i__1; i__ += 4) {
-  dy[i__] += *da * dx[i__];
-  dy[i__ + 1] += *da * dx[i__ + 1];
-  dy[i__ + 2] += *da * dx[i__ + 2];
-  dy[i__ + 3] += *da * dx[i__ + 3];
-/* L50: */
-    }
-    return 0;
 }
 
 
@@ -165,7 +124,7 @@ L40:
  * ierr    = integer. Error message with the following meaning.            *
  *           ierr  = 0    --> successful return.                           *
  *           ierr .gt. 0  --> zero pivot encountered at step number ierr.  *
- *           ierr  = -1   --> Error. input matrix may be wrong.            *
+ *           ierr  = -1   --> Error input matrix may be wrong.            *
  *                            (The elimination process has generated a     *
  *                            row in L or U whose length is .gt.  n.)      *
  *           ierr  = -2   --> The matrix L overflows the array al.         *
@@ -194,7 +153,7 @@ L40:
  * All the diagonal elements of the input matrix must be  nonzero.         *
  *                                                                         *
  *=========================================================================*/
-int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, std::vector<double>& aluold, std::vector<int>& jluold, int *ju, int* levsold, int *iwk, double *w, int *jw, int *ierr)
+int GMRES::iluk(int* n, double* a, int* ja, int* ia, int* lfil, double*& aluold, int*& jluold, int* ju, int*& levsold, int* iwk, double* w, int* jw, int* ierr)
 {
   /* System generated locals */
   int i__1, i__2, i__3, i__4;
@@ -253,14 +212,14 @@ int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, std::vector<doub
     lenu = 1;
     lenl = 0;
     jw[ii] = ii;
-    w[ii] = (double)0.;
+    w[ii] = (float)0.;
     jw[*n + ii] = ii;
 
     i__2 = j2;
     for (j = j1; j <= i__2; ++j) {
       k = ja[j];
       t = a[j];
-      if (t == (double)0.) {
+      if (t == (float)0.) {
         goto L170;
       }
       if (k < ii) {
@@ -473,7 +432,7 @@ int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, std::vector<doub
       }
     /* L302: */
     }
-    if (w[ii] == (double)0.) {
+    if (w[ii] == (float)0.) {
       goto L999;
     }
 
@@ -488,7 +447,6 @@ int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, std::vector<doub
 /* L500: */
     }
 
-#if 0
   delete [] aluold;
   delete [] jluold;
   //delete [] levsold;
@@ -511,9 +469,6 @@ int GMRES::iluk(int *n, double *a, int *ja, int *ia, int *lfil, std::vector<doub
     jluold[i] = jlu[i+1];
     //levsold[i] = levs[i+1];
   }
-#endif
-  aluold = alu;
-  jluold = jlu;
 
     *ierr = 0;
   return *iwk;
@@ -549,7 +504,88 @@ L999:
 }
 
 
-double GMRES::ddot(int *n, double *dx, int *incx, double *dy, int *incy)
+int GMRES::daxpy(int* n, double* da, double* dx, int* incx, double* dy, int* incy)
+{
+  /* System generated locals */
+  int i__1;
+
+  /* Local variables */
+  static int i__, m, ix, iy, mp1;
+
+
+/*     constant times a vector plus a vector. */
+/*     uses unrolled loops for increments equal to one. */
+/*     jack dongarra, linpack, 3/11/78. */
+
+
+  /* Parameter adjustments */
+  --dy;
+  --dx;
+
+  /* Function Body */
+  if (*n <= 0) {
+return 0;
+  }
+  if (*da == 0.) {
+return 0;
+  }
+  if (*incx == 1 && *incy == 1) {
+goto L20;
+  }
+
+/*        code for unequal increments or equal increments */
+/*          not equal to 1 */
+
+  ix = 1;
+  iy = 1;
+  if (*incx < 0) {
+ix = (-(*n) + 1) * *incx + 1;
+  }
+  if (*incy < 0) {
+iy = (-(*n) + 1) * *incy + 1;
+  }
+  i__1 = *n;
+  for (i__ = 1; i__ <= i__1; ++i__) {
+dy[iy] += *da * dx[ix];
+ix += *incx;
+iy += *incy;
+/* L10: */
+  }
+  return 0;
+
+/*        code for both increments equal to 1 */
+
+
+/*        clean-up loop */
+
+L20:
+  m = *n % 4;
+  if (m == 0) {
+goto L40;
+  }
+  i__1 = m;
+  for (i__ = 1; i__ <= i__1; ++i__) {
+dy[i__] += *da * dx[i__];
+/* L30: */
+  }
+  if (*n < 4) {
+return 0;
+  }
+L40:
+  mp1 = m + 1;
+  i__1 = *n;
+  for (i__ = mp1; i__ <= i__1; i__ += 4) {
+dy[i__] += *da * dx[i__];
+dy[i__ + 1] += *da * dx[i__ + 1];
+dy[i__ + 2] += *da * dx[i__ + 2];
+dy[i__ + 3] += *da * dx[i__ + 3];
+/* L50: */
+  }
+  return 0;
+}
+
+
+double GMRES::ddot(int* n, double* dx, int* incx, double* dy, int* incy)
 {
   /* System generated locals */
   int i__1;
@@ -634,40 +670,38 @@ L60:
 }
 
 
-double GMRES::dnrm2(int *n, double *dx, int *incx)
+double GMRES::dnrm2(int* n, double* dx, int* incx)
 {
-    static double zero = 0.;
-    static double one = 1.;
-    static double cutlo = 8.232e-11;
-    static double cuthi = 1.304e19;
+  static double zero = 0.;
+  static double one = 1.;
+  static double cutlo = 8.232e-11;
+  static double cuthi = 1.304e19;
 
-    /* Format strings */
-/*
-    static char fmt_30[] = "";
-    static char fmt_50[] = "";
-    static char fmt_70[] = "";
-    static char fmt_110[] = "";
-*/
+  /* Format strings */
+  static char fmt_30[] = "";
+  static char fmt_50[] = "";
+  static char fmt_70[] = "";
+  static char fmt_110[] = "";
 
-    /* System generated locals */
-    int i__1, i__2;
-    double ret_val, d__1;
+  /* System generated locals */
+  int i__1, i__2;
+  double ret_val, d__1;
 
-    /* Builtin functions */
-    //double sqrt();
+  /* Builtin functions */
+  //double sqrt();
 
-    /* Local variables */
-    static double xmax;
-    static int next, i__, j, nn;
-    static double hitest, sum;
+  /* Local variables */
+  static double xmax;
+  static int next, i__, j, nn;
+  static double hitest, sum;
 
-    /* Assigned format variables */
-    /*static char *next_fmt;*/
+  /* Assigned format variables */
+  static char *next_fmt;
 
-    /* Parameter adjustments */
-    --dx;
+  /* Parameter adjustments */
+  --dx;
 
-    /* Function Body */
+  /* Function Body */
 
 /*     euclidean norm of the n-vector stored in dx() with storage */
 /*     increment incx . */
@@ -675,182 +709,163 @@ double GMRES::dnrm2(int *n, double *dx, int *incx)
 /*     if n .ge. 1 then incx must be .ge. 1 */
 
 
-    if (*n > 0) {
-  goto L10;
-    }
-    ret_val = zero;
-    goto L300;
+  if (*n > 0) {
+goto L10;
+  }
+  ret_val = zero;
+  goto L300;
 
 L10:
-    next = 0;
-    /*static char *next_fmt = fmt_30;*/
-    sum = zero;
-    nn = *n * *incx;
+  next = 0;
+  next_fmt = fmt_30;
+  sum = zero;
+  nn = *n * *incx;
 /*                                                 begin main loop */
-    i__ = 1;
+  i__ = 1;
 L20:
-    switch ((int)next) {
-  case 0: goto L30;
-  case 1: goto L50;
-  case 2: goto L70;
-  case 3: goto L110;
-    }
+  switch ((int)next) {
+case 0: goto L30;
+case 1: goto L50;
+case 2: goto L70;
+case 3: goto L110;
+  }
 L30:
-    if ((d__1 = dx[i__], std::abs(d__1)) > cutlo) {
-  goto L85;
-    }
-    next = 1;
-    /*static char *next_fmt = fmt_50;*/
-    xmax = zero;
+  if ((d__1 = dx[i__], std::abs(d__1)) > cutlo) {
+goto L85;
+  }
+  next = 1;
+  next_fmt = fmt_50;
+  xmax = zero;
 
 /*                        phase 1.  sum is zero */
 
 L50:
-    if (dx[i__] == zero) {
-  goto L200;
-    }
-    if ((d__1 = dx[i__], std::abs(d__1)) > cutlo) {
-  goto L85;
-    }
+  if (dx[i__] == zero) {
+goto L200;
+  }
+  if ((d__1 = dx[i__], std::abs(d__1)) > cutlo) {
+goto L85;
+  }
 
 /*                                prepare for phase 2. */
-    next = 2;
-    /*static char *next_fmt = fmt_70;*/
-    goto L105;
+  next = 2;
+  next_fmt = fmt_70;
+  goto L105;
 
 /*                                prepare for phase 4. */
 
 L100:
-    i__ = j;
-    next = 3;
-    /*static char *next_fmt = fmt_110;*/
-    sum = sum / dx[i__] / dx[i__];
+  i__ = j;
+  next = 3;
+  next_fmt = fmt_110;
+  sum = sum / dx[i__] / dx[i__];
 L105:
-    xmax = (d__1 = dx[i__], std::abs(d__1));
-    goto L115;
+  xmax = (d__1 = dx[i__], std::abs(d__1));
+  goto L115;
 
 /*                   phase 2.  sum is small. */
 /*                             scale to avoid destructive underflow. */
 
 L70:
-    if ((d__1 = dx[i__], std::abs(d__1)) > cutlo) {
-  goto L75;
-    }
+  if ((d__1 = dx[i__], std::abs(d__1)) > cutlo) {
+goto L75;
+  }
 
 /*                     common code for phases 2 and 4. */
 /*                     in phase 4 sum is large.  scale to avoid overflow. */
 
 L110:
-    if ((d__1 = dx[i__], std::abs(d__1)) <= xmax) {
-  goto L115;
-    }
+  if ((d__1 = dx[i__], std::abs(d__1)) <= xmax) {
+goto L115;
+  }
 /* Computing 2nd power */
-    d__1 = xmax / dx[i__];
-    sum = one + sum * (d__1 * d__1);
-    xmax = (d__1 = dx[i__], std::abs(d__1));
-    goto L200;
+  d__1 = xmax / dx[i__];
+  sum = one + sum * (d__1 * d__1);
+  xmax = (d__1 = dx[i__], std::abs(d__1));
+  goto L200;
 
 L115:
 /* Computing 2nd power */
-    d__1 = dx[i__] / xmax;
-    sum += d__1 * d__1;
-    goto L200;
+  d__1 = dx[i__] / xmax;
+  sum += d__1 * d__1;
+  goto L200;
 
 
 /*                  prepare for phase 3. */
 
 L75:
-    sum = sum * xmax * xmax;
+  sum = sum * xmax * xmax;
 
 
 /*     for real or d.p. set hitest = cuthi/n */
 /*     for complex      set hitest = cuthi/(2*n) */
 
 L85:
-    hitest = cuthi / (double) (*n);
+  hitest = cuthi / (double) (*n);
 
 /*                   phase 3.  sum is mid-range.  no scaling. */
 
-    i__1 = nn;
-    i__2 = *incx;
-    for (j = i__; i__2 < 0 ? j >= i__1 : j <= i__1; j += i__2) {
-  if ((d__1 = dx[j], std::abs(d__1)) >= hitest) {
-      goto L100;
-  }
+  i__1 = nn;
+  i__2 = *incx;
+  for (j = i__; i__2 < 0 ? j >= i__1 : j <= i__1; j += i__2) {
+if ((d__1 = dx[j], std::abs(d__1)) >= hitest) {
+    goto L100;
+}
 /* L95: */
 /* Computing 2nd power */
-  d__1 = dx[j];
-  sum += d__1 * d__1;
-    }
-    ret_val = sqrt(sum);
-    goto L300;
+d__1 = dx[j];
+sum += d__1 * d__1;
+  }
+  ret_val = sqrt(sum);
+  goto L300;
 
 L200:
-    i__ += *incx;
-    if (i__ <= nn) {
-  goto L20;
-    }
+  i__ += *incx;
+  if (i__ <= nn) {
+goto L20;
+  }
 
 /*              end of main loop. */
 
 /*              compute square root and adjust for scaling. */
 
-    ret_val = xmax * sqrt(sum);
+  ret_val = xmax * sqrt(sum);
 L300:
-    return ret_val;
+  return ret_val;
 }
 
 
-/*=========================================================================*
- *         A times a vector                                                *
- *=========================================================================*
- * multiplies a matrix by a vector using the dot product form              *
- * Matrix A is stored in compressed sparse row storage.                    *
- *                                                                         *
- * on entry:                                                               *
- * ----------                                                              *
- * n     = row dimension of A                                              *
- * x     = real array of length equal to the column dimension of           *
- *         the A matrix.                                                   *
- * a, ja,                                                                  *
- *    ia = input matrix in compressed sparse row format.                   *
- *                                                                         *
- * on return:                                                              *
- * -----------                                                             *
- * y     = real array of length n, containing the product y=Ax             *
- *                                                                         *
- *=========================================================================*/
-void GMRES::amux(int *n, double *x, double *y, double *a, int *ja, int *ia)
+void GMRES::amux(int* n, double* x, double* y, double* a, int* ja, int* ia)
 {
-   /* System generated locals */
-   int i__1, i__2;
+  /* System generated locals */
+  int i__1, i__2;
 
-   /* Local variables */
-   static int i__, k;
-   static double t;
+  /* Local variables */
+  static int i__, k;
+  static double t;
 
-   /* Parameter adjustments */
-   --ia;
-   --ja;
-   --a;
-   --y;
-   --x;
+  /* Parameter adjustments */
+  --ia;
+  --ja;
+  --a;
+  --y;
+  --x;
 
-   /* Function Body */
-   i__1 = *n;
-   for (i__ = 1; i__ <= i__1; ++i__) {
+  /* Function Body */
+  i__1 = *n;
+  for (i__ = 1; i__ <= i__1; ++i__) {
 
-      /* compute the inner product of row i with vector x */
-      t = 0.;
-      i__2 = ia[i__ + 1] - 1;
-      for (k = ia[i__]; k <= i__2; ++k) {
-         t += a[k] * x[ja[k]];
-      }
+     /* compute the inner product of row i with vector x */
+     t = 0.;
+     i__2 = ia[i__ + 1] - 1;
+     for (k = ia[i__]; k <= i__2; ++k) {
+        t += a[k] * x[ja[k]];
+     }
 
-      /* store result in y(i) */
-      y[i__] = t;
+     /* store result in y(i) */
+     y[i__] = t;
 
-   }
+  }
 }
 
 
@@ -875,43 +890,43 @@ void GMRES::amux(int *n, double *x, double *y, double *a, int *ja, int *ia)
  *       will solve the system with rhs x and overwrite the result on x .  *
  *                                                                         *
  *=========================================================================*/
-void GMRES::lusol(int *n, double *y, double *x, double *alu, int *jlu, int *ju)
+void GMRES::lusol(int* n, double* y, double* x, double* alu, int* jlu, int* ju)
 {
-   /* System generated locals */
-   int i__1, i__2;
+  /* System generated locals */
+  int i__1, i__2;
 
-   /* Local variables */
-   static int i__, k;
+  /* Local variables */
+  static int i__, k;
 
 /* local variables */
 
 
 /* forward solve */
 
-   /* Parameter adjustments */
-   --x;
-   --y;
-   --alu;
-   --jlu;
-   --ju;
-   /* Function Body */
-   i__1 = *n;
-   for (i__ = 1; i__ <= i__1; ++i__) {
-      x[i__] = y[i__];
-      i__2 = ju[i__] - 1;
-      for (k = jlu[i__]; k <= i__2; ++k) {
-         x[i__] -= alu[k] * x[jlu[k]];
-      }
-   }
+  /* Parameter adjustments */
+  --x;
+  --y;
+  --alu;
+  --jlu;
+  --ju;
+  /* Function Body */
+  i__1 = *n;
+  for (i__ = 1; i__ <= i__1; ++i__) {
+     x[i__] = y[i__];
+     i__2 = ju[i__] - 1;
+     for (k = jlu[i__]; k <= i__2; ++k) {
+        x[i__] -= alu[k] * x[jlu[k]];
+     }
+  }
 
-   /* backward solve. */
-   for (i__ = *n; i__ >= 1; --i__) {
-      i__1 = jlu[i__ + 1] - 1;
-      for (k = ju[i__]; k <= i__1; ++k) {
-         x[i__] -= alu[k] * x[jlu[k]];
-      }
-      x[i__] = alu[i__] * x[i__];
-   }
+  /* backward solve. */
+  for (i__ = *n; i__ >= 1; --i__) {
+     i__1 = jlu[i__ + 1] - 1;
+     for (k = ju[i__]; k <= i__1; ++k) {
+        x[i__] -= alu[k] * x[jlu[k]];
+     }
+     x[i__] = alu[i__] * x[i__];
+  }
 }
 
 
@@ -1002,220 +1017,211 @@ void GMRES::lusol(int *n, double *y, double *x, double *alu, int *jlu, int *ju)
  * arnoldi size should not exceed kmax=50 in this version..                *
  * to reset modify paramter kmax accordingly.                              *
  *=========================================================================*/
-void GMRES::pgmres(int *n, int *im, double *rhs, double *sol, double *vv, double *eps, int *maxits, int*iout, double *aa, int *ja, int *ia, double *alu, int *jlu, int *ju, int *ierr)
+void GMRES::pgmres(int* n, int* im, double* rhs, double* sol, double* vv, double* eps, int* maxits, int* iout, double* aa, int* ja, int* ia, double* alu, int* jlu, int* ju, int* ierr)
 {
-   static double epsmac = 1e-16;
+  static double epsmac = 1e-16;
 
-   /* System generated locals */
-   int vv_dim1, vv_offset, i__1, i__2;
-   double d__1, d__2;
+  /* System generated locals */
+  int vv_dim1, vv_offset, i__1, i__2;
+  double d__1, d__2;
 
-   /* Local variables */
-   static double c__[50];
-   static int i__, j, k;
-   static double s[50], t;
-   static int i1, k1;
-   /*static int n1;*/
-   static double hh[2550]  /* was [51][50] */;
-   static int ii, jj;
-   static double ro, rs[51], gam;
-   static int its;
-   static double eps1;
+  /* Local variables */
+  static double c__[50];
+  static int i__, j, k;
+  static double s[50], t;
+  static int i1, k1;
+  static int n1;
+  static double hh[2550]  /* was [51][50] */;
+  static int ii, jj;
+  static double ro, rs[51], gam;
+  static int its;
+  static double eps1;
 
-   //static AnsiString Message;
+  *ierr = 0;
 
+  /* Parameter adjustments */
+  --ju;
+  --ia;
+  vv_dim1 = *n;
+  vv_offset = 1 + vv_dim1 * 1;
+  vv -= vv_offset;
+  --sol;
+  --rhs;
+  --aa;
+  --ja;
+  --alu;
+  --jlu;
 
-   /* Parameter adjustments */
-   --ju;
-   --ia;
-   vv_dim1 = *n;
-   vv_offset = 1 + vv_dim1 * 1;
-   vv -= vv_offset;
-   --sol;
-   --rhs;
-   --aa;
-   --ja;
-   --alu;
-   --jlu;
+  /* Function Body */
+  n1 = *n + 1;
+  its = 0;
 
-   /* Function Body */
-   /*static int n1 = *n + 1;*/
-   its = 0;
+  /* compute initial residual vector */
+  amux(n, &sol[1], &vv[vv_offset], &aa[1], &ja[1], &ia[1]);
+  i__1 = *n;
+  for (j = 1; j <= i__1; ++j) {
+     vv[j + vv_dim1] = rhs[j] - vv[j + vv_dim1];
+  }
 
-   /* compute initial residual vector */
-   amux(n, &sol[1], &vv[vv_offset], &aa[1], &ja[1], &ia[1]);
-   i__1 = *n;
-   for (j = 1; j <= i__1; ++j) {
-      vv[j + vv_dim1] = rhs[j] - vv[j + vv_dim1];
-   }
-
-   /* outer loop starts here.. */
+  /* outer loop starts here.. */
 L20:
-   ro = dnrm2(n, &vv[vv_offset], &c__1);
-   if (ro == 0.) {
-     *ierr = -1;
-     return;
-  //goto L999;
-   }
-   t = 1. / ro;
-   i__1 = *n;
-   for (j = 1; j <= i__1; ++j) {
-      vv[j + vv_dim1] *= t;
-   }
-   if (its == 0) {
-      eps1 = *eps * ro;
-   }
+  ro = dnrm2(n, &vv[vv_offset], &c__1);
+  if (ro == 0.) {
+    *ierr = -1;
+    return;
+  }
+  t = 1. / ro;
+  i__1 = *n;
+  for (j = 1; j <= i__1; ++j) {
+     vv[j + vv_dim1] *= t;
+  }
+  if (its == 0) {
+     eps1 = *eps * ro;
+  }
 
-   /* initialize 1-st term  of rhs of hessenberg system.. */
-   rs[0] = ro;
-   i__ = 0;
+  /* initialize 1-st term  of rhs of hessenberg system.. */
+  rs[0] = ro;
+  i__ = 0;
 
 L4:
-   ++i__;
-   ++its;
-   i1 = i__ + 1;
-   lusol(n, &vv[i__ * vv_dim1 + 1], &rhs[1], &alu[1], &jlu[1], &ju[1]);
-   amux(n, &rhs[1], &vv[i1 * vv_dim1 + 1], &aa[1], &ja[1], &ia[1]);
+  ++i__;
+  ++its;
+  i1 = i__ + 1;
+  lusol(n, &vv[i__ * vv_dim1 + 1], &rhs[1], &alu[1], &jlu[1], &ju[1]);
+  amux(n, &rhs[1], &vv[i1 * vv_dim1 + 1], &aa[1], &ja[1], &ia[1]);
 
-   /* modified gram - schmidt... */
-   i__1 = i__;
-   for (j = 1; j <= i__1; ++j) {
-      t = ddot(n, &vv[j * vv_dim1 + 1], &c__1, &vv[i1 * vv_dim1 + 1], &c__1);
-      hh[j + i__ * 51 - 52] = t;
-      d__1 = -t;
-      daxpy(n, &d__1, &vv[j * vv_dim1 + 1], &c__1, &vv[i1 * vv_dim1 + 1], &c__1);
-   }
-   t = dnrm2(n, &vv[i1 * vv_dim1 + 1], &c__1);
-   hh[i1 + i__ * 51 - 52] = t;
-   if (t == 0.) {
-      goto L58;
-   }
-   t = 1. / t;
-   i__1 = *n;
-   for (k = 1; k <= i__1; ++k) {
-      vv[k + i1 * vv_dim1] *= t;
-   }
+  /* modified gram - schmidt... */
+  i__1 = i__;
+  for (j = 1; j <= i__1; ++j) {
+     t = ddot(n, &vv[j * vv_dim1 + 1], &c__1, &vv[i1 * vv_dim1 + 1], &c__1);
+     hh[j + i__ * 51 - 52] = t;
+     d__1 = -t;
+     daxpy(n, &d__1, &vv[j * vv_dim1 + 1], &c__1, &vv[i1 * vv_dim1 + 1], &c__1);
+  }
+  t = dnrm2(n, &vv[i1 * vv_dim1 + 1], &c__1);
+  hh[i1 + i__ * 51 - 52] = t;
+  if (t == 0.) {
+     goto L58;
+  }
+  t = 1. / t;
+  i__1 = *n;
+  for (k = 1; k <= i__1; ++k) {
+     vv[k + i1 * vv_dim1] *= t;
+  }
 
-   /* done with modified gram schimd and arnoldi step.. */
-   /* now  update factorization of hh */
+  /* done with modified gram schimd and arnoldi step.. */
+  /* now  update factorization of hh */
 L58:
-   if (i__ == 1) {
-      goto L121;
-   }
+  if (i__ == 1) {
+     goto L121;
+  }
 
-   /* perfrom previous transformations on i-th column of h */
-   i__1 = i__;
-   for (k = 2; k <= i__1; ++k) {
-      k1 = k - 1;
-      t = hh[k1 + i__ * 51 - 52];
-      hh[k1 + i__ * 51 - 52] = c__[k1 - 1] * t + s[k1 - 1] * hh[k + i__ *51 - 52];
-      hh[k + i__ * 51 - 52] = -s[k1 - 1] * t + c__[k1 - 1] * hh[k + i__ *51 - 52];
-   }
+  /* perfrom previous transformations on i-th column of h */
+  i__1 = i__;
+  for (k = 2; k <= i__1; ++k) {
+     k1 = k - 1;
+     t = hh[k1 + i__ * 51 - 52];
+     hh[k1 + i__ * 51 - 52] = c__[k1 - 1] * t + s[k1 - 1] * hh[k + i__ *51 - 52];
+     hh[k + i__ * 51 - 52] = -s[k1 - 1] * t + c__[k1 - 1] * hh[k + i__ *51 - 52];
+  }
 
 L121:
-   /* Computing 2nd power */
-   d__1 = hh[i__ + i__ * 51 - 52];
+  /* Computing 2nd power */
+  d__1 = hh[i__ + i__ * 51 - 52];
 
-   /* Computing 2nd power */
-   d__2 = hh[i1 + i__ * 51 - 52];
-   gam = sqrt(d__1 * d__1 + d__2 * d__2);
+  /* Computing 2nd power */
+  d__2 = hh[i1 + i__ * 51 - 52];
+  gam = sqrt(d__1 * d__1 + d__2 * d__2);
 
-   /* if gamma is zero then any small value will do... */
-   /* will affect only residual estimate */
-   if (gam == 0.) {
-      gam = epsmac;
-   }
+  /* if gamma is zero then any small value will do... */
+  /* will affect only residual estimate */
+  if (gam == 0.) {
+     gam = epsmac;
+  }
 
-   /* get next plane rotation */
-   c__[i__ - 1] = hh[i__ + i__ * 51 - 52] / gam;
-   s[i__ - 1] = hh[i1 + i__ * 51 - 52] / gam;
-   rs[i1 - 1] = -s[i__ - 1] * rs[i__ - 1];
-   rs[i__ - 1] = c__[i__ - 1] * rs[i__ - 1];
+  /* get next plane rotation */
+  c__[i__ - 1] = hh[i__ + i__ * 51 - 52] / gam;
+  s[i__ - 1] = hh[i1 + i__ * 51 - 52] / gam;
+  rs[i1 - 1] = -s[i__ - 1] * rs[i__ - 1];
+  rs[i__ - 1] = c__[i__ - 1] * rs[i__ - 1];
 
-   /* determine residual norm and test for convergence- */
-   hh[i__ + i__ * 51 - 52] = c__[i__ - 1] * hh[i__ + i__ * 51 - 52]
-                             + s[i__ - 1] * hh[i1 + i__ * 51 - 52];
-   ro = (d__1 = rs[i1 - 1], std::abs(d__1));
+  /* determine residual norm and test for convergence- */
+  hh[i__ + i__ * 51 - 52] = c__[i__ - 1] * hh[i__ + i__ * 51 - 52]
+                            + s[i__ - 1] * hh[i1 + i__ * 51 - 52];
+  ro = (d__1 = rs[i1 - 1], std::abs(d__1));
 
-   if (*iout>0)
-     std::cout << "GMRES: iteration/residual: " << its << '/' << ro << std::endl;
+  //if (*iout>0)
+  //  std::cout << "GMRES: iteration/residual: " << its << '/' << ro << std::endl;
 
-   if (its<=1)
-     goto L4;
-   if (i__<*im && ro>eps1)
-     goto L4;
+  if (its<=1)
+    goto L4;
+  if (i__<*im && ro>eps1)
+    goto L4;
 
-   /* now compute solution. first solve upper triangular system. */
-   rs[i__ - 1] /= hh[i__ + i__ * 51 - 52];
-   i__1 = i__;
-   for (ii = 2; ii <= i__1; ++ii) {
-      k = i__ - ii + 1;
-      k1 = k + 1;
-      t = rs[k - 1];
-      i__2 = i__;
-      for (j = k1; j <= i__2; ++j) {
-   t -= hh[k + j * 51 - 52] * rs[j - 1];
-      }
-      rs[k - 1] = t / hh[k + k * 51 - 52];
-   }
+  /* now compute solution. first solve upper triangular system. */
+  rs[i__ - 1] /= hh[i__ + i__ * 51 - 52];
+  i__1 = i__;
+  for (ii = 2; ii <= i__1; ++ii) {
+     k = i__ - ii + 1;
+     k1 = k + 1;
+     t = rs[k - 1];
+     i__2 = i__;
+     for (j = k1; j <= i__2; ++j) {
+  t -= hh[k + j * 51 - 52] * rs[j - 1];
+     }
+     rs[k - 1] = t / hh[k + k * 51 - 52];
+  }
 
-   /* form linear combination of v(*,i)'s to get solution */
-   t = rs[0];
-   i__1 = *n;
-   for (k = 1; k <= i__1; ++k) {
-      rhs[k] = vv[k + vv_dim1] * t;
-   }
-   i__1 = i__;
-   for (j = 2; j <= i__1; ++j) {
-      t = rs[j - 1];
-      i__2 = *n;
-      for (k = 1; k <= i__2; ++k) {
-   rhs[k] += t * vv[k + j * vv_dim1];
-      }
-   }
+  /* form linear combination of v(*,i)'s to get solution */
+  t = rs[0];
+  i__1 = *n;
+  for (k = 1; k <= i__1; ++k) {
+     rhs[k] = vv[k + vv_dim1] * t;
+  }
+  i__1 = i__;
+  for (j = 2; j <= i__1; ++j) {
+     t = rs[j - 1];
+     i__2 = *n;
+     for (k = 1; k <= i__2; ++k) {
+  rhs[k] += t * vv[k + j * vv_dim1];
+     }
+  }
 
-   /* call preconditioner. */
-   lusol(n, &rhs[1], &rhs[1], &alu[1], &jlu[1], &ju[1]);
-   i__1 = *n;
-   for (k = 1; k <= i__1; ++k) {
-      sol[k] += rhs[k];
-   }
+  /* call preconditioner. */
+  lusol(n, &rhs[1], &rhs[1], &alu[1], &jlu[1], &ju[1]);
+  i__1 = *n;
+  for (k = 1; k <= i__1; ++k) {
+     sol[k] += rhs[k];
+  }
 
-   /* restart outer loop  when necessary */
-   if (ro <= eps1) {
-      goto L990;
-   }
-   if (its >= *maxits) {
-      goto L991;
-   }
-
-   /* else compute residual vector and continue.. */
-   i__1 = i__;
-   for (j = 1; j <= i__1; ++j) {
-      jj = i1 - j + 1;
-      rs[jj - 2] = -s[jj - 2] * rs[jj - 1];
-      rs[jj - 1] = c__[jj - 2] * rs[jj - 1];
-   }
-   i__1 = i1;
-   for (j = 1; j <= i__1; ++j) {
-      t = rs[j - 1];
-      if (j == 1) {
-   t += -1.;
-      }
-      daxpy(n, &t, &vv[j * vv_dim1 + 1], &c__1, &vv[vv_offset], &c__1);
-   }
-
-   /* restart outer loop. */
-    goto L20;
-
-L990:
+  /* restart outer loop  when necessary */
+  if (ro <= eps1) {
     *ierr = 0;
-
-L991:
+    return;
+  }
+  if (its >= *maxits) {
     *ierr = 1;
+    return;
+  }
 
-/* L999: */
-    *ierr = -1;
+  /* else compute residual vector and continue.. */
+  i__1 = i__;
+  for (j = 1; j <= i__1; ++j) {
+     jj = i1 - j + 1;
+     rs[jj - 2] = -s[jj - 2] * rs[jj - 1];
+     rs[jj - 1] = c__[jj - 2] * rs[jj - 1];
+  }
+  i__1 = i1;
+  for (j = 1; j <= i__1; ++j) {
+     t = rs[j - 1];
+     if (j == 1) {
+  t += -1.;
+     }
+     daxpy(n, &t, &vv[j * vv_dim1 + 1], &c__1, &vv[vv_offset], &c__1);
+  }
+
+  /* restart outer loop. */
+   goto L20;
 }
 
 

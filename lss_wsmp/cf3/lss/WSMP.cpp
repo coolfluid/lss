@@ -28,7 +28,7 @@ common::ComponentBuilder< WSMP, common::Component, LibLSS_WSMP > Builder_WSMP;
 
 
 WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
-  : linearsystem_t(name)
+  : linearsystem< double >(name)
 {
   const char
      *nthreads   = getenv("WSMP_NUM_THREADS"),
@@ -57,7 +57,7 @@ WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j
   iparm[ 4] = 0;  // + C-style numbering
   iparm[19] = 2;  // + ordering option 5
 
-  linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
 
 
@@ -87,7 +87,7 @@ WSMP& WSMP::solve()
 
     throw std::runtime_error(msg.str());
   }
-  b().swap(x());
+  m_b.swap(m_x);
 
   /*
    * iparm[23]: task 1 number of nonzeros in LU factors
@@ -103,8 +103,8 @@ WSMP& WSMP::solve()
 
 int WSMP::call_wsmp(int _task)
 {
-  int nrhs = b().size(1),
-      ldb  = b().size(0),
+  int nrhs = m_b.size(1),
+      ldb  = m_b.size(0),
      &fact = iparm[30],
       ldlt_pivot(fact==2 || fact==4 || fact==6 || fact==7);
 

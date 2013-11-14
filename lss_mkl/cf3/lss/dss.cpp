@@ -24,9 +24,9 @@ common::ComponentBuilder< dss, common::Component, LibLSS_MKL > Builder_MKL_dss;
 
 
 dss::dss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
-  : linearsystem_t(name)
+  : linearsystem< double >(name)
 {
-  char* nthreads = getenv("OMP_NUM_THREADS");
+  const char *nthreads = getenv("OMP_NUM_THREADS");
   int nthd = 1;
   sscanf(nthreads? nthreads:"1","%d",&nthd);
   mkl_set_num_threads(nthd);
@@ -38,13 +38,13 @@ dss::dss(const std::string& name, const size_t& _size_i, const size_t& _size_j, 
   sym  = MKL_DSS_NON_SYMMETRIC;
   type = MKL_DSS_INDEFINITE;
 
-  linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
 
 
 dss& dss::solve()
 {
-  nrhs = static_cast< int >(b().size(1));
+  nrhs = static_cast< int >(m_b.size(1));
   int err;
   if (/*1: initialize       */ (err=dss_create_(&handle, &opt))
     ||/*2: m. structure     */ (err=dss_define_structure_(&handle, &sym, &m_A.ia[0], &m_A.nnu, &m_A.nnu, &m_A.ja[0], &m_A.nnz))
@@ -55,33 +55,33 @@ dss& dss::solve()
   ){
     std::ostringstream msg;
     msg << "mkl dss: error " << err << ": ";
-    err== -1? msg << "zero pivot."      :
-    err== -2? msg << "out of memory."   :
-    err== -3? msg << "failure."         :
-    err== -4? msg << "row err."         :
-    err== -5? msg << "col err."         :
-    err== -6? msg << "too few values."  :
-    err== -7? msg << "too many values." :
-    err== -8? msg << "not square."      :
-    err== -9? msg << "state err."       :
-    err==-10? msg << "invalid option."  :
-    err==-11? msg << "option conflict." :
-    err==-12? msg << "msg lvl err."     :
-    err==-13? msg << "term lvl err."    :
-    err==-14? msg << "structure err."   :
-    err==-15? msg << "reorder err."     :
-    err==-16? msg << "values err."      :
-    err==-17? msg << "statistics invalid matrix." :
-    err==-18? msg << "statistics invalid state."  :
-    err==-19? msg << "statistics invalid string." :
-    err==-20? msg << "reorder1 err."    :
-    err==-21? msg << "preorder err."    :
-    err==-22? msg << "diag err."        :
-    err==-23? msg << "i32bit err."      :
-    err==-24? msg << "ooc mem err."     :
-    err==-25? msg << "ooc oc err."      :
-    err==-26? msg << "ooc rw err."      :
-              msg << "unknown error.";
+    err==  -1? msg << "zero pivot."      :
+    err==  -2? msg << "out of memory."   :
+    err==  -3? msg << "failure."         :
+    err==  -4? msg << "row err."         :
+    err==  -5? msg << "col err."         :
+    err==  -6? msg << "too few values."  :
+    err==  -7? msg << "too many values." :
+    err==  -8? msg << "not square."      :
+    err==  -9? msg << "state err."       :
+    err== -10? msg << "invalid option."  :
+    err== -11? msg << "option conflict." :
+    err== -12? msg << "msg lvl err."     :
+    err== -13? msg << "term lvl err."    :
+    err== -14? msg << "structure err."   :
+    err== -15? msg << "reorder err."     :
+    err== -16? msg << "values err."      :
+    err== -17? msg << "statistics invalid matrix." :
+    err== -18? msg << "statistics invalid state."  :
+    err== -19? msg << "statistics invalid string." :
+    err== -20? msg << "reorder1 err."    :
+    err== -21? msg << "preorder err."    :
+    err== -22? msg << "diag err."        :
+    err== -23? msg << "i32bit err."      :
+    err== -24? msg << "ooc mem err."     :
+    err== -25? msg << "ooc oc err."      :
+    err== -26? msg << "ooc rw err."      :
+               msg << "unknown error.";
     throw std::runtime_error(msg.str());
   }
   return *this;

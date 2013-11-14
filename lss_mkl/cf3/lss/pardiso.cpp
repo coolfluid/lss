@@ -24,7 +24,7 @@ common::ComponentBuilder< pardiso, common::Component, LibLSS_MKL > Builder_MKL_p
 
 
 pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
-  : linearsystem_t(name)
+  : linearsystem< double >(name)
 {
   const char
     *nthreads = getenv("OMP_NUM_THREADS"),
@@ -55,7 +55,7 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
   msglvl    = 1;  // message level: output statistical information
   mtype     = 1;  // real structurally symmetric matrix
 
-  linearsystem_t::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
 
 
@@ -67,7 +67,7 @@ pardiso::~pardiso()
 
 pardiso& pardiso::solve()
 {
-  nrhs = static_cast< int >(b().size(1));
+  nrhs = static_cast< int >(m_b.size(1));
   if
 #if 0
      (call_pardiso(11) ||  // 11: reordering and symbolic factorization
@@ -79,19 +79,19 @@ pardiso& pardiso::solve()
   {
     std::ostringstream msg;
     msg << "mkl pardiso: phase " << phase << " error " << err << ": ";
-    err== -1? msg << "input inconsistent." :
-    err== -2? msg << "not enough memory."  :
-    err== -3? msg << "reordering problem." :
-    err== -4? msg << "zero pivot, numerical factorization or iterative refinement problem." :
-    err== -5? msg << "unclassified (internal) error."     :
-    err== -6? msg << "preordering failed (matrix types 11, 13 only)." :
-    err== -7? msg << "diagonal matrix is singular."           :
-    err== -8? msg << "32-bit integer overflow problem."   :
-    err== -9? msg << "not enough memory for OOC." :
-    err==-10? msg << "error opening OOC files." :
-    err==-11? msg << "read/write error with OOC files." :
-    err==-12? msg << "(pardiso_64 only) pardiso_64 called from 32-bit library." :
-              msg << "unknown error.";
+    err==  -1? msg << "input inconsistent." :
+    err==  -2? msg << "not enough memory."  :
+    err==  -3? msg << "reordering problem." :
+    err==  -4? msg << "zero pivot, numerical factorization or iterative refinement problem." :
+    err==  -5? msg << "unclassified (internal) error."     :
+    err==  -6? msg << "preordering failed (matrix types 11, 13 only)." :
+    err==  -7? msg << "diagonal matrix is singular."           :
+    err==  -8? msg << "32-bit integer overflow problem."   :
+    err==  -9? msg << "not enough memory for OOC." :
+    err== -10? msg << "error opening OOC files." :
+    err== -11? msg << "read/write error with OOC files." :
+    err== -12? msg << "(pardiso_64 only) pardiso_64 called from 32-bit library." :
+               msg << "unknown error.";
     throw std::runtime_error(msg.str());
   }
   return *this;

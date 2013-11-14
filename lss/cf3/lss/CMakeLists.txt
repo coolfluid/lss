@@ -13,10 +13,10 @@ coolfluid3_add_library(
     detail/utilities.hpp
     linearsystem.hpp
 
-    GMRES.cpp
-    GMRES.hpp
     GaussianElimination.cpp
     GaussianElimination.hpp
+    GMRES.cpp
+    GMRES.hpp
     LAPACK.cpp
     LAPACK.hpp
   )
