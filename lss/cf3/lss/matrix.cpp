@@ -17,8 +17,9 @@ namespace lss {
 
 // utilities
 print_t print_level(const int& i) {
-  return i>=print_auto || i<=print_full? static_cast< print_t >(i) : print_auto;
+  return std::max(print_auto,std::min(print_file,static_cast< print_t >(i)));
 }
+
 
 }  // namespace lss
 }  // namespace cf3

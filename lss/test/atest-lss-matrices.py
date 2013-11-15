@@ -13,17 +13,17 @@ solvers = [
 # 'GaussianElimination',
 # 'GaussianElimination_SinglePrecision',
 # 'GMRES',
-  'LAPACK',
+# 'LAPACK',
 # 'LAPACK_SinglePrecision',
 # 'pardiso.pardiso',
   'mkl.pardiso',
-  'mkl.dss',
-  'wsmp.wsmp',
+# 'mkl.dss',
+# 'wsmp.wsmp',
   ]
 
 systems=[
-  ('matrices/intel_mkl_simple_sparse_matrix.csr', ''),
-# ('matrices/samg_demo_matrix.csr', 'matrices/samg_demo_rhs.mtx'),
+# ('matrices/intel_mkl_simple_sparse_matrix.csr', ''),
+  ('matrices/samg_demo_matrix.csr', 'matrices/samg_demo_rhs.mtx'),
 # ('matrices/drivcav/e05r0100.mtx', 'matrices/drivcav/e05r0100_rhs1.mtx'),
 # ('matrices/drivcav/e05r0500.mtx', 'matrices/drivcav/e05r0500_rhs1.mtx'),
 # ('matrices/drivcav/e40r0100.mtx', 'matrices/drivcav/e40r0100_rhs1.mtx'),
@@ -45,7 +45,7 @@ for t in solvers:
     d=time.time()
     lss.solve()
     print '  solve time: %.2fs.'%(time.time()-d)
+    lss.output(file='asd_'+t)
 
-    lss.output(A=1,b=1,x=3)
   lss.delete_component()
 

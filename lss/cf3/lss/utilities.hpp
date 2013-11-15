@@ -69,15 +69,12 @@ struct typecode_t {
   field    m_field;
   symmetry m_symmetry;
 
-  typecode_t() { clear(); }
-  void clear() {
+  typecode_t() {
     m_type     = no_type;
     m_format   = no_format;
     m_field    = no_field;
     m_symmetry = general;
   }
-
-  // -- typecode query functions
 
   bool is_matrix()     { return m_type==matrix; }
 
@@ -98,18 +95,11 @@ struct typecode_t {
 
   bool is_valid() {
     return is_matrix()
-        && !(is_complex())  // (NOTE: not supported in my implementation!)
+        && !(is_complex())  // (not supported in this implementation)
         && !(is_dense() && is_pattern())
         && !(is_real() && is_hermitian())
         && !(is_pattern() && (is_hermitian() || is_skew()));
   }
-
-  // -- typecode modify functions
-
-  void set_type     (const type&     i) { m_type=i;     }
-  void set_format   (const format&   i) { m_format=i;   }
-  void set_field    (const field&    i) { m_field=i;    }
-  void set_symmetry (const symmetry& i) { m_symmetry=i; }
 
 };
 
@@ -119,90 +109,7 @@ bool read_banner(std::ifstream& f, typecode_t& t);
 bool read_size(std::ifstream& f, size_t& i, size_t& j, int& nz);
 
 
-/**
- * @brief read_dense: read MatrixMarket file to dense structure
- * @param fname: input filename
- * @param roworiented: if result should be row (most common) or column oriented
- * @param size: output matrix/array size
- * @param a: output dense matrix/array
- * @return if reading is successful
- */
-bool read_dense(
-    const std::string& fname,
-    const bool &roworiented,
-    idx_t& size,
-    std::vector< std::vector< double > >& a );
-
-
 }  // namespace MatrixMarket
-
-
-/* -- CSR I/O (just I) ------------------------------------------------------ */
-
-namespace CSR
-{
-
-
-/**
- * @brief read_dense: read CSR file format (a hack on MM) to dense structure
- * @param fname: input filename
- * @param roworiented: if result should be row (most common) or column oriented
- * @param size: output matrix/array size
- * @param a: output dense matrix/array
- * @return if reading is successful
- */
-bool read_dense(
-    const std::string& fname,
-    const bool &roworiented,
-    idx_t& size,
-    std::vector< std::vector< double > >& a );
-
-
-}
-
-
-/* -- Generic I/O (interfacing the above) ----------------------------------- */
-
-
-/**
- * @brief read_dense: interface reading of files in different formats to dense
- * data structure, templasized with the container storage type
- * @param fname: input filename
- * @param roworiented: if result should be row (most common) or column oriented
- * @param size: output matrix/array size
- * @param a: output dense matrix/array
- * @return if reading is successful
- */
-template< typename T >
-void read_dense(
-    const std::string& fname,
-    const bool &roworiented,
-    idx_t& size,
-    std::vector< std::vector< T > >& a )
-{
-  // if storage is of different type than double, it miraculously converts
-  std::vector< std::vector< double > > another_a;
-  std::vector< std::vector< double > >& storage(
-    type_is_equal< T, double >()? (std::vector< std::vector< double > >&) a
-                                : another_a);
-
-  // read file contents
-  const bool hasdot(std::string("."+fname).find_last_of("."));
-  if      (hasdot && fname.substr(fname.find_last_of("."))==".mtx") { MatrixMarket ::read_dense(fname,roworiented,size,storage); }
-  else if (hasdot && fname.substr(fname.find_last_of("."))==".csr") { CSR          ::read_dense(fname,roworiented,size,storage); }
-/*else if (hasdot && fname.substr(fname.find_last_of("."))==".rua") { HarwellBoeing::read_dense(fname,roworiented,size,storage); }*/
-  else
-    throw std::runtime_error("file format not detected.");
-
-  // perform storage conversion if necessary, and return
-  if (!type_is_equal< T, double >()) {
-    a.assign(roworiented? size.i:size.j,std::vector< T >(
-             roworiented? size.j:size.i,T() ));
-    for (size_t i=0; i<another_a.size(); ++i)
-      transform( another_a[i].begin(),another_a[i].end(),a[i].begin(),
-                 type_conversion_t< double, T >() );
-  }
-}
 
 
 }  // namespace lss

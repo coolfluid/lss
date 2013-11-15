@@ -89,9 +89,8 @@ class lss_API LAPACK : public linearsystem< T >
   void A___print_level(const int& _l) { m_A.m_print = print_level(_l); }
 
   /// matrix inspecting
-  void          A___print(std::string& _fname) const { m_A.print(_fname);   }
-  std::ostream& A___print(std::ostream& o)     const { return m_A.print(o); }
-  size_t        A___size(const size_t& d)      const { return m_A.size(d);  }
+  std::ostream& A___print(std::ostream& o) const { return m_A.print(o); }
+  size_t        A___size(const size_t& d)  const { return m_A.size(d);  }
 
 
  protected:

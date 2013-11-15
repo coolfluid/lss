@@ -62,9 +62,9 @@ class linearsystem : public common::Action
         .signature ( boost::bind( &linearsystem::signat_ijkvalue, this, _1 ));
 
     regist_signal("output")
-        .description("Print a pretty system matrix, at print level per component (0:auto, 1:size, 2:signs, 3:full), where (A:1, b:1 and x:0)")
-        .connect   ( boost::bind( &linearsystem::signal_output, this, _1 ))
-        .signature ( boost::bind( &linearsystem::signat_abc,    this, _1 ));
+        .description("Print a pretty linear system, at print level per component where 0:auto (default), 1:size, 2:signs, and 3:full")
+        .connect   ( boost::bind( &linearsystem::signal_output,  this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_abcfile, this, _1 ));
 
     regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this )).description("Empty linear system components");
     regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this )).description("Solve linear system, returning solution in x");
@@ -111,11 +111,12 @@ class linearsystem : public common::Action
     opts.add< double >("value");
   }
 
-  void signat_abc(common::SignalArgs& args) {
+  void signat_abcfile(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
-    opts.add< int >("A",print_size);
-    opts.add< int >("b",print_size);
-    opts.add< int >("x",print_auto);
+    opts.add< int >("A",(int) print_auto);
+    opts.add< int >("b",(int) print_auto);
+    opts.add< int >("x",(int) print_auto);
+    opts.add< std::string >("file","");
   }
 
   void signal_initialize(common::SignalArgs& args) {
@@ -150,10 +151,45 @@ class linearsystem : public common::Action
 
   void signal_output(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
-    A___print_level          (opts.value< int >("A"));
-    m_b.m_print = print_level(opts.value< int >("b"));
-    m_x.m_print = print_level(opts.value< int >("x"));
-    operator<<(std::cout,*this);
+    using namespace std;
+
+    string file = opts.value< string >("file");
+    if (file.length()) {
+      A___print_level(print_file);
+      m_b.m_print = print_file;
+      m_x.m_print = print_file;
+      try {
+        ofstream f;
+        string fname;
+
+        f.open((fname=(file+"_A.mtx")).c_str());
+        if (!f) throw runtime_error("A: cannot write to file \""+fname+"\"");
+        A___print(f);
+        f.close();
+
+        f.open((fname=(file+"_b.mtx")).c_str());
+        if (!f) throw runtime_error("b: cannot write to file \""+fname+"\"");
+        m_b.print(f);
+        f.close();
+
+        f.open((fname=(file+"_x.mtx")).c_str());
+        if (!f) throw runtime_error("x: cannot write to file \""+fname+"\"");
+        m_x.print(f);
+        f.close();
+      }
+      catch (const std::runtime_error& e) {
+        CFwarn << "linearsystem: " << e.what() << CFendl;
+      }
+    }
+    else {
+      A___print_level(print_level(opts.value< int >("A")));
+      m_b.m_print =   print_level(opts.value< int >("b"));
+      m_x.m_print =   print_level(opts.value< int >("x"));
+      operator<<(cout,*this);
+    }
+    A___print_level(print_auto);
+    m_b.m_print =   print_auto;
+    m_x.m_print =   print_auto;
   }
 
   void signal_clear () { clear(); }
@@ -324,9 +360,8 @@ class linearsystem : public common::Action
   virtual void A___print_level(const int& _l) = 0;
 
   /// Linear system matrix inspecting
-  virtual void          A___print(std::string& _fname) const = 0;
-  virtual std::ostream& A___print(std::ostream& o)     const = 0;
-  virtual size_t        A___size(const size_t& d )     const = 0;
+  virtual std::ostream& A___print(std::ostream& o) const = 0;
+  virtual size_t        A___size(const size_t& d ) const = 0;
 
 
 #if 0
