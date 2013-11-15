@@ -17,7 +17,6 @@
 
 namespace cf3 {
 namespace lss {
-namespace detail {
 
 
 /* -- MatrixMarket I/O helper structures ------------------------------------ */
@@ -182,6 +181,6 @@ bool read_dense(
 }  // namespace CSR
 
 
-}  // namespace detail
 }  // namespace lss
 }  // namespace cf3
+

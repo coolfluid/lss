@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_detail_utilities_hpp
-#define cf3_lss_detail_utilities_hpp
+#ifndef cf3_lss_utilities_hpp
+#define cf3_lss_utilities_hpp
 
 
 #include <algorithm>
@@ -22,101 +22,6 @@
 
 namespace cf3 {
 namespace lss {
-namespace detail {
-
-
-/* -- coordinate matrix helper structures ----------------------------------- */
-
-template< typename T >
-struct coord_t : std::pair< idx_t, T > {
-  coord_t(const idx_t& _idx, const T& _value) : std::pair< idx_t, T >(_idx,_value) {}
-};
-
-
-/// @brief Coordinate matrix sorting and compression tool, by row (functor)
-template< typename _Key >
-struct sort_by_row_t
-{
-  virtual bool operator()(const _Key& a, const _Key& b) const {
-    return (a.first.i<b.first.i? true  :
-           (a.first.i>b.first.i? false :
-           (a.first.j<b.first.j) ));
-  }
-  static int compress(
-      const std::set< _Key, sort_by_row_t< _Key > >& _entries,
-      std::vector< int >& ia,
-      std::vector< int >& ja) {
-    typename std::set< _Key, sort_by_row_t< _Key > >::const_iterator it=_entries.begin();
-    ia.clear();  ia.push_back(it->first.i);
-    ja.clear();  ja.reserve(_entries.size());
-    for (size_t count,
-         r =  _entries.begin() ->first.i;
-         r <= _entries.rbegin()->first.i;
-         ++r) {
-      for (count=0; r==(it->first.i) && it!=_entries.end(); ++it, ++count)
-        ja.push_back(it->first.j);
-      ia.push_back(ia.back() + count);
-    }
-    return static_cast< int >(ia.size()? ia.size()-1:0);
-  }
-};
-
-
-/// @brief Coordinate matrix sorting and compression tool, by column (functor)
-template< typename _Key >
-struct sort_by_column_t
-{
-  virtual bool operator()(const _Key& a, const _Key& b) const {
-    return (a.first.j<b.first.j? true  :
-           (a.first.j>b.first.j? false :
-           (a.first.i<b.first.i)));
-  }
-  static int compress(
-      const std::set< _Key, sort_by_row_t< _Key > >& _entries,
-      std::vector< int >& ia,
-      std::vector< int >& ja) {
-    typename std::set< _Key, sort_by_row_t< _Key > >::const_iterator it=_entries.begin();
-    ia.clear();  ia.reserve(_entries.size());
-    ja.clear();  ja.push_back(it->first.j);
-    for (size_t count,
-         c =  _entries.begin() ->first.j;
-         c <= _entries.rbegin()->first.j;
-         ++c) {
-      for (count=0; c==(it->first.j) && it!=_entries.end(); ++it, ++count)
-        ia.push_back(it->first.i);
-      ja.push_back(ja.back() + count);
-    }
-    return static_cast< int >(ja.size()? ja.size()-1:0);
-  }
-};
-
-
-/// @brief Coordinate matrix sorting and compression tool, by row (functor),
-/// prioritizing diagonal entries
-template< typename _Key >
-struct sort_by_row_diagonal_first_t : public sort_by_row_t< _Key > {
-  bool operator()(const _Key& a, const _Key& b) const {
-    // FIXME Not implemented
-    throw std::runtime_error("Not implemented!");
-    return (a.first.i<b.first.i? true  :
-           (a.first.i>b.first.i? false :
-           /*here goes all the fun*/true ));
-  }
-};
-
-
-/// @brief Coordinate matrix sorting and compression tool, by column (functor),
-/// prioritizing diagonal entries
-template< typename _Key >
-struct sort_by_column_diagonal_first_t : public sort_by_column_t< _Key > {
-  bool operator()(const _Key& a, const _Key& b) const {
-    // FIXME Not implemented
-    throw std::runtime_error("Not implemented!");
-    return (a.first.j<b.first.j? true  :
-           (a.first.j>b.first.j? false :
-           /*here goes all the fun*/true));
-  }
-};
 
 
 /* -- generic utilities ----------------------------------------------------- */
@@ -133,30 +38,6 @@ struct type_conversion_t
   Tout operator()(const Tin& in) { return static_cast< Tout >(in); }
 };
 
-
-/* -- indexing conversion/application types --------------------------------- */
-
-/// @brief Composite indexing: index hierarchy type list termination type
-struct index_hierarchy_t_end
-{
-  idx_t& dereference(idx_t& _idx) const { return _idx; }
-  void initialize() {}
-};
-
-
-/// @brief Composite indexing: index hierarchy definition
-template<
-    typename Idx,
-    typename IdxNested=index_hierarchy_t_end >
-struct index_hierarchy_t
-{
-  idx_t& dereference(idx_t& _idx) const { return IdxNested::dereference(Idx::dereference(_idx)); }
-  void initialize() { Idx::initialize(); IdxNested::initialize(); }
-};
-
-
-/* -- vector transformations by type ---------------------------------------- */
-/* (common operations for building row or column-oriented sparsity patterns)  */
 
 /// @brief Indexing base conversion tool (functor)
 struct base_conversion_t
@@ -324,7 +205,6 @@ void read_dense(
 }
 
 
-}  // namespace detail
 }  // namespace lss
 }  // namespae cf3
 

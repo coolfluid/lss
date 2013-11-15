@@ -6,12 +6,14 @@ coolfluid3_add_library(
   SOURCES
     LibLSS.cpp
     LibLSS.hpp
-    detail/index.hpp
-    detail/matrix.hpp
-    detail/matrix.cpp
-    detail/utilities.cpp
-    detail/utilities.hpp
+    index.cpp
+    index.hpp
+    linearsystem.cpp
     linearsystem.hpp
+    matrix.cpp
+    matrix.hpp
+    utilities.cpp
+    utilities.hpp
 
     GaussianElimination.cpp
     GaussianElimination.hpp

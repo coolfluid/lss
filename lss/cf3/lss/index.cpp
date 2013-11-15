@@ -5,22 +5,16 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#include "matrix.hpp"
+#include "index.hpp"
 
 
 namespace cf3 {
 namespace lss {
-namespace detail {
 
 
-/* -- matrix interface and implementations ---------------------------------- */
+// dummy placehoder
 
 
-// utilities
-print_t print_level(const int& i) {
-  return i>=print_auto || i<=print_full? static_cast< print_t >(i) : print_auto;
-}
-
-}  // namespace detail
 }  // namespace lss
 }  // namespace cf3
+

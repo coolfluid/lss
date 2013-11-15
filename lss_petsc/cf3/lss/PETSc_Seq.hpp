@@ -17,24 +17,25 @@ namespace cf3 {
 namespace lss {
 
 
-namespace detail {
+namespace petsc {
 
 
-/// @brief PETSc matrix wrapper (consistent with cf3::lss::detail::matrix<...>)
-struct petsc_matrix_wrapper  :
-  matrix< double, petsc_matrix_wrapper >
+/// @brief PETSc matrix wrapper (consistent with cf3::lss::matrix<...>)
+struct matrix_wrapper  :
+  matrix< double, matrix_wrapper >
 {
-  petsc_matrix_wrapper() : v(double()) {}
+  matrix_wrapper() : v(double()) {}
 
-  petsc_matrix_wrapper& initialize(const size_t& i, const size_t& j, const double& _value=double()) { return *this; }
-  petsc_matrix_wrapper& initialize(const std::vector< double >& _vector) { return *this; }
-  petsc_matrix_wrapper& initialize(const std::string& _fname)            { return *this; }
+  matrix_wrapper& initialize(const size_t& i, const size_t& j, const double& _value=double()) { return *this; }
+  matrix_wrapper& initialize(const std::vector< double >& _vector) { return *this; }
+  matrix_wrapper& initialize(const std::string& _fname)            { return *this; }
+  matrix_wrapper& initialize(const index_t& _index)                { return *this; }
 
-  petsc_matrix_wrapper& clear()                  { return *this; }
-  petsc_matrix_wrapper& zerorow(const size_t& i) { return *this; }
+  matrix_wrapper& clear()                  { return *this; }
+  matrix_wrapper& zerorow(const size_t& i) { return *this; }
 
-  petsc_matrix_wrapper& operator=(const petsc_matrix_wrapper& _other) { return *this; }
-  petsc_matrix_wrapper& operator=(const double& _value)               { return *this; }
+  matrix_wrapper& operator=(const matrix_wrapper& _other) { return *this; }
+  matrix_wrapper& operator=(const double& _value)         { return *this; }
 
   const double& operator()(const size_t& i, const size_t& j=0) const { return v; }
         double& operator()(const size_t& i, const size_t& j=0)       { return v; }
@@ -43,21 +44,22 @@ struct petsc_matrix_wrapper  :
 };
 
 
-/// @brief PETSc vector wrapper (consistent with cf3::lss::detail::matrix<...>)
-struct petsc_vector_wrapper  :
-  matrix< double, petsc_vector_wrapper >
+/// @brief PETSc vector wrapper (consistent with cf3::lss::matrix<...>)
+struct vector_wrapper  :
+  matrix< double, vector_wrapper >
 {
-  petsc_vector_wrapper() : v(double()) {}
+  vector_wrapper() : v(double()) {}
 
-  petsc_vector_wrapper& initialize(const size_t& i, const size_t& j, const double& _value=double()) { return *this; }
-  petsc_vector_wrapper& initialize(const std::vector< double >& _vector) { return *this; }
-  petsc_vector_wrapper& initialize(const std::string& _fname)            { return *this; }
+  vector_wrapper& initialize(const size_t& i, const size_t& j, const double& _value=double()) { return *this; }
+  vector_wrapper& initialize(const std::vector< double >& _vector) { return *this; }
+  vector_wrapper& initialize(const std::string& _fname)            { return *this; }
+  vector_wrapper& initialize(const index_t& _index)                { return *this; }
 
-  petsc_vector_wrapper& clear()                  { return *this; }
-  petsc_vector_wrapper& zerorow(const size_t& i) { return *this; }
+  vector_wrapper& clear()                  { return *this; }
+  vector_wrapper& zerorow(const size_t& i) { return *this; }
 
-  petsc_vector_wrapper& operator=(const petsc_vector_wrapper& _other) { return *this; }
-  petsc_vector_wrapper& operator=(const double& _value)               { return *this; }
+  vector_wrapper& operator=(const vector_wrapper& _other) { return *this; }
+  vector_wrapper& operator=(const double& _value)         { return *this; }
 
   const double& operator()(const size_t& i, const size_t& j=0) const { return v; }
         double& operator()(const size_t& i, const size_t& j=0)       { return v; }
@@ -66,7 +68,7 @@ struct petsc_vector_wrapper  :
 };
 
 
-}  // namespace detail
+}  // namespace petsc
 
 
 /**
@@ -76,7 +78,7 @@ struct petsc_vector_wrapper  :
 class lss_API PETSc_Seq : public linearsystem< double >
 {
   // utility definitions
-  typedef detail::petsc_matrix_wrapper matrix_t;
+  typedef petsc::matrix_wrapper matrix_t;
 
 
  public:
@@ -104,9 +106,10 @@ class lss_API PETSc_Seq : public linearsystem< double >
   void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
+  void A___initialize(const index_t& _index)                { m_A.initialize(_index);  }
   void A___clear()                    { m_A.clear();    }
   void A___zerorow(const size_t& i)   { m_A.zerorow(i); }
-  void A___print_level(const int& _l) { m_A.m_print = detail::print_level(_l); }
+  void A___print_level(const int& _l) { m_A.m_print = print_level(_l); }
 
   void          A___print(std::string& _fname) const { m_A.print(_fname);   }
   std::ostream& A___print(std::ostream& o)     const { return m_A.print(o); }

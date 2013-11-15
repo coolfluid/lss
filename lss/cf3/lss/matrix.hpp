@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_detail_matrix_hpp
-#define cf3_lss_detail_matrix_hpp
+#ifndef cf3_lss_matrix_hpp
+#define cf3_lss_matrix_hpp
 
 
 #include <iterator>
@@ -19,7 +19,100 @@
 
 namespace cf3 {
 namespace lss {
-namespace detail {
+
+
+/* -- coordinate matrix helper structures ----------------------------------- */
+
+template< typename T >
+struct coord_t : std::pair< idx_t, T > {
+  coord_t(const idx_t& _idx, const T& _value) : std::pair< idx_t, T >(_idx,_value) {}
+};
+
+
+/// @brief Coordinate matrix sorting and compression tool, by row (functor)
+template< typename _Key >
+struct sort_by_row_t
+{
+  virtual bool operator()(const _Key& a, const _Key& b) const {
+    return (a.first.i<b.first.i? true  :
+           (a.first.i>b.first.i? false :
+           (a.first.j<b.first.j) ));
+  }
+  static int compress(
+      const std::set< _Key, sort_by_row_t< _Key > >& _entries,
+      std::vector< int >& ia,
+      std::vector< int >& ja) {
+    typename std::set< _Key, sort_by_row_t< _Key > >::const_iterator it=_entries.begin();
+    ia.clear();  ia.push_back(it->first.i);
+    ja.clear();  ja.reserve(_entries.size());
+    for (size_t count,
+         r =  _entries.begin() ->first.i;
+         r <= _entries.rbegin()->first.i;
+         ++r) {
+      for (count=0; r==(it->first.i) && it!=_entries.end(); ++it, ++count)
+        ja.push_back(it->first.j);
+      ia.push_back(ia.back() + count);
+    }
+    return static_cast< int >(ia.size()? ia.size()-1:0);
+  }
+};
+
+
+/// @brief Coordinate matrix sorting and compression tool, by column (functor)
+template< typename _Key >
+struct sort_by_column_t
+{
+  virtual bool operator()(const _Key& a, const _Key& b) const {
+    return (a.first.j<b.first.j? true  :
+           (a.first.j>b.first.j? false :
+           (a.first.i<b.first.i)));
+  }
+  static int compress(
+      const std::set< _Key, sort_by_row_t< _Key > >& _entries,
+      std::vector< int >& ia,
+      std::vector< int >& ja) {
+    typename std::set< _Key, sort_by_row_t< _Key > >::const_iterator it=_entries.begin();
+    ia.clear();  ia.reserve(_entries.size());
+    ja.clear();  ja.push_back(it->first.j);
+    for (size_t count,
+         c =  _entries.begin() ->first.j;
+         c <= _entries.rbegin()->first.j;
+         ++c) {
+      for (count=0; c==(it->first.j) && it!=_entries.end(); ++it, ++count)
+        ia.push_back(it->first.i);
+      ja.push_back(ja.back() + count);
+    }
+    return static_cast< int >(ja.size()? ja.size()-1:0);
+  }
+};
+
+
+/// @brief Coordinate matrix sorting and compression tool, by row (functor),
+/// prioritizing diagonal entries
+template< typename _Key >
+struct sort_by_row_diagonal_first_t : public sort_by_row_t< _Key > {
+  bool operator()(const _Key& a, const _Key& b) const {
+    // FIXME Not implemented
+    throw std::runtime_error("Not implemented!");
+    return (a.first.i<b.first.i? true  :
+           (a.first.i>b.first.i? false :
+           /*here goes all the fun*/true ));
+  }
+};
+
+
+/// @brief Coordinate matrix sorting and compression tool, by column (functor),
+/// prioritizing diagonal entries
+template< typename _Key >
+struct sort_by_column_diagonal_first_t : public sort_by_column_t< _Key > {
+  bool operator()(const _Key& a, const _Key& b) const {
+    // FIXME Not implemented
+    throw std::runtime_error("Not implemented!");
+    return (a.first.j<b.first.j? true  :
+           (a.first.j>b.first.j? false :
+           /*here goes all the fun*/true));
+  }
+};
 
 
 /* -- matrix interface and implementations ---------------------------------- */
@@ -53,6 +146,7 @@ struct matrix
   matrix& initialize(const size_t& i, const size_t& j, const double& _value=double()) { return IMPL::initialize(i,j,_value); }
   matrix& initialize(const std::vector< double >& _vector) { return IMPL::initialize(_vector); }
   matrix& initialize(const std::string& _fname)            { return IMPL::initialize(_fname); }
+  matrix& initialize(const index_t& _index)                { return IMPL::initialize(_index); }
 
   matrix& clear()                         { return IMPL::initialize(m_size.i,m_size.j,double()); }
   matrix& operator=(const double& _value) { return IMPL::initialize(m_size.i,m_size.j,_value); }
@@ -177,6 +271,12 @@ struct dense_matrix_vv :
     return *this;
   }
 
+  dense_matrix_vv& initialize(const index_t& _index) {
+    clear();
+    //FIXME implement
+    return *this;
+  }
+
   dense_matrix_vv& clear() {
     a.clear();
     matrix_base_t::m_size.clear();
@@ -270,6 +370,12 @@ struct dense_matrix_v :
     a.resize(size(0)*size(1));
     for (size_t i=0, k=0; i<(ORIENT? size(0):size(1)); ++i, k+=(ORIENT? size(1):size(0)))
       std::copy(another_a[i].begin(),another_a[i].end(),a.begin()+k);
+    return *this;
+  }
+
+  dense_matrix_v& initialize(const index_t& _index) {
+    clear();
+    //FIXME implement
     return *this;
   }
 
@@ -473,32 +579,39 @@ struct sparse_matrix :
     return *this;
   }
 
-//    void initialize(const std::vector< std::vector< size_t > >& nz) {
-//      const int Nb=1;
+  sparse_matrix& initialize(const index_t& _index) {
+    clear();
+    //FIXME implement
 
-//      // set row indices
-//      nnu = Nb * (int) nz.size();
-//      ia.assign(1,BASE);
-//      ia.reserve(nnu+1);
-//      for (int R=0; R<(int) nz.size(); ++R)
-//        for (int i=0; i<Nb; ++i)
-//          ia.push_back(ia.back() + Nb * (int) nz[R].size());
-//      nnz = ia.back() - ia.front();
+    //    void initialize(const std::vector< std::vector< size_t > >& nz) {
+    //      const int Nb=1;
 
-//      // set column indices
-//      ja.assign(nnz,0);
-//      for (size_t R=0; R<(size_t) nz.size(); ++R) {
-//        for (int r=0; r<Nb; ++r) {
-//          int k = ia[R*Nb+r]-BASE;
-//          for (size_t I=0; I<(size_t) nz[R].size(); ++I)
-//            for (int c=0; c<Nb; ++c)
-//              ja[k++] = (int) (Nb*nz[R][I]) + c + BASE;
-//        }
-//      }
+    //      // set row indices
+    //      nnu = Nb * (int) nz.size();
+    //      ia.assign(1,BASE);
+    //      ia.reserve(nnu+1);
+    //      for (int R=0; R<(int) nz.size(); ++R)
+    //        for (int i=0; i<Nb; ++i)
+    //          ia.push_back(ia.back() + Nb * (int) nz[R].size());
+    //      nnz = ia.back() - ia.front();
 
-//      // set entries
-//      a.assign(nnz,T());
-//    }
+    //      // set column indices
+    //      ja.assign(nnz,0);
+    //      for (size_t R=0; R<(size_t) nz.size(); ++R) {
+    //        for (int r=0; r<Nb; ++r) {
+    //          int k = ia[R*Nb+r]-BASE;
+    //          for (size_t I=0; I<(size_t) nz[R].size(); ++I)
+    //            for (int c=0; c<Nb; ++c)
+    //              ja[k++] = (int) (Nb*nz[R][I]) + c + BASE;
+    //        }
+    //      }
+
+    //      // set entries
+    //      a.assign(nnz,T());
+    //    }
+
+    return *this;
+  }
 
   sparse_matrix& clear() {
     matrix_base_t::m_size.clear();
@@ -689,7 +802,6 @@ struct sparse_matrix :
 };
 
 
-}  // namespace detail
 }  // namespace lss
 }  // namespace cf3
 

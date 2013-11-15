@@ -13,9 +13,9 @@
 #include "common/Signal.hpp"
 #include "common/Action.hpp"
 
-#include "detail/utilities.hpp"
-#include "detail/index.hpp"
-#include "detail/matrix.hpp"
+#include "utilities.hpp"
+#include "matrix.hpp"
+#include "index.hpp"
 
 
 namespace cf3 {
@@ -38,7 +38,7 @@ class linearsystem : public common::Action
 {
  protected:
   // utility definitions
-  typedef detail::dense_matrix_v< T, detail::sort_by_column > vector_t;
+  typedef dense_matrix_v< T, sort_by_column > vector_t;
 
   // -- Construction and destruction
  public:
@@ -113,9 +113,9 @@ class linearsystem : public common::Action
 
   void signat_abc(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
-    opts.add< int >("A",detail::print_size);
-    opts.add< int >("b",detail::print_size);
-    opts.add< int >("x",detail::print_auto);
+    opts.add< int >("A",print_size);
+    opts.add< int >("b",print_size);
+    opts.add< int >("x",print_auto);
   }
 
   void signal_initialize(common::SignalArgs& args) {
@@ -150,9 +150,9 @@ class linearsystem : public common::Action
 
   void signal_output(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
-    A___print_level                  (opts.value< int >("A"));
-    m_b.m_print = detail::print_level(opts.value< int >("b"));
-    m_x.m_print = detail::print_level(opts.value< int >("x"));
+    A___print_level          (opts.value< int >("A"));
+    m_b.m_print = print_level(opts.value< int >("b"));
+    m_x.m_print = print_level(opts.value< int >("x"));
     operator<<(std::cout,*this);
   }
 
@@ -167,7 +167,7 @@ class linearsystem : public common::Action
   void trigger_b() { try { m_dummy_vector.size()==1? m_b.initialize(size(0),size(2),m_dummy_vector[0]) : m_b.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: b: " << e.what() << CFendl; } m_dummy_vector.clear();; }
   void trigger_x() { try { m_dummy_vector.size()==1? m_x.initialize(size(1),size(2),m_dummy_vector[0]) : m_x.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: x: " << e.what() << CFendl; } m_dummy_vector.clear();; }
 
-  bool component_initialize_with_file(detail::dense_matrix_v< T >& c, const std::string& name, const std::string& fname) {
+  bool component_initialize_with_file(dense_matrix_v< T >& c, const std::string& name, const std::string& fname) {
     try { c.initialize(fname); }
     catch (const std::runtime_error& e) {
       CFwarn << "linearsystem: " << name << ": " << e.what() << CFendl;
@@ -222,6 +222,14 @@ class linearsystem : public common::Action
     if (vA.size()) A___initialize(vA);
     if (vb.size()) m_b.initialize(vb); else m_b.initialize(size(0),1);
     if (vx.size()) m_x.initialize(vx); else m_x.initialize(size(1),size(2));
+    consistent(A___size(0),A___size(1),m_b.size(0),m_b.size(1),m_x.size(0),m_x.size(1));
+    return *this;
+  }
+
+  virtual linearsystem& initialize(const index_t& _index) {
+    A___initialize(_index);
+    m_b.initialize(size(0),1);
+    m_x.initialize(size(1),size(2));
     consistent(A___size(0),A___size(1),m_b.size(0),m_b.size(1),m_x.size(0),m_x.size(1));
     return *this;
   }
@@ -310,6 +318,7 @@ class linearsystem : public common::Action
   virtual void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
+  virtual void A___initialize(const index_t& _index)                = 0;
   virtual void A___clear()                    = 0;
   virtual void A___zerorow(const size_t& i)   = 0;
   virtual void A___print_level(const int& _l) = 0;

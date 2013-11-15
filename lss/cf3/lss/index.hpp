@@ -5,23 +5,23 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_detail_index_hpp
-#define cf3_lss_detail_index_hpp
+#ifndef cf3_lss_index_hpp
+#define cf3_lss_index_hpp
 
 
 #include <vector>
+#include <string>
 #include <limits>
 
 
 namespace cf3 {
 namespace lss {
-namespace detail {
 
 
 /* -- fundamental index pair (tuple?) type ---------------------------------- */
 
 
-/// @brief Basic index pair (tuple?) input/return type as (i[,j])
+/// @brief Basic index pair (tuple?) input/return type
 struct idx_t
 {
 //  size_t ij[2];  // TODO: check this option too?
@@ -55,11 +55,6 @@ struct index_t
   virtual size_t size(const size_t& d)    const = 0;
   virtual idx_t& dereference(idx_t& _idx) const = 0;
 };
-
-
-#if 0
-typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end > >
-#endif
 
 
 /// @brief Matrix indexer assuming a irregular size block
@@ -143,10 +138,27 @@ struct index_regular_block_t : index_t
 };
 
 
-}  // namespace detail
+/// @brief Hierarchical indexing: type list termination type
+struct index_hierarchy_t_end
+{
+  idx_t& dereference(idx_t& _idx) const { return _idx; }
+  void initialize() {}
+};
+
+
+/// @brief Hierarchical indexing: nested hierarchy definition
+template<
+    typename Idx,
+    typename IdxNested=index_hierarchy_t_end >
+struct index_hierarchy_t
+{
+  idx_t& dereference(idx_t& _idx) const { return IdxNested::dereference(Idx::dereference(_idx)); }
+  void initialize() { Idx::initialize(); IdxNested::initialize(); }
+};
+
+
 }  // namespace lss
 }  // namespace cf3
 
 
 #endif
-
