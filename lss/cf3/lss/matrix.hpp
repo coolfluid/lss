@@ -31,6 +31,28 @@ enum print_t { print_auto=0, print_size, print_signs, print_full, print_file };
 print_t print_level(const int& i);
 
 
+/// @brief Matrix structure compressed
+template< typename T >
+struct matrix_compressed_t {
+  void clear() {
+    nnu = nnz = 0;
+    ia.clear();
+    ja.clear();
+    a.clear();
+  }
+  matrix_compressed_t& swap(matrix_compressed_t& _other) {
+    std::swap(nnu,_other.nnu);
+    std::swap(nnu,_other.nnz);
+    ia.swap(_other.ia);
+    ja.swap(_other.ja);
+    a .swap(_other.a);
+  }
+  int nnu, nnz;               // number of rows/nonzeros
+  std::vector< T > a;         // values
+  std::vector< int > ia, ja;  // rows/column indices
+};
+
+
 /// @brief Dense matrix orientations
 enum orientation_t { sort_by_column=0, sort_by_row=1 };
 
@@ -46,6 +68,8 @@ struct coord_t : std::pair< idx_t, T > {
 template< typename T, typename _Key >
 struct sort_by_row_t
 {
+  static const orientation_t orient = sort_by_row;
+
   virtual bool operator()(const _Key& a, const _Key& b) const {
     return (a.first.i<b.first.i? true  :
            (a.first.i>b.first.i? false :
@@ -54,46 +78,36 @@ struct sort_by_row_t
 
   static void compress(
     const std::set< _Key, sort_by_row_t< T, _Key > >& _entries,
-    std::vector< int >& _ia,
-    std::vector< int >& _ja,
-    std::vector< T >& _a,
-    int& _nnu,
-    int& _nnz )
+    matrix_compressed_t< T >& _comp)
   {
     typename std::set< _Key, sort_by_row_t< T, _Key > >::const_iterator it=_entries.begin();
-    _ia.clear();
-    _ja.clear();
-    _a .clear();
-    _ia.push_back(it->first.i);
-    _ja.reserve(_entries.size());
-    _a .reserve(_entries.size());
+    _comp.clear();
+    _comp.ia.push_back(it->first.i);
+    _comp.ja.reserve(_entries.size());
+    _comp.a .reserve(_entries.size());
     for (size_t count,
          r =  _entries.begin() ->first.i;
          r <= _entries.rbegin()->first.i;
          ++r) {
       for (count=0; r==(it->first.i) && it!=_entries.end(); ++it, ++count) {
-        _ja.push_back(it->first.j);
-        _a .push_back(it->second);
+        _comp.ja.push_back(it->first.j);
+        _comp.a .push_back(it->second);
       }
-      _ia.push_back(_ia.back() + count);
+      _comp.ia.push_back(_comp.ia.back() + count);
     }
-    _nnu = _ia.size() - 1;
-    _nnz = _entries.size();
+    _comp.nnu = _comp.ia.size() - 1;
+    _comp.nnz = _entries.size();
   }
 
   static void uncompress(
     std::set< _Key, sort_by_row_t< T, _Key > >& _entries,
-    const std::vector< int >& _ia,
-    const std::vector< int >& _ja,
-    const std::vector< T >& _a,
-    const int& _nnu,
-    const int& _nnz )
+    const matrix_compressed_t< T >& _comp)
   {
     _entries.clear();
-    const int base = _ia.front();
-    for (int i=0; i<_ia.size()-1; ++i)
-      for (int k=_ia[i]-base; k<_ia[i+1]-base; ++k)
-        _entries.insert(coord_t<T>(idx_t(i+base,_ja[k]),_a[k]));
+    const int base = _comp.ia.front();
+    for (int i=0; i<_comp.ia.size()-1; ++i)
+      for (int k=_comp.ia[i]-base; k<_comp.ia[i+1]-base; ++k)
+        _entries.insert(coord_t<T>(idx_t(i+base,_comp.ja[k]),_comp.a[k]));
   }
 
 };
@@ -103,6 +117,8 @@ struct sort_by_row_t
 template< typename T, typename _Key >
 struct sort_by_column_t
 {
+  static const orientation_t orient = sort_by_column;
+
   virtual bool operator()(const _Key& a, const _Key& b) const {
     return (a.first.j<b.first.j? true  :
            (a.first.j>b.first.j? false :
@@ -111,46 +127,36 @@ struct sort_by_column_t
 
   static void compress(
     const std::set< _Key, sort_by_column_t< T, _Key > >& _entries,
-    std::vector< int >& _ia,
-    std::vector< int >& _ja,
-    std::vector< T >& _a,
-    int& _nnu,
-    int& _nnz )
+    matrix_compressed_t< T >& _comp)
   {
     typename std::set< _Key, sort_by_column_t< T, _Key > >::const_iterator it=_entries.begin();
-    _ia.clear();
-    _ja.clear();
-    _a .clear();
-    _ja.push_back(it->first.j);
-    _ia.reserve(_entries.size());
-    _a .reserve(_entries.size());
+    _comp.clear();
+    _comp.ja.push_back(it->first.j);
+    _comp.ia.reserve(_entries.size());
+    _comp.a .reserve(_entries.size());
     for (size_t count,
          c =  _entries.begin() ->first.j;
          c <= _entries.rbegin()->first.j;
          ++c) {
       for (count=0; c==(it->first.j) && it!=_entries.end(); ++it, ++count) {
-        _ia.push_back(it->first.i);
-        _a .push_back(it->second);
+        _comp.ia.push_back(it->first.i);
+        _comp.a .push_back(it->second);
       }
-      _ja.push_back(_ja.back() + count);
+      _comp.ja.push_back(_comp.ja.back() + count);
     }
-    _nnu = _ja.size() - 1;
-    _nnz = _entries.size();
+    _comp.nnu = _comp.ja.size() - 1;
+    _comp.nnz = _entries.size();
   }
 
   static void uncompress(
-    std::set< _Key, sort_by_column_t< T, _Key > >& _entries,
-    const std::vector< int >& _ia,
-    const std::vector< int >& _ja,
-    const std::vector< T >& _a,
-    const int& _nnu,
-    const int& _nnz )
+      std::set< _Key, sort_by_column_t< T, _Key > >& _entries,
+      const matrix_compressed_t< T >& _comp)
   {
     _entries.clear();
-    const int base = _ja.front();
-    for (int j=0; j<_ja.size()-1; ++j)
-      for (int i=_ja[j]-base; i<_ja[j+1]-base; ++i)
-        _entries.insert(coord_t<T>(idx_t(_ia[i]+base,j+base),_a[i]));
+    const int base = _comp.ja.front();
+    for (int j=0; j<_comp.ja.size()-1; ++j)
+      for (int i=_comp.ja[j]-base; i<_comp.ja[j+1]-base; ++i)
+        _entries.insert(coord_t<T>(idx_t(_comp.ia[i]+base,j+base),_comp.a[i]));
   }
 
 };
@@ -622,14 +628,14 @@ struct dense_matrix_v :
  * compression of rows/columns as necessary
  * T: storage type
  * BASE: column & row numbering base (0 or 1, other values won't work)
- * SORT: ordering of coordinate entries, as (i,j,v) tuples
+ * ORIENT: ordering of coordinate entries, as (i,j,v) tuples
  */
-template< typename T, int BASE=0, typename SORT=sort_by_row_t< T, coord_t<T> > >
+template< typename T, int BASE=0, typename ORIENT=sort_by_row_t< T, coord_t<T> > >
 struct sparse_matrix :
-  matrix< T,sparse_matrix< T,BASE,SORT > >
+  matrix< T,sparse_matrix< T,BASE,ORIENT > >
 {
-  typedef matrix< T,sparse_matrix< T,BASE,SORT > > matrix_base_t;
-  typedef std::set< coord_t<T>, SORT > set_t;
+  typedef matrix< T,sparse_matrix< T,BASE,ORIENT > > matrix_base_t;
+  typedef std::set< coord_t<T>, ORIENT > set_t;
 
   // cons/destructor
   sparse_matrix() : matrix_base_t() { clear(); }
@@ -640,12 +646,20 @@ struct sparse_matrix :
   sparse_matrix& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
     if (idx_t(i,j)==matrix_base_t::m_size)
       return operator=(_value);
-    throw std::runtime_error("sparse_matrix: resizing not available.");
+    CFwarn << "sparse_matrix: clearing matrix." << CFendl;
+    clear();
     return *this;
   }
 
   sparse_matrix& initialize(const std::vector< double >& _vector) {
-    throw std::runtime_error("sparse_matrix_csr: initialize from vector is not possible.");
+    idx_t& size = matrix_base_t::m_size;
+    if (size.i*size.j!=_vector.size())
+      throw std::runtime_error("sparse_matrix: assignment not consistent with current size.");
+    CFwarn << "sparse_matrix: initialize from vector fully populates the otherwise sparse matrix." << CFendl;
+    clear();
+    for (size_t i=0, k=0; i<size.i; ++i)
+      for (size_t j=0; j<size.j; ++j, ++k)
+        entries.insert(coord_t<T>(idx_t(i+BASE,j+BASE),static_cast< T >(_vector[k])));
     return *this;
   }
 
@@ -664,9 +678,10 @@ struct sparse_matrix :
       // read format: MatrixMarket (*.mtx)
       if (hasdot && _fname.substr(_fname.find_last_of("."))==".mtx") {
         MatrixMarket::typecode_t t;
-        if (!MatrixMarket::read_banner(f,t))                throw runtime_error("sparse_matrix: MatrixMarket invalid header (\"%%MatrixMarket ...\" not found).");
-        if (!MatrixMarket::read_size(f,size.i,size.j,nnz))  throw runtime_error("sparse_matrix: MatrixMarket invalid matrix/array size.");
-        if (!t.is_real() || !t.is_general())                throw runtime_error("sparse_matrix: MatrixMarket only \"(coordinate|array) real general\" supported.");
+        if (!MatrixMarket::read_banner(f,t))  throw runtime_error("sparse_matrix: MatrixMarket invalid header (\"%%MatrixMarket ...\" not found).");
+        if (!t.is_real() || !t.is_general())  throw runtime_error("sparse_matrix: MatrixMarket only \"(coordinate|array) real general\" supported.");
+        if (!MatrixMarket::read_size(f,size.i,size.j,compressed.nnz))
+          throw runtime_error("sparse_matrix: MatrixMarket invalid matrix/array size.");
       
         // read into set, line by line
         coord_t<T> p(idx_t(BASE,BASE),T());
@@ -703,31 +718,34 @@ struct sparse_matrix :
         }
 
         /*
-         * temporarily read into ia and ja arrays and convert to intended base
+         * read into temporary compressed structure and convert to intended base
          * - ia has indices in increasing order
          * - ja first entry is read while building ia
          */
+        vector< T > &a = compressed.a;
+        vector< int >
+            &ia = compressed.ia,
+            &ja = compressed.ja;
+        int &nnu = compressed.nnu,
+            &nnz = compressed.nnz;
+
         ia.reserve(size.i+1);
         ja.assign(1,0);
         for (int &i=ja[0], j=-1; f>>i && j<i;)
           ia.push_back(j=i);
-        ja.reserve(ia.back()-ia.front());
-        for (int i; ja.size()<ja.capacity() && f>>i;)
-          ja.push_back(i);
+        nnu = static_cast< int >(size.i);
+        nnz = static_cast< int >(ia.back()-ia.front());
 
+        ja.reserve(nnz);
+        a .reserve(nnz);
+        for (int i; ja.size()<nnz && f>>i;)  ja.push_back(i);
+        for (T   i; a .size()<nnz && f>>i;)  a .push_back(i);
+
+        // convrt to intended base, and uncompress
         for_each(ja.begin(),ja.end(),base_conversion_t(BASE-ia.front()));
         for_each(ia.begin(),ia.end(),base_conversion_t(BASE-ia.front()));
+        uncompress();
 
-        // convert into set
-        for (int i=0; i<ia.size()-1; ++i) {
-          coord_t<T> p(idx_t(i+BASE,BASE),T());
-          for (int j=ia[i]; j<ia[i+1] && f>>p.second; ++j) {
-            p.first.j = ja[j-BASE];
-            entries.insert(p);
-          }
-        }
-        ia.clear();
-        ja.clear();
       }
 
 
@@ -744,23 +762,9 @@ struct sparse_matrix :
     }
 
 
-    CFdebug << "sparse_matrix: preserving symmetry..." << CFendl;
-    size_t nmodif = 0;
-    for (size_t i=0; i<size.i; ++i)
-      entries.insert(coord_t<T>(idx_t(i+BASE,i+BASE),T())).second? ++nmodif:nmodif;
-    for (bool modif=true; modif;) {
-      modif = false;
-      for (typename set_t::const_reverse_iterator c=entries.rbegin(); !modif && c!=entries.rend(); ++c) {
-        coord_t<T> p(idx_t(c->first.j,c->first.i),T());
-        (modif = entries.insert(p).second)? ++nmodif:nmodif;
-      }
-    }
-    CFdebug << "sparse_matrix: preserving symmetry: " << nmodif << " additional entries." << CFendl;
-
-
     // compress and return
     compress();
-    if (size.i!=nnu || size.j<=*std::max_element(ja.begin(),ja.end())-BASE)
+    if (size.i!=compressed.nnu || size.j<=*std::max_element(compressed.ja.begin(),compressed.ja.end())-BASE)
       throw std::runtime_error("sparse_matrix: after reading file, indexing not correct.");
     return *this;
   }
@@ -800,45 +804,40 @@ struct sparse_matrix :
   }
 
   sparse_matrix& clear() {
+    // NOTE: clearing a matrix puts it into uncompressed state (nnu==0)
     matrix_base_t::m_size.clear();
     entries.clear();
-    nnu = nnz = 0;
-    ia.clear();
-    ja.clear();
-    a.clear();
+    compressed.clear();
     return *this;
   }
 
   sparse_matrix& operator=(const double& _value) {
-    a.assign(a.size(),static_cast< const T >(_value));
+    CFwarn << "sparse_matrix: assigning a value to a sparse matrix only affects the populated entries." << CFendl;
+    if (is_compressed())
+      compressed.a.assign(compressed.a.size(),static_cast< const T >(_value));
+    else
+      for (typename set_t::iterator i = entries.begin(); i!=entries.end(); ++i)
+        const_cast< T& >(i->second) = _value;
     return *this;
   }
 
   sparse_matrix& operator=(const sparse_matrix& _other) {
     matrix_base_t::m_size = _other.matrix_base_t::m_size;
     entries = _other.entries;
-    nnu = _other.nnu;
-    nnz = _other.nnz;
-    ia = _other.ia;
-    ja = _other.ja;
-    a  = _other.a;
+    compressed = _other.compressed;
     return *this;
   }
 
   sparse_matrix& zerorow(const size_t& _i) {
     //FIXME: this is specific to CSR structure! this container should also work for CSC!
-    std::fill_n(a.begin()+ia[_i]-BASE,ia[_i+1]-ia[_i],T());
+    std::fill_n(compressed.a.begin()+compressed.ia[_i]-BASE,compressed.ia[_i+1]-compressed.ia[_i],T());
     return *this;
   }
 
   sparse_matrix& swap(sparse_matrix& _other) {
     matrix_base_t::swap(_other);
     std::swap(entries,_other.entries);
-    std::swap(nnu,_other.nnu);
-    std::swap(nnz,_other.nnz);
-    ia.swap(_other.ia);
-    ja.swap(_other.ja);
-    a .swap(_other.a);
+    std::swap(compressed,_other.compressed);
     return *this;
   }
 
@@ -854,35 +853,42 @@ struct sparse_matrix :
                                                         print_full )));
 
     if (print_level==print_size)  {
-      o << "(" << size.i << 'x' << size.j << ">=" << a.size() << ") [ ... ]";
+      o << "(" << size.i << 'x' << size.j << ">=" << compressed.a.size() << ") [ ... ]";
     }
-    else if (print_level==print_signs) {
-      o << "(" << size.i << 'x' << size.j << ">=" << a.size() << ") [ ";
-      string str;
-      for (size_t i=0; i<size.i; ++i) {
-        str.assign(size.j,' ');
-        for (int k=ia[i]-BASE; k<ia[i+1]-BASE; ++k)
-          str[ ja[k]-BASE ] = (a[k]>eps? '+' : (a[k]<-eps? '-' : '.' ));
-        o << "\n  " << str;
+    else if (print_level==print_signs || print_level==print_full) {
+      o << "(" << size.i << 'x' << size.j << ">=" << compressed.a.size() << ") [ ";
+
+      matrix_compressed_t< T > tmp_comp;
+      if (!is_compressed())
+        ORIENT::compress(entries,tmp_comp);
+      const matrix_compressed_t< T >& _comp(is_compressed()? compressed : tmp_comp);
+
+      if (print_level==print_signs) {
+        string str;
+        for (size_t i=0; i<size.i; ++i) {
+          str.assign(size.j,' ');
+          for (int k=_comp.ia[i]-BASE; k<_comp.ia[i+1]-BASE; ++k)
+            str[ _comp.ja[k]-BASE ] = (_comp.a[k]>eps? '+' : (_comp.a[k]<-eps? '-' : '.' ));
+          o << "\n  " << str;
+        }
       }
-      o << " ]";
-    }
-    else if (print_level==print_full) {
-      o << "(" << size.i << 'x' << size.j << ">=" << a.size() << ") [ ";
-      for (size_t i=0; i<size.i; ++i) {
-        vector< T > row(size.j,T());
-        for (int k=ia[i]-BASE; k<ia[i+1]-BASE; ++k)
-          row[ ja[k]-BASE ] = a[k];
-        o << "\n  ";
-        copy(row.begin(),row.end(),ostream_iterator< T >(o,", "));
+      else {  // print_level==print_full
+        for (size_t i=0; i<size.i; ++i) {
+          vector< T > row(size.j,T());
+          for (int k=_comp.ia[i]-BASE; k<_comp.ia[i+1]-BASE; ++k)
+            row[ _comp.ja[k]-BASE ] = _comp.a[k];
+          o << "\n  ";
+          copy(row.begin(),row.end(),ostream_iterator< T >(o,", "));
+        }
       }
+
       o << " ]";
     }
     else if (print_level==print_file) {
 
       set_t tmp_entries;
       if (is_compressed())
-        SORT::uncompress(tmp_entries,ia,ja,a,nnu,nnz);
+        ORIENT::uncompress(tmp_entries,compressed);
       const set_t& _entries(is_compressed()? tmp_entries:entries);
 
       // write format: MatrixMarket (*.mtx)
@@ -899,7 +905,7 @@ struct sparse_matrix :
   const T& operator()(const size_t& _i, const size_t& _j) const {
     if (is_compressed()) {
       const int i=getindex(_i,_j);
-      return (i<0? matrix_base_t::m_zero:a[i]);
+      return (i<0? matrix_base_t::m_zero:compressed.a[i]);
     }
     const coord_t<T> p(idx_t(_i+BASE,_j+BASE),T());
     typename set_t::const_iterator i = entries.find(p);
@@ -909,7 +915,7 @@ struct sparse_matrix :
   T& operator()(const size_t& _i, const size_t& _j) {
     if (is_compressed()) {
       const int i=getindex(_i,_j);
-      return (i<0? matrix_base_t::m_zero:a[i]);
+      return i>=BASE? compressed.a[i] : matrix_base_t::m_zero;
     }
     const coord_t<T> p(idx_t(_i+BASE,_j+BASE),T());
     typename set_t::iterator i = entries.insert(p).first;
@@ -921,43 +927,64 @@ struct sparse_matrix :
   }
 
   int getindex(const size_t& i, const size_t& j) const {
-    //FIXME: this is specific to CSR structure! this container should also work for CSC!
-    for (int k=ia[i]-BASE; k<ia[i+1]-BASE; ++k)
-      if (ja[k]-BASE==(int) j)
-        return k;
+    if (ORIENT::orient==sort_by_row)
+      for (int k=compressed.ia[i]-BASE; k<compressed.ia[i+1]-BASE; ++k)
+        if (compressed.ja[k]-BASE==(int) j)
+          return k;
+    else if (ORIENT::orient==sort_by_column)
+      for (int k=compressed.ja[j]-BASE; k<compressed.ja[j+1]-BASE; ++k)
+        if (compressed.ia[k]-BASE==(int) i)
+          return k;
     return -1;
   }
 
 
   // compression/uncompression
 
-  inline bool is_compressed() const { return nnu; }
+  inline bool is_compressed() const { return compressed.nnu; }
 
-  void compress() {
+  matrix_compressed_t< T >& compress() {
     if (!is_compressed()) {
-      SORT::compress(entries,ia,ja,a,nnu,nnz);
-      entries.clear();
+      CFdebug << "sparse_matrix: compress..." << CFendl;
+      CFdebug << "sparse_matrix: additional entries to preserving symmetry: " << ensure_structural_symmetry() << '.' << CFendl;
+      ORIENT::compress(entries,compressed);
+      CFdebug << "sparse_matrix: compress." << CFendl;
     }
+    entries.clear();
+    return compressed;
   }
 
-  void uncompress() {
+  set_t& uncompress() {
     if (is_compressed()) {
-      SORT::uncompress(entries,ia,ja,a,nnu,nnz);
-      ia.clear();
-      ja.clear();
-      a .clear();
-      nnu = nnz = 0;
+      CFdebug << "sparse_matrix: uncompress..." << CFendl;
+      ORIENT::uncompress(entries,compressed);
+      CFdebug << "sparse_matrix: additional entries to preserving symmetry: " << ensure_structural_symmetry() << '.' << CFendl;
+      CFdebug << "sparse_matrix: uncompress." << CFendl;
     }
+    compressed.clear();
+    return entries;
   }
 
+  size_t ensure_structural_symmetry() {
+    if (is_compressed())
+      uncompress();
+    size_t nmodif = 0;
+    for (size_t i=0; i<this->size(0); ++i)
+      entries.insert(coord_t<T>(idx_t(i+BASE,i+BASE),T())).second? ++nmodif:nmodif;
+    for (bool modif=true; modif;) {
+      modif = false;
+      for (typename set_t::const_reverse_iterator c=entries.rbegin(); !modif && c!=entries.rend(); ++c) {
+        coord_t<T> p(idx_t(c->first.j,c->first.i),T());
+        (modif = entries.insert(p).second)? ++nmodif:nmodif;
+      }
+    }
+    return nmodif;
+  }
 
-  // storage
-  set_t entries;          // (uncompressed)
-  std::vector< T > a;     // (compressed)
-  std::vector< int > ia;  // ...
-  std::vector< int > ja;  // ...
-  int nnu;                // ...
-  int nnz;                // ...
+ // storage
+ private:
+  set_t entries;                        // (uncompressed)
+  matrix_compressed_t< T > compressed;  // (compressed)
 
 };
 

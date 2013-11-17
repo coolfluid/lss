@@ -50,10 +50,11 @@ struct idx_t
 struct index_t
 {
   virtual ~index_t() {}
-  virtual void clear() = 0;
-  virtual size_t size()                   const = 0;
   virtual size_t size(const size_t& d)    const = 0;
   virtual idx_t& dereference(idx_t& _idx) const = 0;
+
+  const idx_t& size() const { return m_size; }
+  idx_t m_size;
 };
 
 
