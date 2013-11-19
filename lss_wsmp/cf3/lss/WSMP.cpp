@@ -70,7 +70,7 @@ WSMP& WSMP::solve()
   {
     const int &err = iparm[63];
     std::ostringstream msg;
-    msg << "WSMP: task " << task << " error " << err << ": ";
+    msg << "WSMP: task " << iparm[2] << " error " << err << ": ";
 
     err>    0? msg << "matrix close enough to singular, suspected pivot at i=j=" << (err-1) << " (0-based)." :
     err< -100? msg << "error in input argument iparm[" << (-err-1) << "]." :
@@ -103,14 +103,15 @@ WSMP& WSMP::solve()
 
 int WSMP::call_wsmp(int _task)
 {
-  int nrhs = m_b.size(1),
-      ldb  = m_b.size(0),
+  matrix_t::matrix_compressed_t& A = m_A.compress();
+  int nrhs = static_cast< int >(m_b.size(1)),
+      ldb  = static_cast< int >(m_b.size(0)),
      &fact = iparm[30],
       ldlt_pivot(fact==2 || fact==4 || fact==6 || fact==7);
 
-  iparm[1] = iparm[2] = task = _task;
+  iparm[1] = iparm[2] = _task;
   wgsmp_(
-    &m_A.nnu,&m_A.ia[0],&m_A.ja[0],&m_A.a[0],
+    &A.nnu,&A.ia[0],&A.ja[0],&A.a[0],
     &m_b.a[0],&ldb,&nrhs,NULL,iparm,dparm);
 
   iparm[63] = (iparm[63]>0 && ldlt_pivot? 0 : iparm[63]);
