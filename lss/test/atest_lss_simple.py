@@ -14,7 +14,7 @@ list_of_solvers = [
   'LAPACK_SinglePrecision',
   'GaussianElimination',
   'GaussianElimination_SinglePrecision',
-# 'GMRES',
+  'GMRES',
   ]
 for solver in list_of_solvers:
   lss = cf.root.create_component('MySolver_' + solver,'cf3.lss.' + solver)

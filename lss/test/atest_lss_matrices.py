@@ -12,13 +12,13 @@ cf.env.log_level = 3 #  1=error, 2=warning, 3=info, 4=debug
 solvers = [
 # 'GaussianElimination',
 # 'GaussianElimination_SinglePrecision',
-# 'GMRES',
+  'GMRES',
 # 'LAPACK',
 # 'LAPACK_SinglePrecision',
-# 'pardiso.pardiso',
-  'mkl.pardiso',
+  'pardiso.pardiso',
+# 'mkl.pardiso',
 # 'mkl.dss',
-# 'wsmp.wsmp',
+  'wsmp.wsmp',
   ]
 
 systems=[
@@ -41,11 +41,12 @@ for t in solvers:
     lss.initialize(A=s[0],b=s[1])
     if not len(s[1]): lss.b=[2]
     print '  initialize time: %.2fs.'%(time.time()-d)
+    #lss.output(A=3)
 
     d=time.time()
     lss.solve()
+    lss.output(file='asd_'+t,x=1)
     print '  solve time: %.2fs.'%(time.time()-d)
-    lss.output(file='asd_'+t)
 
   lss.delete_component()
 
