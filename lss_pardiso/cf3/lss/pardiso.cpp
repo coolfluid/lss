@@ -99,18 +99,21 @@ pardiso& pardiso::solve()
 }
 
 
-int pardiso::call_pardiso_printstats() {
+int pardiso::call_pardiso_printstats()
+{
+  matrix_t::matrix_compressed_t& A = m_A.compress();
   err = 0;
   phase = 0;
   pardiso_printstats_(
     &mtype,
-    &m_A.nnu, &m_A.a[0], &m_A.ia[0], &m_A.ja[0],
+    &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
     &nrhs, &m_b.a[0], &err );
   return err;
 }
 
 
-int pardiso::call_pardiso_init() {
+int pardiso::call_pardiso_init()
+{
   err = 0;
   phase = 0;
   pardisoinit_(pt,&mtype,&iparm[31],iparm,dparm,&err);
@@ -120,11 +123,12 @@ int pardiso::call_pardiso_init() {
 
 int pardiso::call_pardiso(int _phase)
 {
+  matrix_t::matrix_compressed_t& A = m_A.compress();
   err = 0;
   phase = _phase;
   pardiso_(
     pt, &maxfct, &mnum, &mtype, &phase,
-    &m_A.nnu, &m_A.a[0], &m_A.ia[0], &m_A.ja[0],
+    &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
     NULL, &nrhs, iparm, &msglvl, &m_b.a[0], &m_x.a[0], &err, dparm );
   return err;
 }
