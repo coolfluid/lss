@@ -9,38 +9,11 @@
 #define cf3_lss_index_hpp
 
 
-#include <vector>
-#include <string>
 #include <limits>
 
 
 namespace cf3 {
 namespace lss {
-
-
-/* -- fundamental index pair (tuple?) type ---------------------------------- */
-
-
-/// @brief Basic index pair (tuple?) input/return type
-struct idx_t
-{
-//  size_t ij[2];  // TODO: check this option too?
-  size_t i, j;
-  idx_t(const size_t& _i=0, const size_t& _j=0) : i(_i), j(_j) {}
-  idx_t& invalidate() { i=std::numeric_limits< size_t >::max(); j=i; return *this; }
-  idx_t& clear     () { i=0;                                    j=i; return *this; }
-
-  bool operator<  (const idx_t& _other) const { return (i<_other.i? true : i>_other.i? false : (j<_other.j)); }
-  bool operator>  (const idx_t& _other) const { return (_other<*this); }
-  bool operator<= (const idx_t& _other) const { return (operator<(_other) || operator==(_other)); }
-  bool operator>= (const idx_t& _other) const { return (operator>(_other) || operator==(_other)); }
-  bool operator== (const idx_t& _other) const { return i==_other.i && j==_other.j; }
-  bool operator!= (const idx_t& _other) const { return i!=_other.i || j!=_other.j; }
-
-  bool is_valid_size()  const { return operator>=(idx_t(0,0)) && operator<(idx_t().invalidate()); }
-  bool is_square_size() const { return i==j; }
-  bool is_diagonal()    const { return is_square_size(); }
-};
 
 
 /* -- indexing techniques --------------------------------------------------- */

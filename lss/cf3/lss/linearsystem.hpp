@@ -15,7 +15,6 @@
 
 #include "utilities.hpp"
 #include "matrix.hpp"
-#include "index.hpp"
 
 
 namespace cf3 {
@@ -46,7 +45,7 @@ class linearsystem : public common::Action
   /// Construct the linear system
   linearsystem(const std::string& name) :
     common::Action(name),
-    m_dummy_value(std::numeric_limits< T >::quiet_NaN())
+    m_dummy_value(std::numeric_limits< T >::signaling_NaN())
   {
     // framework scripting: options level, signals and options
     mark_basic();
@@ -121,11 +120,11 @@ class linearsystem : public common::Action
 
   void signal_initialize(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
+    const double value(opts.value< double >("value"));
     const std::string
         Afname(opts.value< std::string >("A")),
         bfname(opts.value< std::string >("b")),
         xfname(opts.value< std::string >("x"));
-    const double value(opts.value< double >("value"));
     if (Afname.length() || bfname.length() || xfname.length()) {
       if (Afname.length()) A___initialize(Afname);
       if (bfname.length() && !component_initialize_with_file(m_b,"b",bfname) || !bfname.length()) m_b.initialize(size(0),1,      value);
@@ -153,43 +152,33 @@ class linearsystem : public common::Action
     common::XML::SignalOptions opts(args);
     using namespace std;
 
-    string file = opts.value< string >("file");
-    if (file.length()) {
-      A___print_level(print_file);
-      m_b.m_print = print_file;
-      m_x.m_print = print_file;
+    m_print[0] = static_cast< print_t >(opts.value< int >("A"));
+    m_print[1] = static_cast< print_t >(opts.value< int >("b"));
+    m_print[2] = static_cast< print_t >(opts.value< int >("x"));
+    string bname = opts.value< string >("file");
+    if (bname.length()) {
       try {
-        ofstream f;
-        string fname;
-
-        f.open((fname=(file+"_A.mtx")).c_str());
-        if (!f) throw runtime_error("A: cannot write to file \""+fname+"\"");
-        A___print(f);
-        f.close();
-
-        f.open((fname=(file+"_b.mtx")).c_str());
-        if (!f) throw runtime_error("b: cannot write to file \""+fname+"\"");
-        m_b.print(f);
-        f.close();
-
-        f.open((fname=(file+"_x.mtx")).c_str());
-        if (!f) throw runtime_error("x: cannot write to file \""+fname+"\"");
-        m_x.print(f);
-        f.close();
+        struct fhelper {
+          ofstream f;
+          fhelper(const bool& _print, const string& _fname)
+            : f(_print? _fname.c_str():"") {
+            if (_print && !f)
+              throw runtime_error("cannot write to file \""+_fname+"\"");
+          }
+        } hA(m_print[0],bname+"_A.mtx"),
+          hb(m_print[1],bname+"_b.mtx"),
+          hx(m_print[2],bname+"_x.mtx");
+        if (m_print[0]) A___print(hA.f,print_file);
+        if (m_print[1]) m_b.print(hb.f,print_file);
+        if (m_print[2]) m_x.print(hx.f,print_file);
       }
       catch (const std::runtime_error& e) {
         CFwarn << "linearsystem: " << e.what() << CFendl;
       }
     }
     else {
-      A___print_level(print_level(opts.value< int >("A")));
-      m_b.m_print =   print_level(opts.value< int >("b"));
-      m_x.m_print =   print_level(opts.value< int >("x"));
       operator<<(cout,*this);
     }
-    A___print_level(print_auto);
-    m_b.m_print =   print_auto;
-    m_x.m_print =   print_auto;
   }
 
   void signal_clear () { clear(); }
@@ -226,7 +215,7 @@ class linearsystem : public common::Action
   }
 
   /// Initialize the linear system
-  virtual linearsystem& initialize(
+  linearsystem& initialize(
       const size_t& i=size_t(),
       const size_t& j=size_t(),
       const size_t& k=1,
@@ -239,7 +228,7 @@ class linearsystem : public common::Action
   }
 
   /// Initialize linear system from file(s)
-  virtual linearsystem& initialize(
+  linearsystem& initialize(
       const std::string& _Afname,
       const std::string& _bfname="",
       const std::string& _xfname="" ) {
@@ -251,7 +240,7 @@ class linearsystem : public common::Action
   }
 
   /// Initialize linear system from vectors of values (lists, in the right context)
-  virtual linearsystem& initialize(
+  linearsystem& initialize(
       const std::vector< double >& vA,
       const std::vector< double >& vb=std::vector< double >(),
       const std::vector< double >& vx=std::vector< double >()) {
@@ -262,16 +251,8 @@ class linearsystem : public common::Action
     return *this;
   }
 
-  virtual linearsystem& initialize(const index_t& _index) {
-    A___initialize(_index);
-    m_b.initialize(size(0),1);
-    m_x.initialize(size(1),size(2));
-    consistent(A___size(0),A___size(1),m_b.size(0),m_b.size(1),m_x.size(0),m_x.size(1));
-    return *this;
-  }
-
   /// Clear contents in all system components
-  virtual linearsystem& clear() {
+  linearsystem& clear() {
     A___clear();
     m_b.clear();
     m_x.clear();
@@ -279,7 +260,7 @@ class linearsystem : public common::Action
   }
 
   /// Zero row in all system components
-  virtual linearsystem& zerorow(const size_t& i) {
+  linearsystem& zerorow(const size_t& i) {
     A___zerorow(i);
     m_b.zerorow(i);
     m_x.zerorow(i);
@@ -331,6 +312,7 @@ class linearsystem : public common::Action
   /// Scripting temporary storage
   T                     m_dummy_value;
   std::vector< double > m_dummy_vector;
+  print_t m_print[3];  // matrix and vectors print levels
 
 
   // -- Indexing (absolute)
@@ -354,14 +336,12 @@ class linearsystem : public common::Action
   virtual void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
-  virtual void A___initialize(const index_t& _index)                = 0;
-  virtual void A___clear()                    = 0;
-  virtual void A___zerorow(const size_t& i)   = 0;
-  virtual void A___print_level(const int& _l) = 0;
+  virtual void A___clear()                  = 0;
+  virtual void A___zerorow(const size_t& i) = 0;
 
   /// Linear system matrix inspecting
-  virtual std::ostream& A___print(std::ostream& o) const = 0;
-  virtual size_t        A___size(const size_t& d ) const = 0;
+  virtual void   A___print(std::ostream& o, const print_t &l=print_auto) const = 0;
+  virtual size_t A___size(const size_t& d ) const = 0;
 
 
 #if 0
@@ -387,9 +367,9 @@ class linearsystem : public common::Action
 template< typename T >
 std::ostream& operator<< (std::ostream& o, const linearsystem< T >& lss)
 {
-  o << "linearsystem: A: "; lss.A___print(o); o << std::endl;
-  o << "linearsystem: b: "; lss.m_b.print(o); o << std::endl;
-  o << "linearsystem: x: "; lss.m_x.print(o); o << std::endl;
+  o << "linearsystem: A: "; lss.A___print(o,lss.m_print[0]); o << std::endl;
+  o << "linearsystem: b: "; lss.m_b.print(o,lss.m_print[1]); o << std::endl;
+  o << "linearsystem: x: "; lss.m_x.print(o,lss.m_print[2]); o << std::endl;
   return o;
 }
 

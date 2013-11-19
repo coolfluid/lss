@@ -21,7 +21,7 @@ common::ComponentBuilder< GMRES, common::Component, LibLSS > Builder_GMRES;
 
 GMRES& GMRES::solve()
 {
-  matrix_compressed_t< double >& A = m_A.compress();
+  matrix_t::matrix_compressed_t& A = m_A.compress();
 
   int n = static_cast< int >(size(0));
   int err;
