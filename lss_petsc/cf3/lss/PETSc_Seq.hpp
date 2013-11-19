@@ -29,7 +29,6 @@ struct matrix_wrapper  :
   matrix_wrapper& initialize(const size_t& i, const size_t& j, const double& _value=double()) { return *this; }
   matrix_wrapper& initialize(const std::vector< double >& _vector) { return *this; }
   matrix_wrapper& initialize(const std::string& _fname)            { return *this; }
-  matrix_wrapper& initialize(const index_t& _index)                { return *this; }
 
   matrix_wrapper& clear()                  { return *this; }
   matrix_wrapper& zerorow(const size_t& i) { return *this; }
@@ -53,7 +52,6 @@ struct vector_wrapper  :
   vector_wrapper& initialize(const size_t& i, const size_t& j, const double& _value=double()) { return *this; }
   vector_wrapper& initialize(const std::vector< double >& _vector) { return *this; }
   vector_wrapper& initialize(const std::string& _fname)            { return *this; }
-  vector_wrapper& initialize(const index_t& _index)                { return *this; }
 
   vector_wrapper& clear()                  { return *this; }
   vector_wrapper& zerorow(const size_t& i) { return *this; }
@@ -106,13 +104,11 @@ class lss_API PETSc_Seq : public linearsystem< double >
   void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
-  void A___initialize(const index_t& _index)                { m_A.initialize(_index);  }
-  void A___clear()                    { m_A.clear();    }
-  void A___zerorow(const size_t& i)   { m_A.zerorow(i); }
-  void A___print_level(const int& _l) { m_A.m_print = print_level(_l); }
+  void A___clear()                  { m_A.clear();    }
+  void A___zerorow(const size_t& i) { m_A.zerorow(i); }
 
-  std::ostream& A___print(std::ostream& o) const { return m_A.print(o); }
-  size_t        A___size(const size_t& d)  const { return m_A.size(d);  }
+  void   A___print(std::ostream& o, const print_t& l=print_auto) const { m_A.print(o,l); }
+  size_t A___size(const size_t& d)  const { return m_A.size(d);  }
 
 
  protected:
