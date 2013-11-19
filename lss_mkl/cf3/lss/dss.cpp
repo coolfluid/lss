@@ -44,12 +44,14 @@ dss::dss(const std::string& name, const size_t& _size_i, const size_t& _size_j, 
 
 dss& dss::solve()
 {
+  matrix_t::matrix_compressed_t& A = m_A.compress();
   nrhs = static_cast< int >(m_b.size(1));
   int err;
+
   if (/*1: initialize       */ (err=dss_create_(&handle, &opt))
-    ||/*2: m. structure     */ (err=dss_define_structure_(&handle, &sym, &m_A.ia[0], &m_A.nnu, &m_A.nnu, &m_A.ja[0], &m_A.nnz))
+    ||/*2: m. structure     */ (err=dss_define_structure_(&handle, &sym, &A.ia[0], &A.nnu, &A.nnu, &A.ja[0], &A.nnz))
     ||/*3: m. reordering    */ (err=dss_reorder_(&handle, &opt, NULL))
-    ||/*4: m. factorization */ (err=dss_factor_real_(&handle, &type, &m_A.a[0]))
+    ||/*4: m. factorization */ (err=dss_factor_real_(&handle, &type, &A.a[0]))
     ||/*5: solve            */ (err=dss_solve_real_(&handle, &opt, &m_b.a[0], &nrhs, &m_x.a[0]))
     ||/*6: deallocate       */ (err=dss_delete_(&handle, &opt))
   ){

@@ -45,7 +45,6 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
 
   // reset pt and iparm defaults
   for (int i=0; i<64; ++i) iparm[i] = 0;
-  perm .assign(m_A.nnu,0);
   PARDISOINIT(pt,&mtype,iparm);
 
   iparm[ 7] = 0;  // max numbers of iterative refinement steps
@@ -68,6 +67,8 @@ pardiso::~pardiso()
 pardiso& pardiso::solve()
 {
   nrhs = static_cast< int >(m_b.size(1));
+  perm.assign(m_A.size(0),0);
+
   if
 #if 0
      (call_pardiso(11) ||  // 11: reordering and symbolic factorization
@@ -100,10 +101,11 @@ pardiso& pardiso::solve()
 
 int pardiso::call_pardiso(int _phase)
 {
+  matrix_t::matrix_compressed_t& A = m_A.compress();
   err = 0;
   phase = _phase;
   PARDISO(pt, &maxfct, &mnum, &mtype, &phase,
-    &m_A.nnu, &m_A.a[0], &m_A.ia[0], &m_A.ja[0],
+    &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
     &perm[0], &nrhs, iparm, &msglvl, &m_b.a[0], &m_x.a[0], &err);
   return err;
 }
