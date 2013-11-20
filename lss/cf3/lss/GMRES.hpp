@@ -66,6 +66,7 @@ class lss_API GMRES : public linearsystem< double >
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
   void A___clear()                  { m_A.clear();    }
   void A___zerorow(const size_t& i) { m_A.zerorow(i); }
+  void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
   /// matrix inspecting
   void   A___print(std::ostream& o, const print_t& l=print_auto) const { m_A.print(o,l); }

@@ -99,6 +99,7 @@ struct matrix
   matrix& operator=(const double& _value) { return IMPL::initialize(m_size.i,m_size.j,_value); }
   matrix& operator=(const matrix& _other) { return IMPL::operator=(_other); }
   matrix& zerorow(const size_t& i)        { return IMPL::zerorow(i); }
+  matrix& sumrows(const size_t& i, const size_t& isrc) { return IMPL::sumrows(i,isrc); }
 
   // -- intrinsic functionality
 
@@ -329,6 +330,14 @@ struct dense_matrix_vv :
     return *this;
   }
 
+  dense_matrix_vv& sumrows(const size_t& i, const size_t& isrc) {
+    if (std::max(i,isrc)>=size(0))
+      throw std::runtime_error("dense_matrix_vv: row index(es) outside bounds.");
+    for (size_t j=0; j<size(1); ++j)
+      operator()(i,j) += operator()(isrc,j);
+    return *this;
+  }
+
   dense_matrix_vv& swap(dense_matrix_vv& other) {
     other.a.swap(a);
     matrix_base_t::swap(other);
@@ -516,6 +525,14 @@ struct dense_matrix_v :
       for (size_t j=0, k=i; j<size(1); ++j, k+=size(0))
         a[k] = T();
     }
+    return *this;
+  }
+
+  dense_matrix_v& sumrows(const size_t& i, const size_t& isrc) {
+    if (std::max(i,isrc)>=size(0))
+      throw std::runtime_error("dense_matrix_v: row index(es) outside bounds.");
+    for (size_t j=0; j<size(1); ++j)
+      operator()(i,j) += operator()(isrc,j);
     return *this;
   }
 
@@ -748,6 +765,16 @@ struct sparse_matrix :
             const_cast< T& >(it->second) = T();
       }
     }
+    return *this;
+  }
+
+  sparse_matrix& sumrows(const size_t& i, const size_t& isrc) {
+    if (std::max(i,isrc)>=matrix_base_t::m_size.i)
+      throw std::runtime_error("sparse_matrix: row index(es) outside bounds.");
+    uncompress();
+    for (typename matrix_uncompressed_t::const_iterator it = matu.begin(); it!=matu.end(); ++it)
+      if (it->first.i-BASE==(size_t) isrc)
+        operator()(i,it->first.j-BASE) += it->second;
     return *this;
   }
 

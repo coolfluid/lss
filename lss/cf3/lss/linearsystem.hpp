@@ -267,6 +267,25 @@ class linearsystem : public common::Action
     return *this;
   }
 
+  /// Zero row in all system components
+  linearsystem& sumrows(const size_t& i, const size_t& isrc) {
+    A___sumrows(i,isrc);
+    m_b.sumrows(i,isrc);
+    m_x.sumrows(i,isrc);
+    return *this;
+  }
+
+  /// Output system components
+  linearsystem& output(
+      std::ostream& _sA, const print_t& _lA,
+      std::ostream& _sb, const print_t& _lb,
+      std::ostream& _sx, const print_t& _lx ) {
+    A___print(_sA,(m_print[0]=_lA));
+    m_b.print(_sb,(m_print[1]=_lb));
+    m_x.print(_sx,(m_print[2]=_lx));
+    return *this;
+  }
+
   /// Returns the specific dimension of the system
   size_t size(const size_t& d) const {
     return (d< 2? A___size(d) : (d==2? m_b.size(1) : 0));
@@ -303,12 +322,13 @@ class linearsystem : public common::Action
 
 
   // -- Storage
- protected:
+ public: // FIXME should be protected, but Muphys has some weird interests here
 
   /// Linear system components: b and x vectors
   vector_t m_b;
   vector_t m_x;
 
+ protected:
   /// Scripting temporary storage
   T                     m_dummy_value;
   std::vector< double > m_dummy_vector;
@@ -327,19 +347,22 @@ class linearsystem : public common::Action
 
 
   // -- Interfacing
- public:
 
   /// Linear system solving
+ public:
   virtual linearsystem& solve() = 0;
 
   /// Linear system matrix modifiers
+ protected:
   virtual void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
   virtual void A___clear()                  = 0;
   virtual void A___zerorow(const size_t& i) = 0;
+  virtual void A___sumrows(const size_t& i, const size_t& isrc) = 0;
 
   /// Linear system matrix inspecting
+ protected:
   virtual void   A___print(std::ostream& o, const print_t &l=print_auto) const = 0;
   virtual size_t A___size(const size_t& d ) const = 0;
 
