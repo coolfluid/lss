@@ -21,9 +21,11 @@ common::ComponentBuilder< GMRES, common::Component, LibLSS > Builder_GMRES;
 
 GMRES& GMRES::solve()
 {
+  matrix_t::matrix_compressed_t& A = m_A.compress();
+
   int n = static_cast< int >(size(0));
   int err;
-  int iwk = m_A.nnz;
+  int iwk = A.nnz;
   double eps = 1e-5;  // tolerance, process is stopped when eps>=||current residual||/||initial residual||
   int im     = 50;    // size of krylov subspace (should not exceed 50)
   int maxits = 50;    // maximum number of iterations allowed
@@ -55,7 +57,7 @@ GMRES& GMRES::solve()
 
   err = 0;
   int newiwk = 0;
-  newiwk = iluk(&n,&m_A.a[0],&m_A.ja[0],&m_A.ia[0],&lfil,alu,jlu,ju,levs,&iwk,w,jw,&err);
+  newiwk = iluk(&n,&A.a[0],&A.ja[0],&A.ia[0],&lfil,alu,jlu,ju,levs,&iwk,w,jw,&err);
   if (err) {
     std::ostringstream msg;
     msg << "GMRES: iluk error " << err << ": ";
@@ -76,7 +78,7 @@ GMRES& GMRES::solve()
   double *vv = new double[n*(im+1)];
 
   err = 0;
-  pgmres(&n,&im,&m_b.a[0],&m_x.a[0],vv,&eps,&maxits,&iout,&m_A.a[0],&m_A.ja[0],&m_A.ia[0],alu,jlu,ju,&err);
+  pgmres(&n,&im,&m_b.a[0],&m_x.a[0],vv,&eps,&maxits,&iout,&A.a[0],&A.ja[0],&A.ia[0],alu,jlu,ju,&err);
   if (err) {
     std::ostringstream msg;
     msg << "GMRES: pgmres error " << err << ": ";

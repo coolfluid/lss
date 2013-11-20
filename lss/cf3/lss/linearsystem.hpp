@@ -13,9 +13,8 @@
 #include "common/Signal.hpp"
 #include "common/Action.hpp"
 
-#include "detail/utilities.hpp"
-#include "detail/index.hpp"
-#include "detail/matrix.hpp"
+#include "utilities.hpp"
+#include "matrix.hpp"
 
 
 namespace cf3 {
@@ -38,7 +37,7 @@ class linearsystem : public common::Action
 {
  protected:
   // utility definitions
-  typedef detail::dense_matrix_v< T, detail::sort_by_column > vector_t;
+  typedef dense_matrix_v< T, sort_by_column > vector_t;
 
   // -- Construction and destruction
  public:
@@ -46,7 +45,7 @@ class linearsystem : public common::Action
   /// Construct the linear system
   linearsystem(const std::string& name) :
     common::Action(name),
-    m_dummy_value(std::numeric_limits< T >::quiet_NaN())
+    m_dummy_value(std::numeric_limits< T >::signaling_NaN())
   {
     // framework scripting: options level, signals and options
     mark_basic();
@@ -62,9 +61,9 @@ class linearsystem : public common::Action
         .signature ( boost::bind( &linearsystem::signat_ijkvalue, this, _1 ));
 
     regist_signal("output")
-        .description("Print a pretty system matrix, at print level per component (0:auto, 1:size, 2:signs, 3:full), where (A:1, b:1 and x:0)")
-        .connect   ( boost::bind( &linearsystem::signal_output, this, _1 ))
-        .signature ( boost::bind( &linearsystem::signat_abc,    this, _1 ));
+        .description("Print a pretty linear system, at print level per component where 0:auto (default), 1:size, 2:signs, and 3:full")
+        .connect   ( boost::bind( &linearsystem::signal_output,  this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_abcfile, this, _1 ));
 
     regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this )).description("Empty linear system components");
     regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this )).description("Solve linear system, returning solution in x");
@@ -111,20 +110,21 @@ class linearsystem : public common::Action
     opts.add< double >("value");
   }
 
-  void signat_abc(common::SignalArgs& args) {
+  void signat_abcfile(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
-    opts.add< int >("A",detail::print_size);
-    opts.add< int >("b",detail::print_size);
-    opts.add< int >("x",detail::print_auto);
+    opts.add< int >("A",(int) print_auto);
+    opts.add< int >("b",(int) print_auto);
+    opts.add< int >("x",(int) print_auto);
+    opts.add< std::string >("file","");
   }
 
   void signal_initialize(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
+    const double value(opts.value< double >("value"));
     const std::string
         Afname(opts.value< std::string >("A")),
         bfname(opts.value< std::string >("b")),
         xfname(opts.value< std::string >("x"));
-    const double value(opts.value< double >("value"));
     if (Afname.length() || bfname.length() || xfname.length()) {
       if (Afname.length()) A___initialize(Afname);
       if (bfname.length() && !component_initialize_with_file(m_b,"b",bfname) || !bfname.length()) m_b.initialize(size(0),1,      value);
@@ -150,10 +150,35 @@ class linearsystem : public common::Action
 
   void signal_output(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
-    A___print_level                  (opts.value< int >("A"));
-    m_b.m_print = detail::print_level(opts.value< int >("b"));
-    m_x.m_print = detail::print_level(opts.value< int >("x"));
-    operator<<(std::cout,*this);
+    using namespace std;
+
+    m_print[0] = static_cast< print_t >(opts.value< int >("A"));
+    m_print[1] = static_cast< print_t >(opts.value< int >("b"));
+    m_print[2] = static_cast< print_t >(opts.value< int >("x"));
+    string bname = opts.value< string >("file");
+    if (bname.length()) {
+      try {
+        struct fhelper {
+          ofstream f;
+          fhelper(const bool& _print, const string& _fname)
+            : f(_print? _fname.c_str():"") {
+            if (_print && !f)
+              throw runtime_error("cannot write to file \""+_fname+"\"");
+          }
+        } hA(m_print[0],bname+"_A.mtx"),
+          hb(m_print[1],bname+"_b.mtx"),
+          hx(m_print[2],bname+"_x.mtx");
+        if (m_print[0]) A___print(hA.f,print_file);
+        if (m_print[1]) m_b.print(hb.f,print_file);
+        if (m_print[2]) m_x.print(hx.f,print_file);
+      }
+      catch (const std::runtime_error& e) {
+        CFwarn << "linearsystem: " << e.what() << CFendl;
+      }
+    }
+    else {
+      operator<<(cout,*this);
+    }
   }
 
   void signal_clear () { clear(); }
@@ -167,7 +192,7 @@ class linearsystem : public common::Action
   void trigger_b() { try { m_dummy_vector.size()==1? m_b.initialize(size(0),size(2),m_dummy_vector[0]) : m_b.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: b: " << e.what() << CFendl; } m_dummy_vector.clear();; }
   void trigger_x() { try { m_dummy_vector.size()==1? m_x.initialize(size(1),size(2),m_dummy_vector[0]) : m_x.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: x: " << e.what() << CFendl; } m_dummy_vector.clear();; }
 
-  bool component_initialize_with_file(detail::dense_matrix_v< T >& c, const std::string& name, const std::string& fname) {
+  bool component_initialize_with_file(dense_matrix_v< T >& c, const std::string& name, const std::string& fname) {
     try { c.initialize(fname); }
     catch (const std::runtime_error& e) {
       CFwarn << "linearsystem: " << name << ": " << e.what() << CFendl;
@@ -190,7 +215,7 @@ class linearsystem : public common::Action
   }
 
   /// Initialize the linear system
-  virtual linearsystem& initialize(
+  linearsystem& initialize(
       const size_t& i=size_t(),
       const size_t& j=size_t(),
       const size_t& k=1,
@@ -203,7 +228,7 @@ class linearsystem : public common::Action
   }
 
   /// Initialize linear system from file(s)
-  virtual linearsystem& initialize(
+  linearsystem& initialize(
       const std::string& _Afname,
       const std::string& _bfname="",
       const std::string& _xfname="" ) {
@@ -215,7 +240,7 @@ class linearsystem : public common::Action
   }
 
   /// Initialize linear system from vectors of values (lists, in the right context)
-  virtual linearsystem& initialize(
+  linearsystem& initialize(
       const std::vector< double >& vA,
       const std::vector< double >& vb=std::vector< double >(),
       const std::vector< double >& vx=std::vector< double >()) {
@@ -227,7 +252,7 @@ class linearsystem : public common::Action
   }
 
   /// Clear contents in all system components
-  virtual linearsystem& clear() {
+  linearsystem& clear() {
     A___clear();
     m_b.clear();
     m_x.clear();
@@ -235,10 +260,29 @@ class linearsystem : public common::Action
   }
 
   /// Zero row in all system components
-  virtual linearsystem& zerorow(const size_t& i) {
+  linearsystem& zerorow(const size_t& i) {
     A___zerorow(i);
     m_b.zerorow(i);
     m_x.zerorow(i);
+    return *this;
+  }
+
+  /// Zero row in all system components
+  linearsystem& sumrows(const size_t& i, const size_t& isrc) {
+    A___sumrows(i,isrc);
+    m_b.sumrows(i,isrc);
+    m_x.sumrows(i,isrc);
+    return *this;
+  }
+
+  /// Output system components
+  linearsystem& output(
+      std::ostream& _sA, const print_t& _lA,
+      std::ostream& _sb, const print_t& _lb,
+      std::ostream& _sx, const print_t& _lx ) {
+    A___print(_sA,(m_print[0]=_lA));
+    m_b.print(_sb,(m_print[1]=_lb));
+    m_x.print(_sx,(m_print[2]=_lx));
     return *this;
   }
 
@@ -278,15 +322,17 @@ class linearsystem : public common::Action
 
 
   // -- Storage
- protected:
+ public: // FIXME should be protected, but Muphys has some weird interests here
 
   /// Linear system components: b and x vectors
   vector_t m_b;
   vector_t m_x;
 
+ protected:
   /// Scripting temporary storage
   T                     m_dummy_value;
   std::vector< double > m_dummy_vector;
+  print_t m_print[3];  // matrix and vectors print levels
 
 
   // -- Indexing (absolute)
@@ -301,23 +347,24 @@ class linearsystem : public common::Action
 
 
   // -- Interfacing
- public:
 
   /// Linear system solving
+ public:
   virtual linearsystem& solve() = 0;
 
   /// Linear system matrix modifiers
+ protected:
   virtual void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
-  virtual void A___clear()                    = 0;
-  virtual void A___zerorow(const size_t& i)   = 0;
-  virtual void A___print_level(const int& _l) = 0;
+  virtual void A___clear()                  = 0;
+  virtual void A___zerorow(const size_t& i) = 0;
+  virtual void A___sumrows(const size_t& i, const size_t& isrc) = 0;
 
   /// Linear system matrix inspecting
-  virtual void          A___print(std::string& _fname) const = 0;
-  virtual std::ostream& A___print(std::ostream& o)     const = 0;
-  virtual size_t        A___size(const size_t& d )     const = 0;
+ protected:
+  virtual void   A___print(std::ostream& o, const print_t &l=print_auto) const = 0;
+  virtual size_t A___size(const size_t& d ) const = 0;
 
 
 #if 0
@@ -343,9 +390,9 @@ class linearsystem : public common::Action
 template< typename T >
 std::ostream& operator<< (std::ostream& o, const linearsystem< T >& lss)
 {
-  o << "linearsystem: A: "; lss.A___print(o); o << std::endl;
-  o << "linearsystem: b: "; lss.m_b.print(o); o << std::endl;
-  o << "linearsystem: x: "; lss.m_x.print(o); o << std::endl;
+  o << "linearsystem: A: "; lss.A___print(o,lss.m_print[0]); o << std::endl;
+  o << "linearsystem: b: "; lss.m_b.print(o,lss.m_print[1]); o << std::endl;
+  o << "linearsystem: x: "; lss.m_x.print(o,lss.m_print[2]); o << std::endl;
   return o;
 }
 

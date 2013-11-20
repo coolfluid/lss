@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_GaussianElimination_h
-#define cf3_lss_GaussianElimination_h
+#ifndef cf3_lss_GaussianElimination_hpp
+#define cf3_lss_GaussianElimination_hpp
 
 
 #include <cmath>
@@ -28,7 +28,7 @@ template< typename T >
 class lss_API GaussianElimination : public linearsystem< T >
 {
   // utility definitions
-  typedef detail::dense_matrix_v< T, detail::sort_by_row > matrix_t;
+  typedef dense_matrix_v< T, sort_by_row > matrix_t;
 
   // framework interfacing
  public:
@@ -117,14 +117,13 @@ class lss_API GaussianElimination : public linearsystem< T >
   void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
-  void A___clear()                    { m_A.clear();    }
-  void A___zerorow(const size_t& i)   { m_A.zerorow(i); }
-  void A___print_level(const int& _l) { m_A.m_print = detail::print_level(_l); }
+  void A___clear()                  { m_A.clear();    }
+  void A___zerorow(const size_t& i) { m_A.zerorow(i); }
+  void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
   /// matrix inspecting
-  void          A___print(std::string& _fname) const { m_A.print(_fname);   }
-  std::ostream& A___print(std::ostream& o)     const { return m_A.print(o); }
-  size_t        A___size(const size_t& d)      const { return m_A.size(d);  }
+  void   A___print(std::ostream& o, const print_t& l=print_auto) const { m_A.print(o,l); }
+  size_t A___size(const size_t& d)  const { return m_A.size(d);  }
 
 
  protected:

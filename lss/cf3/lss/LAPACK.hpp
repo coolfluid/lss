@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_LAPACK_h
-#define cf3_lss_LAPACK_h
+#ifndef cf3_lss_LAPACK_hpp
+#define cf3_lss_LAPACK_hpp
 
 
 #include "LibLSS.hpp"
@@ -33,7 +33,7 @@ template< typename T >
 class lss_API LAPACK : public linearsystem< T >
 {
   // utility definitions
-  typedef detail::dense_matrix_v< T > matrix_t;
+  typedef dense_matrix_v< T > matrix_t;
 
  public:
   // framework interfacing
@@ -56,8 +56,8 @@ class lss_API LAPACK : public linearsystem< T >
     std::vector< int > ipiv(n);
 
     if (!m_A.m_size.is_square_size()) { err = -17; }
-    else if (detail::type_is_equal< T, double >()) { this->m_x=this->m_b; dgesv_( &n, &nrhs, (double*) &m_A.a[0], &n, &ipiv[0], (double*) &this->m_x.a[0], &n, &err ); }
-    else if (detail::type_is_equal< T, float  >()) { this->m_x=this->m_b; sgesv_( &n, &nrhs, (float*)  &m_A.a[0], &n, &ipiv[0], (float*)  &this->m_x.a[0], &n, &err ); }
+    else if (type_is_equal< T, double >()) { this->m_x=this->m_b; dgesv_( &n, &nrhs, (double*) &m_A.a[0], &n, &ipiv[0], (double*) &this->m_x.a[0], &n, &err ); }
+    else if (type_is_equal< T, float  >()) { this->m_x=this->m_b; sgesv_( &n, &nrhs, (float*)  &m_A.a[0], &n, &ipiv[0], (float*)  &this->m_x.a[0], &n, &err ); }
     else { err = -42; }
 
     std::ostringstream msg;
@@ -83,14 +83,13 @@ class lss_API LAPACK : public linearsystem< T >
   void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
-  void A___clear()                    { m_A.clear();    }
-  void A___zerorow(const size_t& i)   { m_A.zerorow(i); }
-  void A___print_level(const int& _l) { m_A.m_print = detail::print_level(_l); }
+  void A___clear()                  { m_A.clear();    }
+  void A___zerorow(const size_t& i) { m_A.zerorow(i); }
+  void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
   /// matrix inspecting
-  void          A___print(std::string& _fname) const { m_A.print(_fname);   }
-  std::ostream& A___print(std::ostream& o)     const { return m_A.print(o); }
-  size_t        A___size(const size_t& d)      const { return m_A.size(d);  }
+  void   A___print(std::ostream& o, const print_t& l=print_auto) const { m_A.print(o,l); }
+  size_t A___size(const size_t& d)  const { return m_A.size(d);  }
 
 
  protected:

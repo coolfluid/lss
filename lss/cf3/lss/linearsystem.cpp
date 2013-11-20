@@ -5,22 +5,20 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#include "matrix.hpp"
+#include "common/Builder.hpp"
+
+#include "LibLSS.hpp"
+#include "linearsystem.hpp"
 
 
 namespace cf3 {
 namespace lss {
-namespace detail {
 
 
-/* -- matrix interface and implementations ---------------------------------- */
+common::RegisterComponent< linearsystem< double >, LibLSS > Register_linearsystem;
+common::RegisterComponent< linearsystem< float  >, LibLSS > Register_linearsystem_SinglePrecision;
 
 
-// utilities
-print_t print_level(const int& i) {
-  return i>=print_auto || i<=print_full? static_cast< print_t >(i) : print_auto;
-}
-
-}  // namespace detail
 }  // namespace lss
 }  // namespace cf3
+

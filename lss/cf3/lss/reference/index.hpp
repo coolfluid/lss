@@ -5,42 +5,15 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_detail_index_hpp
-#define cf3_lss_detail_index_hpp
+#ifndef cf3_lss_index_hpp
+#define cf3_lss_index_hpp
 
 
-#include <vector>
 #include <limits>
 
 
 namespace cf3 {
 namespace lss {
-namespace detail {
-
-
-/* -- fundamental index pair (tuple?) type ---------------------------------- */
-
-
-/// @brief Basic index pair (tuple?) input/return type as (i[,j])
-struct idx_t
-{
-//  size_t ij[2];  // TODO: check this option too?
-  size_t i, j;
-  idx_t(const size_t& _i=0, const size_t& _j=0) : i(_i), j(_j) {}
-  idx_t& invalidate() { i=std::numeric_limits< size_t >::max(); j=i; return *this; }
-  idx_t& clear     () { i=0;                                    j=i; return *this; }
-
-  bool operator<  (const idx_t& _other) const { return (i<_other.i? true : i>_other.i? false : (j<_other.j)); }
-  bool operator>  (const idx_t& _other) const { return (_other<*this); }
-  bool operator<= (const idx_t& _other) const { return (operator<(_other) || operator==(_other)); }
-  bool operator>= (const idx_t& _other) const { return (operator>(_other) || operator==(_other)); }
-  bool operator== (const idx_t& _other) const { return i==_other.i && j==_other.j; }
-  bool operator!= (const idx_t& _other) const { return i!=_other.i || j!=_other.j; }
-
-  bool is_valid_size()  const { return operator>=(idx_t(0,0)) && operator<(idx_t().invalidate()); }
-  bool is_square_size() const { return i==j; }
-  bool is_diagonal()    const { return is_square_size(); }
-};
 
 
 /* -- indexing techniques --------------------------------------------------- */
@@ -50,16 +23,12 @@ struct idx_t
 struct index_t
 {
   virtual ~index_t() {}
-  virtual void clear() = 0;
-  virtual size_t size()                   const = 0;
   virtual size_t size(const size_t& d)    const = 0;
   virtual idx_t& dereference(idx_t& _idx) const = 0;
+
+  const idx_t& size() const { return m_size; }
+  idx_t m_size;
 };
-
-
-#if 0
-typename INDEX=detail::index_hierarchy_t< detail::index_hierarchy_t_end > >
-#endif
 
 
 /// @brief Matrix indexer assuming a irregular size block
@@ -143,10 +112,27 @@ struct index_regular_block_t : index_t
 };
 
 
-}  // namespace detail
+/// @brief Hierarchical indexing: type list termination type
+struct index_hierarchy_t_end
+{
+  idx_t& dereference(idx_t& _idx) const { return _idx; }
+  void initialize() {}
+};
+
+
+/// @brief Hierarchical indexing: nested hierarchy definition
+template<
+    typename Idx,
+    typename IdxNested=index_hierarchy_t_end >
+struct index_hierarchy_t
+{
+  idx_t& dereference(idx_t& _idx) const { return IdxNested::dereference(Idx::dereference(_idx)); }
+  void initialize() { Idx::initialize(); IdxNested::initialize(); }
+};
+
+
 }  // namespace lss
 }  // namespace cf3
 
 
 #endif
-
