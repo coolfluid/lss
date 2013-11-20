@@ -32,6 +32,7 @@ struct matrix_wrapper  :
 
   matrix_wrapper& clear()                  { return *this; }
   matrix_wrapper& zerorow(const size_t& i) { return *this; }
+  matrix_wrapper& sumrows(const size_t& i, const size_t& isrc) { return *this; }
 
   matrix_wrapper& operator=(const matrix_wrapper& _other) { return *this; }
   matrix_wrapper& operator=(const double& _value)         { return *this; }
@@ -43,6 +44,7 @@ struct matrix_wrapper  :
 };
 
 
+#if 0
 /// @brief PETSc vector wrapper (consistent with cf3::lss::matrix<...>)
 struct vector_wrapper  :
   matrix< double, vector_wrapper >
@@ -55,6 +57,7 @@ struct vector_wrapper  :
 
   vector_wrapper& clear()                  { return *this; }
   vector_wrapper& zerorow(const size_t& i) { return *this; }
+  vector_wrapper& sumrows(const size_t& i, const size_t& isrc) { return *this; }
 
   vector_wrapper& operator=(const vector_wrapper& _other) { return *this; }
   vector_wrapper& operator=(const double& _value)         { return *this; }
@@ -64,6 +67,7 @@ struct vector_wrapper  :
 
   double v;
 };
+#endif
 
 
 }  // namespace petsc
@@ -106,6 +110,7 @@ class lss_API PETSc_Seq : public linearsystem< double >
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
   void A___clear()                  { m_A.clear();    }
   void A___zerorow(const size_t& i) { m_A.zerorow(i); }
+  void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
   void   A___print(std::ostream& o, const print_t& l=print_auto) const { m_A.print(o,l); }
   size_t A___size(const size_t& d)  const { return m_A.size(d);  }
