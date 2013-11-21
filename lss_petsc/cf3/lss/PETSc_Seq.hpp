@@ -95,8 +95,11 @@ class lss_API PETSc_Seq : public linearsystem< double >
     const size_t& _size_k=1,
     const double& _value=double() );
 
-  /// Solve
+  /// Linear system solving
   PETSc_Seq& solve();
+
+  /// Linear system copy
+  PETSc_Seq& copy(const PETSc_Seq& _other);
 
 
  protected:

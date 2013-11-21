@@ -71,6 +71,31 @@ struct base_conversion_t
 };
 
 
+/// @brief Environment variable access, with value conversion
+/// @note This guarantees multiple calls to getenv, since returning pointer has
+/// undefined behavihour in subsequent calls to get/setenv.
+template< typename T=std::string >
+struct environment_variable_t {
+  environment_variable_t(const char* _variable, const T& _default=T()) :
+    v(std::getenv(_variable)), set(v), value(_default) {
+    if (set) {
+      std::stringstream s(v);
+      s >> value;
+    }
+  }
+  const std::string description() const {
+    std::stringstream s;
+    s << (set? "(set) ":"(not set) ") << value;
+    return s.str();
+  }
+ private:
+  const char* v;
+ public:
+  const bool set;
+  T value;
+};
+
+
 /* -- Matrix Market I/O (or, say, just I) ----------------------------------- */
 
 namespace MatrixMarket

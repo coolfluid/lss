@@ -41,9 +41,11 @@ class lss_API iss : public
     const size_t& _size_k=1,
     const double& _value=double() );
 
-  /// Solve
+  /// Linear system solving
   iss& solve();
 
+  /// Linear system copy
+  iss& copy(const iss& _other);
 
  protected:
   // linear system matrix interfacing

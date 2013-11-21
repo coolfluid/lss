@@ -21,8 +21,8 @@ namespace lss {
 
 
 /**
- * example linear system solver, using Gaussian elimination
- * (precision is configurable)
+ * @brief Example linear system solver, using Gaussian elimination (configurable precision)
+ * @author Pedro Maciel
  */
 template< typename T >
 class lss_API GaussianElimination : public linearsystem< T >
@@ -43,7 +43,7 @@ class lss_API GaussianElimination : public linearsystem< T >
     linearsystem< T >::initialize(_size_i,_size_j,_size_k,_value);
   }
 
-  /// Solve
+  /// Linear system solving
   GaussianElimination& solve() {
     const size_t
       N(linearsystem< T >::size(0)),
@@ -103,6 +103,12 @@ class lss_API GaussianElimination : public linearsystem< T >
     }
 
     return *this;
+  }
+
+  /// Linear system copy
+  GaussianElimination& copy(const GaussianElimination& _other) {
+    linearsystem< T >::copy(_other);
+    m_A = _other.m_A;
   }
 
 

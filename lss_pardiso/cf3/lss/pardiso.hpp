@@ -42,15 +42,24 @@ class lss_API pardiso : public linearsystem< double >
   /// Destruction
   ~pardiso();
 
-  /// Solve
+  /// Linear system solving
   pardiso& solve();
 
+  /// Linear system copy
+  pardiso& copy(const pardiso& _other);
 
- private:
+
   // internal functions
+ private:
+
+  /// Verbose error message
+  static std::string err_message(const int& err);
+
+  /// Library call
+  int call_pardiso(const int& _phase);
+
+  /// Library call (print statistics)
   int call_pardiso_printstats();
-  int call_pardiso_init();
-  int call_pardiso(int _phase);
 
 
  protected:
@@ -76,13 +85,11 @@ class lss_API pardiso : public linearsystem< double >
   void*  pt[64];  // internal memory pointer (void* for both 32/64-bit)
   double dparm[64];
   int    iparm[64],
-         err,
+         nrhs,
          maxfct,
          mnum,
          msglvl,
-         mtype,
-         nrhs,
-         phase;
+         mtype;
 
 };
 

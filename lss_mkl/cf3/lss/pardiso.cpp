@@ -5,8 +5,6 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#include <cstdio>  // for sscanf
-
 #include "mkl_pardiso.h"
 #include "mkl_service.h"
 
@@ -26,33 +24,33 @@ common::ComponentBuilder< pardiso, common::Component, LibLSS_MKL > Builder_MKL_p
 pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
   : linearsystem< double >(name)
 {
-  const char
-    *nthreads = getenv("OMP_NUM_THREADS"),
-    *ooc_path = getenv("MKL_PARDISO_OOC_PATH"),
-    *ooc_maxc = getenv("MKL_PARDISO_OOC_MAX_CORE_SIZE"),
-    *ooc_swap = getenv("MKL_PARDISO_OOC_MAX_SWAP_SIZE"),
-    *ooc_keep = getenv("MKL_PARDISO_OOC_KEEP_FILE");
+  environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
+  environment_variable_t< std::string >
+    ooc_path("MKL_PARDISO_OOC_PATH"),
+    ooc_maxc("MKL_PARDISO_OOC_MAX_CORE_SIZE"),
+    ooc_swap("MKL_PARDISO_OOC_MAX_SWAP_SIZE"),
+    ooc_keep("MKL_PARDISO_OOC_KEEP_FILE");
 
-  int nthd = 1;
-  sscanf(nthreads? nthreads:"1","%d",&nthd);
-  mkl_set_num_threads(nthd);
+  CFinfo  << "mkl pardiso: OMP_NUM_THREADS:               " << nthreads.description() << CFendl;
+  CFdebug << "mkl pardiso: MKL_PARDISO_OOC_PATH:          " << ooc_path.description() << CFendl
+          << "mkl pardiso: MKL_PARDISO_OOC_MAX_CORE_SIZE: " << ooc_maxc.description() << CFendl
+          << "mkl pardiso: MKL_PARDISO_OOC_MAX_SWAP_SIZE: " << ooc_swap.description() << CFendl
+          << "mkl pardiso: MKL_PARDISO_OOC_KEEP_FILE:     " << ooc_keep.description() << CFendl;
 
-  CFinfo  << "mkl pardiso: OMP_NUM_THREADS: " << nthd << (nthreads? " (set)":" (not set)") << CFendl;
-  CFdebug << "mkl pardiso: MKL_PARDISO_OOC_PATH:          " << (ooc_path? ooc_path : "(not set)") << CFendl
-          << "mkl pardiso: MKL_PARDISO_OOC_MAX_CORE_SIZE: " << (ooc_maxc? ooc_maxc : "(not set)") << CFendl
-          << "mkl pardiso: MKL_PARDISO_OOC_MAX_SWAP_SIZE: " << (ooc_swap? ooc_swap : "(not set)") << CFendl
-          << "mkl pardiso: MKL_PARDISO_OOC_KEEP_FILE:     " << (ooc_keep? ooc_keep : "(not set)") << CFendl;
+  mkl_set_num_threads(nthreads.value);
 
   // reset pt and iparm defaults
-  for (int i=0; i<64; ++i) iparm[i] = 0;
-  PARDISOINIT(pt,&mtype,iparm);
+  mtype     = 1;  // real structurally symmetric matrix
+  for (size_t i=0; i<64; ++i) iparm[i] = 0;
+
+  int err;
+  if (err=call_pardiso(42,0))
+    throw std::runtime_error(err_message(err));
 
   iparm[ 7] = 0;  // max numbers of iterative refinement steps
-//iparm[31] = 0;  // [0|1] sparse direct solver or multi-recursive iterative solver
+  iparm[31] = 0;  // [0|1] sparse direct solver or multi-recursive iterative solver
   maxfct    = 1;  // maximum number of numerical factorizations
   mnum      = 1;  // which factorization to use
-  msglvl    = 1;  // message level: output statistical information
-  mtype     = 1;  // real structurally symmetric matrix
 
   linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
@@ -60,53 +58,74 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
 
 pardiso::~pardiso()
 {
-  call_pardiso(-1);  // -1: termination and release of memory
+  call_pardiso(-1,0);  // -1: termination and release of memory
 }
 
 
 pardiso& pardiso::solve()
 {
-  nrhs = static_cast< int >(m_b.size(1));
-  perm.assign(m_A.size(0),0);
-
-  if
-#if 0
-     (call_pardiso(11) ||  // 11: reordering and symbolic factorization
-      call_pardiso(22) ||  // 22: numerical factorization and
-      call_pardiso(33))    // 33: back substitution and iterative refinement
-#else
-     (call_pardiso(13))
-#endif
-  {
-    std::ostringstream msg;
-    msg << "mkl pardiso: phase " << phase << " error " << err << ": ";
-    err==  -1? msg << "input inconsistent." :
-    err==  -2? msg << "not enough memory."  :
-    err==  -3? msg << "reordering problem." :
-    err==  -4? msg << "zero pivot, numerical factorization or iterative refinement problem." :
-    err==  -5? msg << "unclassified (internal) error."     :
-    err==  -6? msg << "preordering failed (matrix types 11, 13 only)." :
-    err==  -7? msg << "diagonal matrix is singular."           :
-    err==  -8? msg << "32-bit integer overflow problem."   :
-    err==  -9? msg << "not enough memory for OOC." :
-    err== -10? msg << "error opening OOC files." :
-    err== -11? msg << "read/write error with OOC files." :
-    err== -12? msg << "(pardiso_64 only) pardiso_64 called from 32-bit library." :
-               msg << "unknown error.";
-    throw std::runtime_error(msg.str());
-  }
+  int err;
+  if ( (err=call_pardiso(11,0)) ||  // 11: reordering and symbolic factorization
+       (err=call_pardiso(22,0)) ||  // 22: numerical factorization and
+       (err=call_pardiso(33,0)) )   // 33: back substitution and iterative refinement
+    throw std::runtime_error(err_message(err));
   return *this;
 }
 
 
-int pardiso::call_pardiso(int _phase)
+pardiso& pardiso::copy(const pardiso& _other)
+{
+  linearsystem< double >::copy(_other);
+  m_A = _other.m_A;
+  for (size_t i=0; i<64; ++i) pt   [i] = _other.pt   [i];
+  for (size_t i=0; i<64; ++i) iparm[i] = _other.iparm[i];
+  maxfct = _other.maxfct;
+  mnum   = _other.mnum;
+  mtype  = _other.mtype;
+  return *this;
+}
+
+
+const std::string pardiso::err_message(const int& err)
+{
+  std::ostringstream s;
+  s << "mkl pardiso error: " << err << ": ";
+  err==   0? s << "(success)"          :
+  err==  -1? s << "input inconsistent" :
+  err==  -2? s << "not enough memory"  :
+  err==  -3? s << "reordering problem" :
+  err==  -4? s << "zero pivot, numerical factorization or iterative refinement problem" :
+  err==  -5? s << "unclassified (internal) error"   :
+  err==  -6? s << "reordering failed (matrix types 11 and 13 only)" :
+  err==  -7? s << "diagonal matrix is singular"     :
+  err==  -8? s << "32-bit integer overflow problem" :
+  err==  -9? s << "not enough memory for OOC"       :
+  err== -10? s << "error opening OOC files"         :
+  err== -11? s << "read/write error with OOC files" :
+  err== -12? s << "(pardiso_64 only) pardiso_64 called from 32-bit library" :
+  err==-101? s << "(internal: unimplemented)" :
+  err==-102? s << "(internal: null handle)"   :
+  err==-103? s << "(internal: memory error)"  :
+             s << "(unknown error)";
+  return s.str();
+}
+
+
+int pardiso::call_pardiso(int _phase, int _msglvl)
 {
   matrix_t::matrix_compressed_t& A = m_A.compress();
-  err = 0;
-  phase = _phase;
-  PARDISO(pt, &maxfct, &mnum, &mtype, &phase,
-    &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
-    &perm[0], &nrhs, iparm, &msglvl, &m_b.a[0], &m_x.a[0], &err);
+  int nrhs = static_cast< int >(m_b.size(1));
+
+  int err = 0;
+  if (_phase==42) {
+    PARDISOINIT(pt,&mtype,iparm);
+  }
+  else {
+    PARDISO(
+      pt, &maxfct, &mnum, &mtype, &_phase,
+      &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
+      NULL, &nrhs, iparm, &_msglvl, &m_b.a[0], &m_x.a[0], &err );
+  }
   return err;
 }
 
