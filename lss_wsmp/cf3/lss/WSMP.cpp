@@ -30,30 +30,27 @@ common::ComponentBuilder< WSMP, common::Component, LibLSS_WSMP > Builder_WSMP;
 WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
   : linearsystem< double >(name)
 {
-  const char
-     *nthreads   = getenv("WSMP_NUM_THREADS"),
-     *licpath    = getenv("WSMPLICPATH"),
-     *wincoremem = getenv("WINCOREMEM"),
-     *woocdir0   = getenv("WOOCDIR0"),
-     *malloc_trh = getenv("MALLOC_TRIM_THRESHOLD_"),
-     *malloc_max = getenv("MALLOC_MMAP_MAX_");
+  environment_variable_t< int > nthreads("WSMP_NUM_THREADS",1);
+  environment_variable_t< std::string >
+    licpath    ("WSMPLICPATH"),
+    wincoremem ("WINCOREMEM"),
+    woocdir0   ("WOOCDIR0"),
+    malloc_trh ("MALLOC_TRIM_THRESHOLD_"),
+    malloc_max ("MALLOC_MMAP_MAX_");
 
-  int nthd = 1;
-  sscanf(nthreads? nthreads:"1","%d",&nthd);
-  wsetmaxthrds_(&nthd);
-
-  CFinfo  << "WSMP: WSMP_NUM_THREADS: " << nthd << (nthreads? " (set)":" (not set)") << CFendl
-          << "WSMP: WSMPLICPATH:      "       << (licpath?    licpath    : "(not set)") << CFendl;
-  CFdebug << "WSMP: WINCOREMEM:             " << (wincoremem? wincoremem : "(not set)") << CFendl
-          << "WSMP: WOOCDIR0:               " << (woocdir0?   woocdir0   : "(not set)") << CFendl
-          << "WSMP: MALLOC_TRIM_THRESHOLD_: " << (malloc_trh? malloc_trh : "(not set)") << CFendl
-          << "WSMP: MALLOC_MMAP_MAX_:       " << (malloc_max? malloc_max : "(not set)") << CFendl;
+  CFinfo  << "WSMP: WSMP_NUM_THREADS:       " << nthreads  .description() << CFendl
+          << "WSMP: WSMPLICPATH:            " << licpath   .description() << CFendl;
+  CFdebug << "WSMP: WINCOREMEM:             " << wincoremem.description() << CFendl
+          << "WSMP: WOOCDIR0:               " << woocdir0  .description() << CFendl
+          << "WSMP: MALLOC_TRIM_THRESHOLD_: " << malloc_trh.description() << CFendl
+          << "WSMP: MALLOC_MMAP_MAX_:       " << malloc_max.description() << CFendl;
 
   // iparm/dparm defaults
-  for (int i=0; i<64; ++i)  iparm[i] = 0;
-  for (int i=0; i<64; ++i)  dparm[i] = 0.;
+  std::fill_n(&iparm[0],64,0);
+  std::fill_n(&dparm[0],64,0.);
   call_wsmp(0);
 
+  wsetmaxthrds_(&nthreads.value);
   iparm[ 4] = 0;  // + C-style numbering
   iparm[19] = 2;  // + ordering option 5
 
@@ -97,6 +94,18 @@ WSMP& WSMP::solve()
    * dparm[25]: task ? summary residual
    */
 
+  return *this;
+}
+
+
+WSMP& WSMP::copy(const WSMP& _other)
+{
+  linearsystem< double >::copy(_other);
+  m_A = _other.m_A;
+  for (size_t i=0; i<64; ++i) {
+    dparm[i] = _other.dparm[i];
+    iparm[i] = _other.iparm[i];
+  }
   return *this;
 }
 

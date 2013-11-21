@@ -36,6 +36,13 @@ PETSc_Seq& PETSc_Seq::solve()
   return *this;
 }
 
+PETSc_Seq&PETSc_Seq::copy(const PETSc_Seq& _other)
+{
+  linearsystem< double >::copy(_other);
+  m_A = _other.m_A;
+  return *this;
+}
+
 
 }  // namespace lss
 }  // namespace cf3

@@ -48,7 +48,7 @@ class lss_API LAPACK : public linearsystem< T >
     linearsystem< T >::initialize(_size_i,_size_j,_size_k,_value);
   }
 
-  /// Solve
+  /// Linear system solving
   LAPACK& solve() {
     int n    = static_cast< int >(this->size(0));
     int nrhs = static_cast< int >(this->size(2));
@@ -69,6 +69,12 @@ class lss_API LAPACK : public linearsystem< T >
     if (err)
       throw std::runtime_error(msg.str());
     return *this;
+  }
+
+  /// Linear system copy
+  LAPACK& copy(const LAPACK& _other) {
+    linearsystem< T >::copy(_other);
+    m_A = _other.m_A;
   }
 
 

@@ -267,13 +267,22 @@ class linearsystem : public common::Action
     return *this;
   }
 
-  /// Zero row in all system components
+  /// Sum entries into row, from another given row
   linearsystem& sumrows(const size_t& i, const size_t& isrc) {
     A___sumrows(i,isrc);
     m_b.sumrows(i,isrc);
     m_x.sumrows(i,isrc);
     return *this;
   }
+
+  /// Value assignment (method)
+  linearsystem& assign(const T& _value=T()) {
+    return initialize(size(0),size(1),size(2),_value);
+  }
+
+  /// Operators assign value and copy
+  linearsystem& operator=(const T& _value)            { return assign(_value); }
+  linearsystem& operator=(const linearsystem& _other) { return copy(_other);   }
 
   /// Output system components
   linearsystem& output(
@@ -346,14 +355,25 @@ class linearsystem : public common::Action
                 T& x(const size_t& i, const size_t& j=0)       { return m_x(i,j); }
 
 
-  // -- Interfacing
+  // -- Interfacing (public)
+ public:
 
   /// Linear system solving
- public:
   virtual linearsystem& solve() = 0;
 
-  /// Linear system matrix modifiers
+  /// Linear system copy
+  virtual linearsystem& copy(const linearsystem& _other) {
+    m_b = _other.m_b;
+    m_x = _other.m_x;
+    m_dummy_value = _other.m_dummy_value;
+    m_dummy_vector = _other.m_dummy_vector;
+    for (size_t i=0; i<3; ++i) m_print[i] = _other.m_print[i];
+  }
+
+  // -- Interfacing (protected)
  protected:
+
+  /// Linear system matrix modifiers
   virtual void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
@@ -362,26 +382,8 @@ class linearsystem : public common::Action
   virtual void A___sumrows(const size_t& i, const size_t& isrc) = 0;
 
   /// Linear system matrix inspecting
- protected:
   virtual void   A___print(std::ostream& o, const print_t &l=print_auto) const = 0;
   virtual size_t A___size(const size_t& d ) const = 0;
-
-
-#if 0
-  /// Linear system copy
-  linearsystem& operator=(const linearsystem& _other) {
-    A() = _other.A();
-    m_b = _other.m_b;
-    m_x = _other.m_x;
-    return *this;
-  }
-
-  /// Value assignment (operator)
-  linearsystem& operator=(const T& _value) { return initialize(size(0),size(1),size(2),_value); }
-
-  /// Value assignment (method)
-  linearsystem& assign(const T& _value=T()) { return operator=(_value); }
-#endif
 
 };
 

@@ -39,8 +39,11 @@ class lss_API WSMP : public linearsystem< double >
     const size_t& _size_k=1,
     const double& _value=double() );
 
-  /// Solve
+  /// Linear system solving
   WSMP& solve();
+
+  /// Linear system copy
+  WSMP& copy(const WSMP& _other);
 
 
  private:

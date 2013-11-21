@@ -28,8 +28,8 @@ class lss_API pardiso : public linearsystem< double >
   typedef sparse_matrix< double, sort_by_row, 1 > matrix_t;
 
 
- public:
   // framework interfacing
+ public:
   static std::string type_name() { return "pardiso"; }
 
 
@@ -43,13 +43,21 @@ class lss_API pardiso : public linearsystem< double >
   /// Destruction
   ~pardiso();
 
-  /// Solve
+  /// Linear system solving
   pardiso& solve();
 
+  /// Linear system copy
+  pardiso& copy(const pardiso& _other);
 
- private:
+
   // internal functions
-  int call_pardiso(int _phase);
+ private:
+
+  /// Verbose error message
+  static const std::string err_message(const int& err);
+
+  /// Library call
+  int call_pardiso(int _phase, int _msglvl);
 
 
  protected:
@@ -72,16 +80,11 @@ class lss_API pardiso : public linearsystem< double >
  protected:
   // storage
   matrix_t m_A;
-  void*  pt[64];  // internal memory pointer (void* for both 32/64-bit)
-  int    iparm[64],
-         err,
-         maxfct,
-         mnum,
-         msglvl,
-         mtype,
-         nrhs,
-         phase;
-  std::vector< int > perm;
+  void* pt[64];  // internal memory pointer (void* for both 32/64-bit)
+  int   iparm[64],
+        maxfct,
+        mnum,
+        mtype;
 
 };
 

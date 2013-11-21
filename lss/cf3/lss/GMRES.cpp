@@ -97,6 +97,14 @@ GMRES& GMRES::solve()
 }
 
 
+GMRES& GMRES::copy(const GMRES& _other) {
+  linearsystem< double >::copy(_other);
+  m_A  = _other.m_A;
+  c__1 = _other.c__1;
+  return *this;
+}
+
+
 /*=========================================================================*
  *     SPARSKIT ROUTINE ILUK -- ILU WITH LEVEL OF FILL-IN OF K (ILU(k))    *
  *=========================================================================*

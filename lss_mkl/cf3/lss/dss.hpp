@@ -41,8 +41,21 @@ class lss_API dss : public
     const size_t& _size_k=1,
     const double& _value=double() );
 
-  /// Solve
+  /// Destruction
+  ~dss();
+
+  /// Linear system solving
   dss& solve();
+
+  /// Linear system copy
+  dss& copy(const dss& _other);
+
+
+  // internal functions
+ private:
+
+  /// Verbose error message
+  static std::string err_message(const int& err);
 
 
  protected:
@@ -66,8 +79,7 @@ class lss_API dss : public
   // storage
   matrix_t m_A;
   void *handle;
-  int nrhs,
-      opt,
+  int opt,
       sym,
       type;
 

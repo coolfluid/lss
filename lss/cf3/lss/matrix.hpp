@@ -610,7 +610,7 @@ struct sparse_matrix :
     matc.clear();
     for (size_t i=0, k=0; i<size.i; ++i)
       for (size_t j=0; j<size.j; ++j, ++k)
-        matu.insert(coord_t<T>(idx_t(i+BASE,j+BASE),static_cast< T >(_vector[k])));
+        matu.insert(coord_t<T>(idx_t(i,j),static_cast< T >(_vector[k])));
     compress();  // since matrix is fully populated, this won't hurt.
     return *this;
   }
@@ -634,24 +634,24 @@ struct sparse_matrix :
         if (!t.is_real() || !t.is_general())  throw runtime_error("sparse_matrix: MatrixMarket only \"(coordinate|array) real general\" supported.");
         if (!MatrixMarket::read_size(f,size.i,size.j,matc.nnz))
           throw runtime_error("sparse_matrix: MatrixMarket invalid matrix/array size.");
-      
+
         // read into set, line by line
-        coord_t<T> p(idx_t(BASE,BASE),T());
-        string line;        
+        coord_t<T> p(idx_t(0,0),T());
+        string line;
         while (getline(f,line)) {
           if (line.find_first_of("%")==0) {}
           else if (t.is_dense()) {
             istringstream(line) >> p.second;
             matu.insert(p);
-            if (++p.first.i-BASE >= size.i) {
-              p.first.i = BASE;
+            if (++p.first.i >= size.i) {
+              p.first.i = 0;
               p.first.j++;
             }
           }
           else {
             istringstream(line) >> p.first.i >> p.first.j >> p.second;
-            p.first.i += (BASE-1);
-            p.first.j += (BASE-1);
+            p.first.i -= 1;
+            p.first.j -= 1;
             matu.insert(p);
           }
         }
@@ -693,7 +693,7 @@ struct sparse_matrix :
         for (int i; ja.size()<nnz && f>>i;)  ja.push_back(i);
         for (T   i; a .size()<nnz && f>>i;)  a .push_back(i);
 
-        // convrt to intended base, and uncompress
+        // convert to intended base, and uncompress
         for_each(ja.begin(),ja.end(),base_conversion_t(BASE-ia.front()));
         for_each(ia.begin(),ia.end(),base_conversion_t(BASE-ia.front()));
         uncompress();
@@ -716,8 +716,6 @@ struct sparse_matrix :
 
     // compress and return
     compress();
-    if (size.i!=matc.nnu || size.j<=*max_element(matc.ja.begin(),matc.ja.end())-BASE)
-      throw runtime_error("sparse_matrix: after reading file, indexing not correct.");
     return *this;
   }
 
@@ -761,7 +759,7 @@ struct sparse_matrix :
       else {
         // uncompressed, coordinate matrix
         for (typename matrix_uncompressed_t::iterator it = matu.begin(); it!=matu.end(); ++it)
-          if (it->first.i-BASE==(size_t) _i)
+          if (it->first.i==(size_t) _i)
             const_cast< T& >(it->second) = T();
       }
     }
@@ -773,8 +771,8 @@ struct sparse_matrix :
       throw std::runtime_error("sparse_matrix: row index(es) outside bounds.");
     uncompress();
     for (typename matrix_uncompressed_t::const_iterator it = matu.begin(); it!=matu.end(); ++it)
-      if (it->first.i-BASE==(size_t) isrc)
-        operator()(i,it->first.j-BASE) += it->second;
+      if (it->first.i==(size_t) isrc)
+        operator()(i,it->first.j) += it->second;
     return *this;
   }
 
@@ -814,10 +812,10 @@ struct sparse_matrix :
           for (size_t i=0; i<size.i; ++i) {
             row_s.assign(size.j,' ');
             for (typename matrix_uncompressed_t::const_iterator it = mat.begin(); it!=mat.end(); ++it)
-              if (it->first.i==i+BASE)
-                row_s[ it->first.j-BASE ] = (it->second> eps? '+'
-                                          : (it->second<-eps? '-'
-                                          :                   '.' ));
+              if (it->first.i==i)
+                row_s[ it->first.j ] = (it->second> eps? '+'
+                                     : (it->second<-eps? '-'
+                                     :                   '.' ));
             o << "\n  " << row_s;
           }
           o << " ]";
@@ -828,8 +826,8 @@ struct sparse_matrix :
           for (size_t i=0; i<size.i; ++i) {
             row_v.assign(size.j,T());
             for (typename matrix_uncompressed_t::const_iterator it = mat.begin(); it!=mat.end(); ++it)
-              if (it->first.i==i+BASE)
-                row_v[ it->first.j-BASE ] = it->second;
+              if (it->first.i==i)
+                row_v[ it->first.j ] = it->second;
             o << "\n  ";
             copy(row_v.begin(),row_v.end(),ostream_iterator< T >(o,", "));
           }
@@ -840,7 +838,7 @@ struct sparse_matrix :
           o << "%%MatrixMarket matrix coordinate real general\n"
             << size.i << ' ' << size.j << ' ' << mat.size() << '\n';
           for (typename matrix_uncompressed_t::const_iterator i = mat.begin(); i!=mat.end(); ++i)
-            o << (i->first.i-BASE+1) << ' '<< (i->first.j-BASE+1) << ' '<< i->second << '\n';
+            o << (i->first.i+1) << ' '<< (i->first.j+1) << ' '<< i->second << '\n';
           break;
 
         case print_auto:
@@ -867,7 +865,7 @@ struct sparse_matrix :
           return matc.a[k];
     }
     else {
-      typename matrix_uncompressed_t::const_iterator it = matu.find(coord_t<T>(idx_t(i+BASE,j+BASE),T()));
+      typename matrix_uncompressed_t::const_iterator it = matu.find(coord_t<T>(idx_t(i,j),T()));
       if (it!=matu.end())
         return it->second;
     }
@@ -892,9 +890,9 @@ struct sparse_matrix :
     // removal is safe because the entry value does not change matrix ordering
     uncompress();
     if (i!=j)
-      matu.insert( coord_t<T>(idx_t(j+BASE,i+BASE),T()) );
+      matu.insert( coord_t<T>(idx_t(j,i),T()) );
     typename matrix_uncompressed_t::iterator it =
-      matu.insert( coord_t<T>(idx_t(i+BASE,j+BASE),T()) ).first;
+      matu.insert( coord_t<T>(idx_t(i,j),T()) ).first;
     return const_cast< T& >(it->second);
   }
 
@@ -936,7 +934,7 @@ struct sparse_matrix :
 
     // row-oriented matrix
     if (ORIENT) {
-      _c.ia.push_back(it->first.i);
+      _c.ia.push_back(0);
       _c.ja.reserve(_u.size());
       _c.a .reserve(_u.size());
       for (size_t count,
@@ -953,7 +951,7 @@ struct sparse_matrix :
 
     // column-oriented matrix
     else {
-      _c.ja.push_back(it->first.j);
+      _c.ja.push_back(0);
       _c.ia.reserve(_u.size());
       _c.a .reserve(_u.size());
       for (size_t count,
@@ -967,9 +965,14 @@ struct sparse_matrix :
         _c.ja.push_back(_c.ja.back() + count);
       }
     }
-
     _c.nnu = (ORIENT? _size.i:_size.j);
     _c.nnz = _u.size();
+    if ( _size.i!=_c.nnu
+      || _size.j<=*max_element(_c.ja.begin(),_c.ja.end()))
+      throw std::runtime_error("sparse_matrix: after compression, indexing not correct.");
+
+    std::for_each(_c.ja.begin(),_c.ja.end(),base_conversion_t(BASE));
+    std::for_each(_c.ia.begin(),_c.ia.end(),base_conversion_t(BASE));
   }
 
 
@@ -981,10 +984,10 @@ struct sparse_matrix :
     _u.clear();
     for (int i=0; ORIENT && i<_c.ia.size()-1; ++i)
       for (int k=_c.ia[i]-BASE; k<_c.ia[i+1]-BASE; ++k)
-        _u.insert(coord_t<T>(idx_t(i+BASE,_c.ja[k]),_c.a[k]));
+        _u.insert(coord_t<T>(idx_t(i,_c.ja[k]-BASE),_c.a[k]));
     for (int j=0; !ORIENT && j<_c.ja.size()-1; ++j)
       for (int k=_c.ja[j]-BASE; k<_c.ja[j+1]-BASE; ++k)
-        _u.insert(coord_t<T>(idx_t(_c.ia[k]+BASE,j+BASE),_c.a[k]));
+        _u.insert(coord_t<T>(idx_t(_c.ia[k]-BASE,j),_c.a[k]));
     ensure_structural_symmetry(_size,_u);
   }
 
@@ -995,7 +998,7 @@ struct sparse_matrix :
   {
     size_t nmodif = 0;
     for (size_t i=0; i<std::min(_size.i,_size.j); ++i)
-      _u.insert(coord_t<T>(idx_t(i+BASE,i+BASE),T())).second? ++nmodif:nmodif;
+      _u.insert(coord_t<T>(idx_t(i,i),T())).second? ++nmodif:nmodif;
     for (bool modif=true; modif;) {
       modif = false;
       for (typename matrix_uncompressed_t::const_reverse_iterator c=_u.rbegin(); !modif && c!=_u.rend(); ++c)
@@ -1010,8 +1013,8 @@ struct sparse_matrix :
 
  private:
   // storage
-  matrix_uncompressed_t matu;  // (uncompressed)
-  matrix_compressed_t   matc;  // (compressed)
+  matrix_uncompressed_t matu;  // (uncompressed, in 0-based indexing)
+  matrix_compressed_t   matc;  // (compressed, in BASE indexing)
 
 };
 

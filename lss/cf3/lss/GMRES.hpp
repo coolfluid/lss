@@ -38,8 +38,11 @@ class lss_API GMRES : public linearsystem< double >
     linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
   }
 
-  /// Solve
+  /// Linear system solving
   GMRES& solve();
+
+  /// Linear system copy
+  GMRES& copy(const GMRES& _other);
 
 
  private:

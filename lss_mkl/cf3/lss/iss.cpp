@@ -5,9 +5,7 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#include <cstdio>  // for sscanf
-
-#include "mkl_rci.h" 
+#include "mkl_rci.h"
 #include "mkl_service.h"
 
 #include "common/Builder.hpp"
@@ -26,12 +24,9 @@ common::ComponentBuilder< iss, common::Component, LibLSS_MKL > Builder_MKL_iss;
 iss::iss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
   : linearsystem< double >(name)
 {
-  const char *nthreads = getenv("OMP_NUM_THREADS");
-  int nthd = 1;
-  sscanf(nthreads? nthreads:"1","%d",&nthd);
-  mkl_set_num_threads(nthd);
-
-  CFinfo  << "mkl iss: OMP_NUM_THREADS: " << nthd << (nthreads? " (set)":" (not set)") << CFendl;
+  environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
+  CFinfo << "mkl iss: OMP_NUM_THREADS: " << nthreads.description() << CFendl;
+  mkl_set_num_threads(nthreads.value);
 
   linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
@@ -40,6 +35,14 @@ iss::iss(const std::string& name, const size_t& _size_i, const size_t& _size_j, 
 iss& iss::solve()
 {
 //nrhs = static_cast< int >(m_b.size(1));
+  return *this;
+}
+
+
+iss& iss::copy(const iss& _other)
+{
+  linearsystem< double >::copy(_other);
+  m_A = _other.m_A;
   return *this;
 }
 

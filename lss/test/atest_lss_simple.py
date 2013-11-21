@@ -15,6 +15,8 @@ list_of_solvers = [
   'GaussianElimination',
   'GaussianElimination_SinglePrecision',
   'GMRES',
+  'Dlib',
+# 'mkl.pardiso',
   ]
 for solver in list_of_solvers:
   lss = cf.root.create_component('MySolver_' + solver,'cf3.lss.' + solver)
@@ -29,6 +31,6 @@ for solver in list_of_solvers:
              4,  8,
              6, 12,
              8, 16 ]
+  lss.output(A=3,b=3,x=3)
   lss.solve()
-  lss.output(A=1,b=1,x=3)
 

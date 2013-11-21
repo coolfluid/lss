@@ -5,8 +5,6 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#include <cstdio>  // for sscanf
-
 #include "common/Builder.hpp"
 #include "common/Log.hpp"
 #include "pardiso.hpp"
@@ -16,7 +14,7 @@
 extern "C" {
   void pardiso_printstats_(int *, int *, double *, int *, int *, int *, double *, int *);
   int pardisoinit_(void *, int *, int *, int *, double *, int *);
-  int pardiso_(void *, int *, int *, int *, int *, int *, double *, int *, int *, int *, int *, int *, int *, double *, double *, int *, double *);  
+  int pardiso_(void *, int *, int *, int *, int *, int *, double *, int *, int *, int *, int *, int *, int *, double *, double *, int *, double *);
 }
 
 
@@ -30,30 +28,31 @@ common::ComponentBuilder< pardiso, common::Component, LibLSS_PARDISO > Builder_p
 pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
   : linearsystem< double >(name)
 {
+  environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
+  environment_variable_t< std::string >
+    licspath ("PARDISO_LIC_PATH"),
+    mklserial("MKL_SERIAL");
 
-  char* nthreads = getenv("OMP_NUM_THREADS");
-  sscanf(nthreads? nthreads:"1","%d",&iparm[2]);
-  CFinfo << "pardiso: OMP_NUM_THREADS: " << iparm[2] << (nthreads? " (set)":" (not set)") << CFendl;
+  CFinfo << "pardiso: OMP_NUM_THREADS:  " << nthreads .description() << CFendl
+         << "pardiso: PARDISO_LIC_PATH: " << licspath .description() << CFendl
+         << "pardiso: MKL_SERIAL:       " << mklserial.description() << " (should be set to YES)" << CFendl;
 
-  for (int i=0; i<64; ++i)  iparm[i] = 0;
-  for (int i=0; i<64; ++i)  dparm[i] = 0.;
+  mtype = 1; // real and structurally symmetric matrix
 
+  // reset pt, iparm and dparm defaults
+  std::fill_n(&iparm[0],64,0);
+  std::fill_n(&dparm[0],64,0.);
+  int err = 0;
+  pardisoinit_(pt,&mtype,&iparm[31],iparm,dparm,&err);
+  if (err)
+    throw std::runtime_error(err_message(err));
+
+  iparm[ 2] = nthreads.value;
   iparm[ 7] = 0;  // max numbers of iterative refinement steps
   iparm[31] = 0;  // [0|1] sparse direct solver or multi-recursive iterative solver
   maxfct    = 1;  // maximum number of numerical factorizations
   mnum      = 1;  // which factorization to use
   msglvl    = 1;  // message level: output statistical information
-  mtype     = 1;  // real structurally symmetric matrix
-
-  if (call_pardiso_init()) {
-    std::ostringstream msg;
-    msg << "pardiso: pardisoinit error " << err << ": ";
-    err== -10? msg << "no license file pardiso.lic found." :
-    err== -11? msg << "license is expired."                :
-    err== -12? msg << "wrong username or hostname."        :
-               msg << "unknown error.";
-    throw std::runtime_error(msg.str());
-  }
 
   linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
@@ -68,68 +67,84 @@ pardiso::~pardiso()
 pardiso& pardiso::solve()
 {
   nrhs = static_cast< int >(m_b.size(1));
-  if
+
+  int err;
 #if 0
-     (call_pardiso_printstats() ||  // check for matrix/vector consistency
-      call_pardiso(11)          ||  // 11: reordering and symbolic factorization
-      call_pardiso(22)          ||  // 22: numerical factorization and
-      call_pardiso(33))             // 33: back substitution and iterative refinement
+  if ((err=call_pardiso_printstats()) ||  // check for matrix/vector consistency
+      (err=call_pardiso(11))          ||  // 11: reordering and symbolic factorization
+      (err=call_pardiso(22))          ||  // 22: numerical factorization and
+      (err=call_pardiso(33)))             // 33: back substitution and iterative refinement
 #else
-     (call_pardiso(13))
+  if (err=call_pardiso(13))
 #endif
-  {
-    std::ostringstream msg;
-    msg << "pardiso: phase " << phase << " error " << err << ": ";
-    err==  -1? msg << "input inconsistent." :
-    err==  -2? msg << "not enough memory."  :
-    err==  -3? msg << "reordering problem." :
-    err==  -4? msg << "zero pivot, numerical factorization or iterative refinement problem." :
-    err==  -5? msg << "unclassified (internal) error."     :
-    err==  -6? msg << "preordering failed (matrix types 11, 13 only)." :
-    err==  -7? msg << "diagonal matrix problem."           :
-    err==  -8? msg << "32-bit integer overflow problem."   :
-    err==-100? msg << "reached maximum number of Krylov-subspace iteration in iterative solver."     :
-    err==-101? msg << "no sufficient convergence in Krylov-subspace iteration within 25 iterations." :
-    err==-102? msg << "error in Krylov-subspace iteration."      :
-    err==-103? msg << "break-down in Krylov-subspace iteration." :
-               msg << "unknown error.";
-    throw std::runtime_error(msg.str());
-  }
+    throw std::runtime_error(err_message(err));
   return *this;
+}
+
+
+pardiso& pardiso::copy(const pardiso& _other)
+{
+  linearsystem< double >::copy(_other);
+  m_A = _other.m_A;
+  std::copy(&_other.pt   [0],&_other.pt   [0]+64,&pt   [0]);
+  std::copy(&_other.dparm[0],&_other.dparm[0]+64,&dparm[0]);
+  std::copy(&_other.iparm[0],&_other.iparm[0]+64,&iparm[0]);
+  nrhs   = _other.nrhs;
+  maxfct = _other.maxfct;
+  mnum   = _other.mnum;
+  msglvl = _other.msglvl;
+  mtype  = _other.mtype;
+  return *this;
+}
+
+
+std::string pardiso::err_message(const int& err)
+{
+  std::ostringstream s;
+  s << "pardiso: error " << err << ": ";
+  err==   0? s << "(success)" :
+  err==  -1? s << "input inconsistent" :
+  err==  -2? s << "not enough memory"  :
+  err==  -3? s << "reordering problem" :
+  err==  -4? s << "zero pivot, numerical factorization or iterative refinement problem" :
+  err==  -5? s << "unclassified (internal) error"     :
+  err==  -6? s << "preordering failed (matrix types 11, 13 only)" :
+  err==  -7? s << "diagonal matrix problem"           :
+  err==  -8? s << "32-bit integer overflow problem"   :
+  err== -10? s << "no license file pardiso.lic found" :
+  err== -11? s << "license is expired"                :
+  err== -12? s << "wrong username or hostname"        :
+  err==-100? s << "reached maximum number of Krylov-subspace iteration in iterative solver"     :
+  err==-101? s << "no sufficient convergence in Krylov-subspace iteration within 25 iterations" :
+  err==-102? s << "error in Krylov-subspace iteration"      :
+  err==-103? s << "break-down in Krylov-subspace iteration" :
+             s << "(unknown error)";
+  s << '.';
+  return s.str();
+}
+
+
+int pardiso::call_pardiso(const int& _phase)
+{
+  matrix_t::matrix_compressed_t& A = m_A.compress();
+  int phase = _phase;
+  int err = 0;
+  pardiso_(
+    pt, &maxfct, &mnum, &mtype, &phase,
+    &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
+    NULL, &nrhs, iparm, &msglvl, &m_b.a[0], &m_x.a[0], &err, dparm );
+  return err;
 }
 
 
 int pardiso::call_pardiso_printstats()
 {
   matrix_t::matrix_compressed_t& A = m_A.compress();
-  err = 0;
-  phase = 0;
+  int err = 0;
   pardiso_printstats_(
     &mtype,
     &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
     &nrhs, &m_b.a[0], &err );
-  return err;
-}
-
-
-int pardiso::call_pardiso_init()
-{
-  err = 0;
-  phase = 0;
-  pardisoinit_(pt,&mtype,&iparm[31],iparm,dparm,&err);
-  return err;
-}
-
-
-int pardiso::call_pardiso(int _phase)
-{
-  matrix_t::matrix_compressed_t& A = m_A.compress();
-  err = 0;
-  phase = _phase;
-  pardiso_(
-    pt, &maxfct, &mnum, &mtype, &phase,
-    &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
-    NULL, &nrhs, iparm, &msglvl, &m_b.a[0], &m_x.a[0], &err, dparm );
   return err;
 }
 
