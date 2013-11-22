@@ -39,18 +39,16 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
 
   mkl_set_num_threads(nthreads.value);
 
-  // reset pt and iparm defaults
-  mtype     = 1;  // real structurally symmetric matrix
+  mtype  = 1;  // real structurally symmetric matrix
+  maxfct = 1;  // maximum number of numerical factorizations
+  mnum   = 1;  // which factorization to use
+
   for (size_t i=0; i<64; ++i) iparm[i] = 0;
 
-  int err;
-  if (err=call_pardiso(42,0))
-    throw std::runtime_error(err_message(err));
-
-  iparm[ 7] = 0;  // max numbers of iterative refinement steps
-  iparm[31] = 0;  // [0|1] sparse direct solver or multi-recursive iterative solver
-  maxfct    = 1;  // maximum number of numerical factorizations
-  mnum      = 1;  // which factorization to use
+  // reset pt and iparm defaults
+  PARDISOINIT(pt,&mtype,iparm);
+  iparm[ 7] = 0;  // + max numbers of iterative refinement steps
+  iparm[31] = 0;  // + [0|1] sparse direct solver or multi-recursive iterative solver
 
   linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
 }
@@ -107,6 +105,7 @@ const std::string pardiso::err_message(const int& err)
   err==-102? s << "(internal: null handle)"   :
   err==-103? s << "(internal: memory error)"  :
              s << "(unknown error)";
+  s << '.';
   return s.str();
 }
 
@@ -117,15 +116,10 @@ int pardiso::call_pardiso(int _phase, int _msglvl)
   int nrhs = static_cast< int >(m_b.size(1));
 
   int err = 0;
-  if (_phase==42) {
-    PARDISOINIT(pt,&mtype,iparm);
-  }
-  else {
-    PARDISO(
-      pt, &maxfct, &mnum, &mtype, &_phase,
-      &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
-      NULL, &nrhs, iparm, &_msglvl, &m_b.a[0], &m_x.a[0], &err );
-  }
+  PARDISO(
+    pt, &maxfct, &mnum, &mtype, &_phase,
+    &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
+    NULL, &nrhs, iparm, &_msglvl, &m_b.a[0], &m_x.a[0], &err );
   return err;
 }
 
