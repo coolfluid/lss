@@ -84,28 +84,129 @@ struct matrix
 {
   // constructor
   matrix() :
-    m_zero(std::numeric_limits< T >::quiet_NaN()),
+    m_zero(std::numeric_limits< T >::signaling_NaN()),
     m_size()
   {}
   virtual ~matrix() {}
 
   // -- functionality in remote implementation
 
-  matrix& initialize(const size_t& i, const size_t& j, const double& _value=double()) { return IMPL::initialize(i,j,_value); }
-  matrix& initialize(const std::vector< double >& _vector) { return IMPL::initialize(_vector); }
-  matrix& initialize(const std::string& _fname)            { return IMPL::initialize(_fname); }
+  virtual matrix& initialize(const size_t& i, const size_t& j, const double& _value=double()) = 0;
 
-  matrix& clear()                         { return IMPL::initialize(m_size.i,m_size.j,double()); }
-  matrix& operator=(const double& _value) { return IMPL::initialize(m_size.i,m_size.j,_value); }
+  virtual matrix& initialize(const std::vector< double >& _vector) {
+    if (m_size.i*m_size.j!=_vector.size())
+      throw std::runtime_error("matrix: assignment not consistent with current size.");
+    for (size_t i=0, k=0; i<size(0); ++i)
+      for (size_t j=0; j<size(1); ++j, ++k)
+        operator()(i,j) = (type_is_equal< T, double >()? (const T) _vector[k] : static_cast< const T >(_vector[k]) );
+    return *this;
+  }
+
+  virtual matrix& initialize(const std::string& _fname) {
+    using namespace std;
+    clear();
+    m_size.invalidate();
+    try {
+
+      ifstream f(_fname.c_str());
+      if (!f) throw runtime_error("matrix: cannot open file.");
+      const bool hasdot(string("."+_fname).find_last_of("."));
+
+
+      // read format: MatrixMarket (*.mtx)
+      if (hasdot && _fname.substr(_fname.find_last_of("."))==".mtx") {
+
+
+        // read matrix size and properties, and allocate
+        MatrixMarket::typecode_t t;
+        int nnz(0);
+        if (!MatrixMarket::read_banner(f,t))                    throw runtime_error("matrix: MatrixMarket: invalid header, \"%%MatrixMarket ...\" not found.");
+        if (!MatrixMarket::read_size(f,m_size.i,m_size.j,nnz))  throw runtime_error("matrix: MatrixMarket: invalid matrix/array size.");
+        if (!t.is_real() || !t.is_general())                    throw runtime_error("matrix: MatrixMarket: only \"(coordinate|array) real general\" supported.");
+
+        initialize(m_size.i,m_size.j);
+
+        // read into row/column-oriented dense matrix, line by line
+        idx_t ij(1,1);
+        string line;
+        while (getline(f,line)) {
+          if (line.find_first_of("%")==0) {}
+          else if (t.is_dense()) {
+            istringstream(line) >> operator()(ij.i-1,ij.j-1);
+            if (++ij.i > m_size.i) {
+              ij.i = 1;
+              ij.j++;
+            }
+          }
+          else {
+            T v;
+            istringstream(line) >> ij.i >> ij.j >> v;
+            operator()(ij.i-1,ij.j-1) = v;
+          }
+        }
+
+
+      }
+      // read format: CSR (*.csr)
+      else if (hasdot && _fname.substr(_fname.find_last_of("."))==".csr") {
+
+
+        // read matrix size, and allocate
+        string line;
+        while (!m_size.is_valid_size()) {
+          if (getline(f,line) && line.find_first_of("%")!=0)
+            istringstream(line) >> m_size.i >> m_size.j;
+        }
+
+        initialize(m_size.i,m_size.j);
+
+        // read rows and column indices (base 0), then fill in non-zeros
+        vector< int > ia;
+        ia.reserve(m_size.i+1);
+        for (int i; ia.size()<m_size.i+1 && f >> i;)
+          ia.push_back(i);
+
+        vector< int > ja;
+        ja.reserve(ia.back()-ia.front());
+        for (int i; ja.size()<ia.back()-ia.front() && f >> i;)
+          ja.push_back(i);
+
+        for_each(ja.begin(),ja.end(),base_conversion_t(-ia.front()));
+        for_each(ia.begin(),ia.end(),base_conversion_t(-ia.front()));
+
+        for (size_t i=0; i<m_size.i; ++i)
+          for (int k=ia[i]; k<ia[i+1] && f; ++k)
+            f >> operator()(i,ja[k]);
+
+
+      }
+
+
+      // read format: file format not detected
+      else {
+        throw runtime_error("matrix: file format not detected.");
+      }
+      f.close();
+
+
+    }
+    catch (const runtime_error& e) {
+      throw runtime_error("matrix: cannot read file. " + string(e.what()));
+    }
+    return *this;
+  }
+
+  matrix& clear()                         { return initialize(m_size.i,m_size.j,double()); }
+  matrix& operator=(const double& _value) { return initialize(m_size.i,m_size.j,_value);   }
   matrix& operator=(const matrix& _other) { return IMPL::operator=(_other); }
   matrix& zerorow(const size_t& i)        { return IMPL::zerorow(i); }
   matrix& sumrows(const size_t& i, const size_t& isrc) { return IMPL::sumrows(i,isrc); }
 
   // -- intrinsic functionality
 
-  void swap(matrix& other) {
-    std::swap(other.m_size,m_size);
-    std::swap(other.m_zero,m_zero);
+  void swap(matrix& _other) {
+    std::swap(_other.m_size,m_size);
+    std::swap(_other.m_zero,m_zero);
   }
 
   virtual void print(std::ostream& o, const print_t& l=print_auto) const {
@@ -192,8 +293,8 @@ struct dense_matrix_vv :
 
   dense_matrix_vv& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
     if (idx_t(i,j).is_valid_size()) {
-      clear();
       matrix_base_t::m_size = idx_t(i,j);
+      a.clear();
       if (size(0)*size(1))
         a.assign(ORIENT? size(0):size(1),std::vector< T >(
                  ORIENT? size(1):size(0),static_cast< T >(_value) ));
@@ -202,108 +303,12 @@ struct dense_matrix_vv :
   }
 
   dense_matrix_vv& initialize(const std::vector< double >& _vector) {
-    if (size(0)*size(1)!=_vector.size())
-      throw std::runtime_error("dense_matrix_vv: assignment not consistent with current size.");
-    for (size_t i=0, k=0; i<size(0); ++i)
-      for (size_t j=0; j<size(1); ++j, ++k)
-        operator()(i,j) = (type_is_equal< T, double >()? (const T) _vector[k]
-                                                       : static_cast< const T >(_vector[k]) );
+    matrix_base_t::initialize(_vector);
     return *this;
   }
 
   dense_matrix_vv& initialize(const std::string& _fname) {
-    using namespace std;
-    clear();
-    idx_t& size = matrix_base_t::m_size;
-    size.invalidate();
-    try {
-
-      ifstream f(_fname.c_str());
-      if (!f) throw runtime_error("sparse_matrix: cannot open file.");
-      const bool hasdot(string("."+_fname).find_last_of("."));
-
-
-      // read format: MatrixMarket (*.mtx)
-      if (hasdot && _fname.substr(_fname.find_last_of("."))==".mtx") {
-
-
-        // read matrix size and properties
-        MatrixMarket::typecode_t t;
-        int nnz(0);
-        if (!MatrixMarket::read_banner(f,t))                throw runtime_error("dense_matrix_vv: MatrixMarket: invalid header, \"%%MatrixMarket ...\" not found.");
-        if (!MatrixMarket::read_size(f,size.i,size.j,nnz))  throw runtime_error("dense_matrix_vv: MatrixMarket: invalid matrix/array size.");
-        if (!t.is_real() || !t.is_general())                throw runtime_error("dense_matrix_vv: MatrixMarket: only \"(coordinate|array) real general\" supported.");
-
-        // read into row/column-oriented dense matrix, line by line
-        a.assign(ORIENT? size.i:size.j,vector< T >(
-                 ORIENT? size.j:size.i,T() ));
-        idx_t ij(1,1);
-        string line;
-        T v;
-        while (getline(f,line)) {
-          if (line.find_first_of("%")==0) {}
-          else if (t.is_dense()) {
-            istringstream(line) >> operator()(ij.i-1,ij.j-1);
-            if (++ij.i > size.i) {
-              ij.i = 1;
-              ij.j++;
-            }
-          }
-          else {
-            istringstream(line) >> ij.i >> ij.j >> v;
-            operator()(ij.i-1,ij.j-1) = v;
-          }
-        }
-
-
-      }
-      // read format: CSR (*.csr)
-      else if (hasdot && _fname.substr(_fname.find_last_of("."))==".csr") {
-
-
-        // read matrix size
-        string line;
-        while (!size.is_valid_size()) {
-          if (getline(f,line) && line.find_first_of("%")!=0)
-            istringstream(line) >> size.i >> size.j;
-        }
-
-        // read rows and column indices, converting to base 0 (easier)
-        vector< int > ia;
-        ia.reserve(size.i+1);
-        for (int i; ia.size()<size.i+1 && f >> i;)
-          ia.push_back(i);
-
-        vector< int > ja;
-        ja.reserve(ia.back()-ia.front());
-        for (int i; ja.size()<ia.back()-ia.front() && f >> i;)
-          ja.push_back(i);
-
-        for_each(ja.begin(),ja.end(),base_conversion_t(-ia.front()));
-        for_each(ia.begin(),ia.end(),base_conversion_t(-ia.front()));
-
-        // populate per row
-        a.assign(ORIENT? size.i:size.j,vector< T >(
-                 ORIENT? size.j:size.i,T() ));
-        for (size_t i=0; i<size.i; ++i)
-          for (int k=ia[i]; k<ia[i+1] && f; ++k)
-            f >> operator()(i,ja[k]);
-
-
-      }
-
-
-      // read format: file format not detected
-      else {
-        throw runtime_error("dense_matrix_vv: file format not detected.");
-      }
-      f.close();
-
-
-    }
-    catch (const runtime_error& e) {
-      throw runtime_error("dense_matrix_vv: cannot read file. " + string(e.what()));
-    }
+    matrix_base_t::initialize(_fname);
     return *this;
   }
 
@@ -370,8 +375,8 @@ struct dense_matrix_v :
 
   dense_matrix_v& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
     if (idx_t(i,j).is_valid_size()) {
-      clear();
       matrix_base_t::m_size = idx_t(i,j);
+      a.clear();
       if (size(0)*size(1))
         a.assign(size(0)*size(1),static_cast< T >(_value));
     }
@@ -379,116 +384,12 @@ struct dense_matrix_v :
   }
 
   dense_matrix_v& initialize(const std::vector< double >& _vector) {
-    if (a.size()!=_vector.size())
-      throw std::runtime_error("dense_matrix_v: assignment not consistent with current size.");
-
-    std::vector< T > w;
-    if (!type_is_equal< T, double >()) {
-      w.resize(_vector.size());
-      std::transform(_vector.begin(),_vector.end(),w.begin(),type_conversion_t< double, T >() );
-    }
-    const std::vector< T >& v(type_is_equal< T, double >()? (const std::vector< T >&) _vector : w);
-
-    if (ORIENT) { a = v; }
-    else {
-      for (size_t i=0, k=0; i<size(0); ++i)
-        for (size_t j=0; j<size(1); ++j, ++k)
-          operator()(i,j) = v[k];
-    }
+    matrix_base_t::initialize(_vector);
     return *this;
   }
 
   dense_matrix_v& initialize(const std::string& _fname) {
-    using namespace std;
-    clear();
-    idx_t& size = matrix_base_t::m_size;
-    size.invalidate();
-    try {
-
-      ifstream f(_fname.c_str());
-      if (!f) throw runtime_error("sparse_matrix: cannot open file.");
-      const bool hasdot(string("."+_fname).find_last_of("."));
-
-
-      // read format: MatrixMarket (*.mtx)
-      if (hasdot && _fname.substr(_fname.find_last_of("."))==".mtx") {
-
-
-        // read matrix size and properties
-        MatrixMarket::typecode_t t;
-        int nnz(0);
-        if (!MatrixMarket::read_banner(f,t))                throw runtime_error("dense_matrix_v: MatrixMarket: invalid header, \"%%MatrixMarket ...\" not found.");
-        if (!MatrixMarket::read_size(f,size.i,size.j,nnz))  throw runtime_error("dense_matrix_v: MatrixMarket: invalid matrix/array size.");
-        if (!t.is_real() || !t.is_general())                throw runtime_error("dense_matrix_v: MatrixMarket: only \"(coordinate|array) real general\" supported.");
-
-        // read into row/column-oriented dense matrix, line by line
-        a.assign(size.i*size.j,T());
-        idx_t ij(1,1);
-        string line;
-        T v;
-        while (getline(f,line)) {
-          if (line.find_first_of("%")==0) {}
-          else if (t.is_dense()) {
-            istringstream(line) >> operator()(ij.i-1,ij.j-1);
-            if (++ij.i > size.i) {
-              ij.i = 1;
-              ij.j++;
-            }
-          }
-          else {
-            istringstream(line) >> ij.i >> ij.j >> v;
-            operator()(ij.i-1,ij.j-1) = v;
-          }
-        }
-
-
-      }
-      // read format: CSR (*.csr)
-      else if (hasdot && _fname.substr(_fname.find_last_of("."))==".csr") {
-
-
-        // read matrix size
-        string line;
-        while (!size.is_valid_size()) {
-          if (getline(f,line) && line.find_first_of("%")!=0)
-            istringstream(line) >> size.i >> size.j;
-        }
-
-        // read rows and column indices, converting to base 0 (easier)
-        vector< int > ia;
-        ia.reserve(size.i+1);
-        for (int i; ia.size()<size.i+1 && f >> i;)
-          ia.push_back(i);
-
-        vector< int > ja;
-        ja.reserve(ia.back()-ia.front());
-        for (int i; ja.size()<ia.back()-ia.front() && f >> i;)
-          ja.push_back(i);
-
-        for_each(ja.begin(),ja.end(),base_conversion_t(-ia.front()));
-        for_each(ia.begin(),ia.end(),base_conversion_t(-ia.front()));
-
-        // populate per row
-        a.assign(size.i*size.j,T());
-        for (size_t i=0; i<size.i; ++i)
-          for (int k=ia[i]; k<ia[i+1] && f; ++k)
-            f >> operator()(i,ja[k]);
-
-
-      }
-
-
-      // read format: file format not detected
-      else {
-        throw runtime_error("dense_matrix_v: file format not detected.");
-      }
-      f.close();
-
-
-    }
-    catch (const runtime_error& e) {
-      throw runtime_error("dense_matrix_v: cannot read file. " + string(e.what()));
-    }
+    matrix_base_t::initialize(_fname);
     return *this;
   }
 
@@ -588,10 +489,11 @@ struct sparse_matrix :
 
   // initializations
 
-  sparse_matrix& initialize(const size_t& i, const size_t& j, const double&) {
+  sparse_matrix& initialize(const size_t& i, const size_t& j, const double& _value) {
     if (idx_t(i,j).is_valid_size()) {
       // initialization value ignored (after all, this is a sparse matrix)
-      clear();
+      matu.clear();
+      matc.clear();
       matrix_base_t::m_size = idx_t(i,j);
       ensure_structural_symmetry(matrix_base_t::m_size,matu);
     }
@@ -602,119 +504,13 @@ struct sparse_matrix :
   }
 
   sparse_matrix& initialize(const std::vector< double >& _vector) {
-    idx_t& size = matrix_base_t::m_size;
-    if (size.i*size.j!=_vector.size())
-      throw std::runtime_error("sparse_matrix: assignment not consistent with current size.");
-    CFwarn << "sparse_matrix: initialize from vector fully populates the (otherwise sparse) matrix." << CFendl;
-    matu.clear();
-    matc.clear();
-    for (size_t i=0, k=0; i<size.i; ++i)
-      for (size_t j=0; j<size.j; ++j, ++k)
-        matu.insert(coord_t<T>(idx_t(i,j),static_cast< T >(_vector[k])));
-    compress();  // since matrix is fully populated, this won't hurt.
+    matrix_base_t::initialize(_vector);
+    compress();
     return *this;
   }
 
   sparse_matrix& initialize(const std::string& _fname) {
-    using namespace std;
-    clear();
-    idx_t& size = matrix_base_t::m_size;
-    size.invalidate();
-    try {
-      ifstream f(_fname.c_str());
-      if (!f)
-        throw runtime_error("sparse_matrix: cannot open file.");
-      const bool hasdot(string("."+_fname).find_last_of("."));
-
-
-      // read format: MatrixMarket (*.mtx)
-      if (hasdot && _fname.substr(_fname.find_last_of("."))==".mtx") {
-        MatrixMarket::typecode_t t;
-        if (!MatrixMarket::read_banner(f,t))  throw runtime_error("sparse_matrix: MatrixMarket invalid header (\"%%MatrixMarket ...\" not found).");
-        if (!t.is_real() || !t.is_general())  throw runtime_error("sparse_matrix: MatrixMarket only \"(coordinate|array) real general\" supported.");
-        if (!MatrixMarket::read_size(f,size.i,size.j,matc.nnz))
-          throw runtime_error("sparse_matrix: MatrixMarket invalid matrix/array size.");
-
-        // read into set, line by line
-        coord_t<T> p(idx_t(0,0),T());
-        string line;
-        while (getline(f,line)) {
-          if (line.find_first_of("%")==0) {}
-          else if (t.is_dense()) {
-            istringstream(line) >> p.second;
-            matu.insert(p);
-            if (++p.first.i >= size.i) {
-              p.first.i = 0;
-              p.first.j++;
-            }
-          }
-          else {
-            istringstream(line) >> p.first.i >> p.first.j >> p.second;
-            p.first.i -= 1;
-            p.first.j -= 1;
-            matu.insert(p);
-          }
-        }
-      }
-
-
-      // read format: CSR (*.csr)
-      else if (hasdot && _fname.substr(_fname.find_last_of("."))==".csr") {
-
-
-        // read matrix size
-        string line;
-        while (!size.is_valid_size()) {
-          if (getline(f,line) && line.find_first_of("%")!=0)
-            istringstream(line) >> size.i >> size.j;
-        }
-
-        /*
-         * read into temporary compressed structure and convert to intended base
-         * - ia has indices in increasing order
-         * - ja first entry is read while building ia
-         */
-        vector< T > &a = matc.a;
-        vector< int >
-            &ia = matc.ia,
-            &ja = matc.ja;
-        int &nnu = matc.nnu,
-            &nnz = matc.nnz;
-
-        ia.reserve(size.i+1);
-        ja.assign(1,0);
-        for (int &i=ja[0], j=-1; f>>i && j<i;)
-          ia.push_back(j=i);
-        nnu = static_cast< int >(size.i);
-        nnz = static_cast< int >(ia.back()-ia.front());
-
-        ja.reserve(nnz);
-        a .reserve(nnz);
-        for (int i; ja.size()<nnz && f>>i;)  ja.push_back(i);
-        for (T   i; a .size()<nnz && f>>i;)  a .push_back(i);
-
-        // convert to intended base, and uncompress
-        for_each(ja.begin(),ja.end(),base_conversion_t(BASE-ia.front()));
-        for_each(ia.begin(),ia.end(),base_conversion_t(BASE-ia.front()));
-        uncompress();
-
-      }
-
-
-      // read format: file format not detected
-      else {
-        throw runtime_error("sparse_matrix: file format not detected.");
-      }
-      f.close();
-
-
-    }
-    catch (const runtime_error& e) {
-      throw runtime_error("sparse_matrix: cannot read file. " + string(e.what()));
-    }
-
-
-    // compress and return
+    matrix_base_t::initialize(_fname);
     compress();
     return *this;
   }
@@ -727,12 +523,11 @@ struct sparse_matrix :
   }
 
   sparse_matrix& operator=(const double& _value) {
-    CFwarn << "sparse_matrix: assigning a value to a sparse matrix only affects the populated entries." << CFendl;
-    if (is_compressed())
-      matc.a.assign(matc.a.size(),static_cast< const T >(_value));
-    else
-      for (typename matrix_uncompressed_t::iterator i = matu.begin(); i!=matu.end(); ++i)
-        const_cast< T& >(i->second) = _value;
+    CFdebug << "sparse_matrix: assigning a value to a sparse matrix only affects the populated entries." << CFendl;
+    const T value = _value;
+    std::fill(matc.a.begin(),matc.a.end(),value);
+    for (typename matrix_uncompressed_t::iterator it = matu.begin(); it!=matu.end(); ++it)
+      const_cast< T& >(it->second) = value;
     return *this;
   }
 
@@ -744,24 +539,25 @@ struct sparse_matrix :
   }
 
   sparse_matrix& zerorow(const size_t& _i) {
-    if ( _i<matrix_base_t::m_size.i) {
-      if (is_compressed() && ORIENT) {
-        // compressed, row-oriented matrix
-        std::fill(&matc.ia[_i],&matc.ia[_i+1],T());
-      }
-      else if (is_compressed() && !ORIENT) {
-        // compressed, column-oriented matrix
-        for (int j=0; j<matc.nnu; ++j)
-          for (int k=matc.ja[j]-BASE; k<matc.ja[j+1]-BASE; ++k)
-            if (matc.ia[k]-BASE==(int) _i)
-              matc.a[k] = T();
-      }
-      else {
-        // uncompressed, coordinate matrix
-        for (typename matrix_uncompressed_t::iterator it = matu.begin(); it!=matu.end(); ++it)
-          if (it->first.i==(size_t) _i)
-            const_cast< T& >(it->second) = T();
-      }
+    if ( _i>=matrix_base_t::m_size.i)
+      throw std::runtime_error("sparse_matrix: row index out of bounds.");
+
+    if (is_compressed() && ORIENT) {
+      // compressed, row-oriented matrix
+      for (int k=matc.ia[_i]-BASE; k<matc.ia[_i+1]-BASE; ++k)
+        matc.a[k] = T();
+    }
+    else if (is_compressed() && !ORIENT) {
+      // compressed, column-oriented matrix
+      for (int k=0; k<matc.nnz; ++k)
+        if (matc.ia[k]-BASE==(int) _i)
+            matc.a[k] = T();
+    }
+    else {
+      // uncompressed, coordinate matrix
+      for (typename matrix_uncompressed_t::iterator it = matu.begin(); it!=matu.end(); ++it)
+        if (it->first.i==(size_t) _i)
+          const_cast< T& >(it->second) = T();
     }
     return *this;
   }
@@ -889,10 +685,10 @@ struct sparse_matrix :
     // find/insert new entry, and a structurally symmetric pair. the constness
     // removal is safe because the entry value does not change matrix ordering
     uncompress();
+    typename matrix_uncompressed_t::iterator it;
     if (i!=j)
-      matu.insert( coord_t<T>(idx_t(j,i),T()) );
-    typename matrix_uncompressed_t::iterator it =
-      matu.insert( coord_t<T>(idx_t(i,j),T()) ).first;
+         matu.insert( coord_t<T>(idx_t(j,i),T()) );
+    it = matu.insert( coord_t<T>(idx_t(i,j),T()) ).first;
     return const_cast< T& >(it->second);
   }
 
@@ -901,6 +697,7 @@ struct sparse_matrix :
 
   matrix_compressed_t& compress() {
     if (!is_compressed()) {
+      ensure_structural_symmetry(matrix_base_t::m_size,matu);
       compress(matrix_base_t::m_size,matu,matc);
       matu.clear();
     }
@@ -910,6 +707,7 @@ struct sparse_matrix :
   matrix_uncompressed_t& uncompress() {
     if (is_compressed()) {
       uncompress(matrix_base_t::m_size,matu,matc);
+      ensure_structural_symmetry(matrix_base_t::m_size,matu);
       matc.clear();
     }
     return matu;
@@ -919,7 +717,7 @@ struct sparse_matrix :
  private:
   // compression utilities (not to use outside this context)
 
-  inline bool is_compressed() const { return matc.nnu; }
+  inline bool is_compressed() const { return matc.nnz; }
 
   static void compress(
     const idx_t& _size,
@@ -971,8 +769,10 @@ struct sparse_matrix :
       || _size.j<=*max_element(_c.ja.begin(),_c.ja.end()))
       throw std::runtime_error("sparse_matrix: after compression, indexing not correct.");
 
-    std::for_each(_c.ja.begin(),_c.ja.end(),base_conversion_t(BASE));
-    std::for_each(_c.ia.begin(),_c.ia.end(),base_conversion_t(BASE));
+    if (BASE) {
+      std::for_each(_c.ja.begin(),_c.ja.end(),base_conversion_t(BASE));
+      std::for_each(_c.ia.begin(),_c.ia.end(),base_conversion_t(BASE));
+    }
   }
 
 
@@ -988,7 +788,6 @@ struct sparse_matrix :
     for (int j=0; !ORIENT && j<_c.ja.size()-1; ++j)
       for (int k=_c.ja[j]-BASE; k<_c.ja[j+1]-BASE; ++k)
         _u.insert(coord_t<T>(idx_t(_c.ia[k]-BASE,j),_c.a[k]));
-    ensure_structural_symmetry(_size,_u);
   }
 
 
