@@ -67,8 +67,9 @@ class lss_API dss : public
   void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
-  void A___clear()                  { m_A.clear();    }
-  void A___zerorow(const size_t& i) { m_A.zerorow(i); }
+  void A___assign(const double& _value) { m_A = _value;   }
+  void A___clear()                      { m_A.clear();    }
+  void A___zerorow(const size_t& i)     { m_A.zerorow(i); }
   void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
   void   A___print(std::ostream& o, const print_t& l=print_auto) const { m_A.print(o,l); }
@@ -76,12 +77,14 @@ class lss_API dss : public
 
 
  protected:
+  // phase options
+  enum phase_t { _create=0, _structure, _reorder, _factor, _solve, _delete, _all_phases };
+
+ protected:
   // storage
   matrix_t m_A;
+  int opts[_all_phases];
   void *handle;
-  int opt,
-      sym,
-      type;
 
 };
 
