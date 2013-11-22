@@ -123,8 +123,9 @@ class lss_API GaussianElimination : public linearsystem< T >
   void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
-  void A___clear()                  { m_A.clear();    }
-  void A___zerorow(const size_t& i) { m_A.zerorow(i); }
+  void A___assign(const double& _value) { m_A = _value;   }
+  void A___clear()                      { m_A.clear();    }
+  void A___zerorow(const size_t& i)     { m_A.zerorow(i); }
   void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
   /// matrix inspecting

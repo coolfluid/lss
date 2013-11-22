@@ -276,8 +276,11 @@ class linearsystem : public common::Action
   }
 
   /// Value assignment (method)
-  linearsystem& assign(const T& _value=T()) {
-    return initialize(size(0),size(1),size(2),_value);
+  linearsystem& assign(const double& _value=double()) {
+    A___assign(_value);
+    m_b = _value;
+    m_x = _value;
+    return *this;
   }
 
   /// Operators assign value and copy
@@ -377,8 +380,9 @@ class linearsystem : public common::Action
   virtual void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
-  virtual void A___clear()                  = 0;
-  virtual void A___zerorow(const size_t& i) = 0;
+  virtual void A___assign(const double& _value) = 0;
+  virtual void A___clear()                      = 0;
+  virtual void A___zerorow(const size_t& i)     = 0;
   virtual void A___sumrows(const size_t& i, const size_t& isrc) = 0;
 
   /// Linear system matrix inspecting
