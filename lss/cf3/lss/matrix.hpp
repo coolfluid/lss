@@ -685,11 +685,11 @@ struct sparse_matrix :
     // find/insert new entry, and a structurally symmetric pair. the constness
     // removal is safe because the entry value does not change matrix ordering
     uncompress();
-    typename matrix_uncompressed_t::iterator it;
-    if (i!=j)
-         matu.insert( coord_t<T>(idx_t(j,i),T()) );
-    it = matu.insert( coord_t<T>(idx_t(i,j),T()) ).first;
-    return const_cast< T& >(it->second);
+    std::pair< typename matrix_uncompressed_t::iterator, bool > p =
+      matu.insert( coord_t<T>(idx_t(i,j),T()) );
+    if (p.second && i!=j)
+      matu.insert( coord_t<T>(idx_t(j,i),T()) );
+    return const_cast< T& >((p.first)->second);
   }
 
 
