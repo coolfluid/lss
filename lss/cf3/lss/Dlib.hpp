@@ -136,6 +136,11 @@ class lss_API Dlib : public linearsystem< T >
   /// Linear system solving
   Dlib& solve() {
 
+    //dlib::matrix<double,0,1> dlib_x = dlib::inv(m_A.a) * dlib::vector_to_matrix(m_B);
+    //for (unsigned i=0; i<Nb*Ne; ++i)
+    //  m_X[i] = dlib_x(i);
+
+
     // extremely innefficient but elegant, like a pig with lipstick...
     dlib::matrix< T > rhs(linearsystem< T >::size(0),linearsystem< T >::size(2));
     for (size_t i=0; i<linearsystem< T >::size(1); ++i)
