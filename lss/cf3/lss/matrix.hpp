@@ -565,9 +565,20 @@ struct sparse_matrix :
   sparse_matrix& sumrows(const size_t& i, const size_t& isrc) {
     if (std::max(i,isrc)>=matrix_base_t::m_size.i)
       throw std::runtime_error("sparse_matrix: row index(es) outside bounds.");
-    uncompress();
-    for (typename matrix_uncompressed_t::const_iterator it = matu.begin(); it!=matu.end(); ++it)
-      if (it->first.i==(size_t) isrc)
+
+    matrix_uncompressed_t rowu;  // (row buffer, in case matrix is compressed)
+    if (is_compressed()) {
+      for (int k=matc.ia[isrc]-BASE; ORIENT && k<matc.ia[isrc+1]-BASE; ++k)
+        rowu.insert(coord_t<T>(idx_t(isrc,matc.ja[k]-BASE), matc.a[k] ));
+      for (int j=0; !ORIENT && j<matc.nnu; ++j)
+        for (int k=matc.ja[j]-BASE; k<matc.ja[j+1]-BASE; ++k)
+          if (matc.ia[k]-BASE==isrc)
+            rowu.insert(coord_t<T>(idx_t(isrc,j), matc.a[k] ));
+    }
+
+    matrix_uncompressed_t& mat = is_compressed()? rowu : matu;
+    for (typename matrix_uncompressed_t::const_iterator it = mat.begin(); it!=mat.end(); ++it)
+      if (it->first.i==isrc)
         operator()(i,it->first.j) += it->second;
     return *this;
   }
