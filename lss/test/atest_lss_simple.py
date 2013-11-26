@@ -11,12 +11,15 @@ cf.env.log_level = 3 #  1=error, 2=warning, 3=info, 4=debug
 
 list_of_solvers = [
   'LAPACK',
-  'LAPACK_SinglePrecision',
-  'GaussianElimination',
-  'GaussianElimination_SinglePrecision',
-  'GMRES',
+# 'LAPACK_SinglePrecision',
+# 'GaussianElimination',
+# 'GaussianElimination_SinglePrecision',
+# 'GMRES',
   'Dlib',
+  'Dlib_SinglePrecision',
+# 'pardiso.pardiso',
 # 'mkl.pardiso',
+# 'wsmp.wsmp',
   ]
 for solver in list_of_solvers:
   lss = cf.root.create_component('MySolver_' + solver,'cf3.lss.' + solver)
@@ -31,6 +34,7 @@ for solver in list_of_solvers:
              4,  8,
              6, 12,
              8, 16 ]
-  lss.output(A=3,b=3,x=3)
+  lss.output(A=3,b=3,x=1)
   lss.solve()
+  lss.output(A=1,b=1,x=3)
 

@@ -127,8 +127,8 @@ class linearsystem : public common::Action
         xfname(opts.value< std::string >("x"));
     if (Afname.length() || bfname.length() || xfname.length()) {
       if (Afname.length()) A___initialize(Afname);
-      if (bfname.length() && !component_initialize_with_file(m_b,"b",bfname) || !bfname.length()) m_b.initialize(size(0),1,      value);
-      if (xfname.length() && !component_initialize_with_file(m_x,"x",xfname) || !xfname.length()) m_x.initialize(size(1),size(2),value);
+      if (bfname.length() && !component_initialize_with_file(m_b,"b",bfname) || !bfname.length()) m_b.initialize(size(0),1      );
+      if (xfname.length() && !component_initialize_with_file(m_x,"x",xfname) || !xfname.length()) m_x.initialize(size(1),size(2));
       consistent(A___size(0),A___size(1),m_b.size(0),m_b.size(1),m_x.size(0),m_x.size(1));
     }
     else {
@@ -136,9 +136,9 @@ class linearsystem : public common::Action
           i(opts.value< unsigned >("i")),
           j(opts.value< unsigned >("j")),
           k(opts.value< unsigned >("k"));
-      A___initialize(i,j,value);
-      m_b.initialize(i,k,value);
-      m_x.initialize(j,k,value);
+      A___initialize(i,j);
+      m_b.initialize(i,k);
+      m_x.initialize(j,k);
     }
   }
 
@@ -184,13 +184,13 @@ class linearsystem : public common::Action
   void signal_clear () { clear(); }
   void signal_solve () { execute(); }
 
-  void signal_A(common::SignalArgs& args) { common::XML::SignalOptions opts(args); A  (opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double   >("value"); }
-  void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); m_b(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }
-  void signal_x(common::SignalArgs& args) { common::XML::SignalOptions opts(args); m_x(opts.value< unsigned >("j"),opts.value< unsigned >("k")) = opts.value< unsigned >("value"); }
+  void signal_A(common::SignalArgs& args) { common::XML::SignalOptions opts(args); A  (opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double >("value"); }
+  void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); m_b(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< double >("value"); }
+  void signal_x(common::SignalArgs& args) { common::XML::SignalOptions opts(args); m_x(opts.value< unsigned >("j"),opts.value< unsigned >("k")) = opts.value< double >("value"); }
 
-  void trigger_A() { try { m_dummy_vector.size()==1? A___initialize(size(0),size(1),m_dummy_vector[0]) : A___initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: A: " << e.what() << CFendl; } m_dummy_vector.clear(); }
-  void trigger_b() { try { m_dummy_vector.size()==1? m_b.initialize(size(0),size(2),m_dummy_vector[0]) : m_b.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: b: " << e.what() << CFendl; } m_dummy_vector.clear();; }
-  void trigger_x() { try { m_dummy_vector.size()==1? m_x.initialize(size(1),size(2),m_dummy_vector[0]) : m_x.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: x: " << e.what() << CFendl; } m_dummy_vector.clear();; }
+  void trigger_A() { try { A___initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: A: " << e.what() << CFendl; } m_dummy_vector.clear(); }
+  void trigger_b() { try { m_b.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: b: " << e.what() << CFendl; } m_dummy_vector.clear(); }
+  void trigger_x() { try { m_x.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: x: " << e.what() << CFendl; } m_dummy_vector.clear(); }
 
   bool component_initialize_with_file(dense_matrix_v< T >& c, const std::string& name, const std::string& fname) {
     try { c.initialize(fname); }
@@ -219,11 +219,11 @@ class linearsystem : public common::Action
       const size_t& i=size_t(),
       const size_t& j=size_t(),
       const size_t& k=1,
-      const double& _value=double())
+      const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() )
   {
-    A___initialize(i,j,_value);
-    m_b.initialize(i,k,_value);
-    m_x.initialize(j,k,_value);
+    A___initialize(i,j,_nnz);
+    m_b.initialize(i,k);
+    m_x.initialize(j,k);
     return *this;
   }
 
@@ -276,8 +276,11 @@ class linearsystem : public common::Action
   }
 
   /// Value assignment (method)
-  linearsystem& assign(const T& _value=T()) {
-    return initialize(size(0),size(1),size(2),_value);
+  linearsystem& assign(const double& _value=double()) {
+    A___assign(_value);
+    m_b = _value;
+    m_x = _value;
+    return *this;
   }
 
   /// Operators assign value and copy
@@ -374,11 +377,12 @@ class linearsystem : public common::Action
  protected:
 
   /// Linear system matrix modifiers
-  virtual void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) = 0;
+  virtual void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
-  virtual void A___clear()                  = 0;
-  virtual void A___zerorow(const size_t& i) = 0;
+  virtual void A___assign(const double& _value) = 0;
+  virtual void A___clear()                      = 0;
+  virtual void A___zerorow(const size_t& i)     = 0;
   virtual void A___sumrows(const size_t& i, const size_t& isrc) = 0;
 
   /// Linear system matrix inspecting

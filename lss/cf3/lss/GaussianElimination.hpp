@@ -38,9 +38,8 @@ class lss_API GaussianElimination : public linearsystem< T >
   GaussianElimination(const std::string& name,
                       const size_t& _size_i=size_t(),
                       const size_t& _size_j=size_t(),
-                      const size_t& _size_k=1,
-                      const T& _value=T() ) : linearsystem< T >(name) {
-    linearsystem< T >::initialize(_size_i,_size_j,_size_k,_value);
+                      const size_t& _size_k=1 ) : linearsystem< T >(name) {
+    linearsystem< T >::initialize(_size_i,_size_j,_size_k);
   }
 
   /// Linear system solving
@@ -120,11 +119,12 @@ class lss_API GaussianElimination : public linearsystem< T >
         T& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
 
   /// matrix modifiers
-  void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
+  void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
-  void A___clear()                  { m_A.clear();    }
-  void A___zerorow(const size_t& i) { m_A.zerorow(i); }
+  void A___assign(const double& _value) { m_A = _value;   }
+  void A___clear()                      { m_A.clear();    }
+  void A___zerorow(const size_t& i)     { m_A.zerorow(i); }
   void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
   /// matrix inspecting

@@ -18,15 +18,13 @@ namespace lss {
 common::ComponentBuilder< PETSc_Seq, common::Component, LibLSS_PETSC > Builder_PETSc_Seq;
 
 
-PETSc_Seq::PETSc_Seq(
-    const std::string& name,
+PETSc_Seq::PETSc_Seq(const std::string& name,
     const size_t& _size_i,
     const size_t& _size_j,
-    const size_t& _size_k,
-    const double& _value)
+    const size_t& _size_k)
   : linearsystem< double >(name)
 {
-  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k);
 }
 
 
