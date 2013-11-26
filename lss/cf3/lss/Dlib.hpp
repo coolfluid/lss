@@ -36,11 +36,15 @@ struct dense_matrix_dlib :
 
   // initializations
 
-  dense_matrix_dlib& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
+  dense_matrix_dlib& initialize(
+      const size_t& i,
+      const size_t& j,
+      const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()
+      ) {
     if (idx_t(i,j).is_valid_size()) {
       matrix_base_t::m_size = idx_t(i,j);
       a.set_size(i,j);
-      a = static_cast< T >(_value);
+      a = T();
     }
     return *this;
   }
@@ -65,7 +69,8 @@ struct dense_matrix_dlib :
   }
 
   dense_matrix_dlib& operator=(const double& _value) {
-    return initialize(size(0),size(1),_value);
+    a = static_cast< T >(_value);
+    return *this;
   }
 
   void swap(dense_matrix_dlib& other) {
@@ -128,9 +133,8 @@ class lss_API Dlib : public linearsystem< T >
   Dlib(const std::string& name,
        const size_t& _size_i=size_t(),
        const size_t& _size_j=size_t(),
-       const size_t& _size_k=1,
-       const T& _value=T() ) : linearsystem< T >(name) {
-    linearsystem< T >::initialize(_size_i,_size_j,_size_k,_value);
+       const size_t& _size_k=1 ) : linearsystem< T >(name) {
+    linearsystem< T >::initialize(_size_i,_size_j,_size_k);
   }
 
   /// Linear system solving
@@ -170,7 +174,7 @@ class lss_API Dlib : public linearsystem< T >
         T& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
 
   /// matrix modifiers
-  void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
+  void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
   void A___assign(const double& _value)                 { m_A.operator=(_value); }
