@@ -25,7 +25,7 @@ namespace lss {
 common::ComponentBuilder< pardiso, common::Component, LibLSS_PARDISO > Builder_pardiso;
 
 
-pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
+pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k)
   : linearsystem< double >(name)
 {
   environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
@@ -53,7 +53,7 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
   iparm[ 7] = 0;               // + max numbers of iterative refinement steps
   iparm[31] = 0;               // + [0|1] sparse direct solver or multi-recursive iterative solver
 
-  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k);
 }
 
 

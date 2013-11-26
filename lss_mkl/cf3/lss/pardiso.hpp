@@ -37,8 +37,7 @@ class lss_API pardiso : public linearsystem< double >
   pardiso(const std::string& name,
     const size_t& _size_i=size_t(),
     const size_t& _size_j=size_t(),
-    const size_t& _size_k=1,
-    const double& _value=double() );
+    const size_t& _size_k=1 );
 
   /// Destruction
   ~pardiso();
@@ -66,7 +65,7 @@ class lss_API pardiso : public linearsystem< double >
   const double& A(const size_t& i, const size_t& j) const { return m_A(i,j); }
         double& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
 
-  void A___initialize(const size_t& i, const size_t& j, const double& _value=double()) { m_A.initialize(i,j,_value); }
+  void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j,_nnz); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
   void A___assign(const double& _value) { m_A = _value;   }

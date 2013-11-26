@@ -27,7 +27,7 @@ namespace lss {
 common::ComponentBuilder< WSMP, common::Component, LibLSS_WSMP > Builder_WSMP;
 
 
-WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
+WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k)
   : linearsystem< double >(name)
 {
   environment_variable_t< int > nthreads("WSMP_NUM_THREADS",1);
@@ -55,7 +55,7 @@ WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j
   iparm[ 4] = 0;  // + C-style numbering
   iparm[19] = 2;  // + ordering option 5
 
-  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k);
 }
 
 

@@ -21,14 +21,14 @@ namespace mkl {
 common::ComponentBuilder< iss, common::Component, LibLSS_MKL > Builder_MKL_iss;
 
 
-iss::iss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
+iss::iss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k)
   : linearsystem< double >(name)
 {
   environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
   CFinfo << "mkl iss: OMP_NUM_THREADS: " << nthreads.description() << CFendl;
   mkl_set_num_threads(nthreads.value);
 
-  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k);
 }
 
 

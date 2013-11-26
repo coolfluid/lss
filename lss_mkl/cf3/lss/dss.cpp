@@ -21,7 +21,7 @@ namespace mkl {
 common::ComponentBuilder< dss, common::Component, LibLSS_MKL > Builder_MKL_dss;
 
 
-dss::dss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k, const double& _value)
+dss::dss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k)
   : linearsystem< double >(name)
 {
   environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
@@ -39,7 +39,7 @@ dss::dss(const std::string& name, const size_t& _size_i, const size_t& _size_j, 
   if (err=dss_create_(&handle, &opts[_create]))
     throw std::runtime_error(err_message(err));
 
-  linearsystem< double >::initialize(_size_i,_size_j,_size_k,_value);
+  linearsystem< double >::initialize(_size_i,_size_j,_size_k);
 }
 
 dss::~dss()
