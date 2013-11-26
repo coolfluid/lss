@@ -8,13 +8,14 @@ TODO:
       + (core plugin, dense) Dlib
       + (core plugin, sparse) GMRES
       + (separate plugin, sparse) Pardiso/Basel[7] (version 4)
-      + (separate plugin, sparse) Pardiso/MKL (version 3)
-      + (separate plugin, sparse) DSS/MKL (version 3)
+      + (separate plugin, sparse) Pardiso/Intel MKL (version 3)
+      + (separate plugin, sparse) DSS/Intel MKL
       + (separate plugin, sparse) WSMP
 
 
   - work in progress:
       + (separate plugin, sparse) PETSc[5]
+      + (separate plugin, sparse) ISS/Intel MKL
 
 
   - to consider:
