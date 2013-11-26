@@ -91,10 +91,15 @@ struct matrix
 
   // -- functionality in remote implementation
 
-  virtual matrix& initialize(const size_t& i, const size_t& j, const double& _value=double()) = 0;
+  virtual matrix& initialize(
+      const size_t& i,
+      const size_t& j,
+      const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) = 0;
 
   virtual matrix& initialize(const std::vector< double >& _vector) {
-    if (m_size.i*m_size.j!=_vector.size())
+    if (_vector.size()==1)
+      return operator=(_vector[0]);
+    else if (m_size.i*m_size.j!=_vector.size())
       throw std::runtime_error("matrix: assignment not consistent with current size.");
     for (size_t i=0, k=0; i<size(0); ++i)
       for (size_t j=0; j<size(1); ++j, ++k)
@@ -196,8 +201,13 @@ struct matrix
     return *this;
   }
 
-  matrix& clear()                         { return initialize(m_size.i,m_size.j,double()); }
-  matrix& operator=(const double& _value) { return initialize(m_size.i,m_size.j,_value);   }
+  matrix& clear() {
+    m_zero = std::numeric_limits< T >::signaling_NaN();
+    m_size.clear();
+    return *this;
+  }
+
+  virtual matrix& operator=(const double& _value) = 0;
   matrix& operator=(const matrix& _other) { return IMPL::operator=(_other); }
   matrix& zerorow(const size_t& i)        { return IMPL::zerorow(i); }
   matrix& sumrows(const size_t& i, const size_t& isrc) { return IMPL::sumrows(i,isrc); }
@@ -291,18 +301,25 @@ struct dense_matrix_vv :
   typedef matrix< T, dense_matrix_vv< T > > matrix_base_t;
   using matrix_base_t::size;
 
-  dense_matrix_vv& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
+  // initializations
+
+  dense_matrix_vv& initialize(
+      const size_t& i,
+      const size_t& j,
+      const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
     if (idx_t(i,j).is_valid_size()) {
       matrix_base_t::m_size = idx_t(i,j);
       a.clear();
       if (size(0)*size(1))
         a.assign(ORIENT? size(0):size(1),std::vector< T >(
-                 ORIENT? size(1):size(0),static_cast< T >(_value) ));
+                 ORIENT? size(1):size(0),T() ));
     }
     return *this;
   }
 
   dense_matrix_vv& initialize(const std::vector< double >& _vector) {
+    if (_vector.size()==1)
+      return operator=(_vector[0]);
     matrix_base_t::initialize(_vector);
     return *this;
   }
@@ -312,15 +329,24 @@ struct dense_matrix_vv :
     return *this;
   }
 
-  dense_matrix_vv& clear() {
-    a.clear();
-    matrix_base_t::m_size.clear();
-    return *this;
-  }
+  // assignments
 
   dense_matrix_vv& operator=(const dense_matrix_vv& _other) {
     a = _other.a;
     matrix_base_t::m_size = _other.matrix_base_t::m_size;
+    return *this;
+  }
+
+  dense_matrix_vv& operator=(const double& _value) {
+    if (size(0)*size(1))
+      a.assign(ORIENT? size(0):size(1),std::vector< T >(
+               ORIENT? size(1):size(0),static_cast< T >(_value) ));
+    return *this;
+  }
+
+  dense_matrix_vv& clear() {
+    matrix_base_t::clear();
+    a.clear();
     return *this;
   }
 
@@ -373,17 +399,22 @@ struct dense_matrix_v :
 
   // initializations
 
-  dense_matrix_v& initialize(const size_t& i, const size_t& j, const double& _value=double()) {
+  dense_matrix_v& initialize(
+      const size_t& i,
+      const size_t& j,
+      const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
     if (idx_t(i,j).is_valid_size()) {
       matrix_base_t::m_size = idx_t(i,j);
       a.clear();
       if (size(0)*size(1))
-        a.assign(size(0)*size(1),static_cast< T >(_value));
+        a.assign(size(0)*size(1),T());
     }
     return *this;
   }
 
   dense_matrix_v& initialize(const std::vector< double >& _vector) {
+    if (_vector.size()==1)
+      return operator =(_vector[0]);
     matrix_base_t::initialize(_vector);
     return *this;
   }
@@ -402,7 +433,9 @@ struct dense_matrix_v :
   }
 
   dense_matrix_v& operator=(const double& _value) {
-    return initialize(size(0),size(1),_value);
+    if (size(0)*size(1))
+      a.assign(size(0)*size(1),static_cast< T >(_value));
+    return *this;
   }
 
   void swap(dense_matrix_v& other) {
@@ -413,8 +446,8 @@ struct dense_matrix_v :
   // clearing
 
   dense_matrix_v& clear() {
+    matrix_base_t::clear();
     a.clear();
-    matrix_base_t::m_size.clear();
     return *this;
   }
 
@@ -483,19 +516,45 @@ struct sparse_matrix :
     std::vector< T > a;         // values
   };
 
-  // cons/destructor
-  sparse_matrix() : matrix_base_t() { clear(); }
-  ~sparse_matrix() { clear(); }
+  // constructor
+  sparse_matrix() : matrix_base_t() {}
 
   // initializations
 
-  sparse_matrix& initialize(const size_t& i, const size_t& j, const double& _value) {
+  sparse_matrix& initialize(
+      const size_t& i,
+      const size_t& j,
+      const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
     if (idx_t(i,j).is_valid_size()) {
-      // initialization value ignored (after all, this is a sparse matrix)
       matu.clear();
       matc.clear();
       matrix_base_t::m_size = idx_t(i,j);
-      ensure_structural_symmetry(matrix_base_t::m_size,matu);
+      if (_nnz.size() && ORIENT) {
+
+        // build (already compressed) row and column indices, and allocate values
+        matc.nnu = static_cast< int >(_nnz.size());
+        matc.ia.reserve(matc.nnu+1);
+        matc.ia.push_back(BASE);
+        for (size_t r=0; r<_nnz.size(); ++r)
+          matc.ia.push_back(matc.ia.back() + static_cast< int >(_nnz[r].size()));
+
+        matc.nnz = matc.ia.back()-BASE;
+        matc.ja.reserve(matc.nnz);
+        for (size_t r=0, k=0; r<_nnz.size(); ++r)
+          for (size_t c=0; c<_nnz[r].size(); ++c)
+            matc.ja[k++] = static_cast< int >(_nnz[r][c])+BASE;
+
+        matc.a.assign(matc.nnz,T());
+
+      }
+      else if (_nnz.size()) {
+
+        for (size_t r=0; r<_nnz.size(); ++r)
+          for (std::vector< size_t >::const_iterator c=_nnz[r].begin(); c!=_nnz[r].end(); ++c)
+            operator()(r,*c) = T();
+        compress();
+
+      }
     }
     else {
       CFwarn << "sparse_matrix: invalid size: (" << i << ',' << j << ')' << CFendl;
@@ -504,6 +563,8 @@ struct sparse_matrix :
   }
 
   sparse_matrix& initialize(const std::vector< double >& _vector) {
+    if (_vector.size()==1)
+      return operator =(_vector[0]);
     matrix_base_t::initialize(_vector);
     compress();
     return *this;
@@ -516,15 +577,15 @@ struct sparse_matrix :
   }
 
   sparse_matrix& clear() {
-    matrix_base_t::m_size.clear();
+    matrix_base_t::clear();
     matu.clear();
     matc.clear();
     return *this;
   }
 
   sparse_matrix& operator=(const double& _value) {
-    CFdebug << "sparse_matrix: assigning a value to a sparse matrix only affects the populated entries." << CFendl;
-    const T value = _value;
+    CFdebug << "sparse_matrix: assigning a value only affects populated entries." << CFendl;
+    const T value = static_cast< T >(_value);
     std::fill(matc.a.begin(),matc.a.end(),value);
     for (typename matrix_uncompressed_t::iterator it = matu.begin(); it!=matu.end(); ++it)
       const_cast< T& >(it->second) = value;
@@ -538,25 +599,19 @@ struct sparse_matrix :
     return *this;
   }
 
-  sparse_matrix& zerorow(const size_t& _i) {
-    if ( _i>=matrix_base_t::m_size.i)
+  sparse_matrix& zerorow(const size_t& i) {
+    if (i>=matrix_base_t::m_size.i)
       throw std::runtime_error("sparse_matrix: row index out of bounds.");
-
-    if (is_compressed() && ORIENT) {
-      // compressed, row-oriented matrix
-      for (int k=matc.ia[_i]-BASE; k<matc.ia[_i+1]-BASE; ++k)
+    if (is_compressed()) {
+      for (int k=matc.ia[i]-BASE; ORIENT && k<matc.ia[i+1]-BASE; ++k)
         matc.a[k] = T();
-    }
-    else if (is_compressed() && !ORIENT) {
-      // compressed, column-oriented matrix
-      for (int k=0; k<matc.nnz; ++k)
-        if (matc.ia[k]-BASE==(int) _i)
+      for (int k=0; !ORIENT && k<matc.nnz; ++k)
+        if (matc.ia[k]-BASE==(int) i)
             matc.a[k] = T();
     }
     else {
-      // uncompressed, coordinate matrix
       for (typename matrix_uncompressed_t::iterator it = matu.begin(); it!=matu.end(); ++it)
-        if (it->first.i==(size_t) _i)
+        if (it->first.i==(size_t) i)
           const_cast< T& >(it->second) = T();
     }
     return *this;
@@ -693,7 +748,7 @@ struct sparse_matrix :
         if (matc.ia[k]-BASE==(int) i)
           return matc.a[k];
     }
-    // find/insert new entry, and a structurally symmetric pair. the constness
+    // find/insert new entry, and structurally symmetric pair. the constness
     // removal is safe because the entry value does not change matrix ordering
     uncompress();
     std::pair< typename matrix_uncompressed_t::iterator, bool > p =
@@ -708,18 +763,26 @@ struct sparse_matrix :
 
   matrix_compressed_t& compress() {
     if (!is_compressed()) {
-      ensure_structural_symmetry(matrix_base_t::m_size,matu);
+      CFinfo << "sparse_matrix::compress..." << CFendl;
+      const size_t nmodif = ensure_structural_symmetry(matrix_base_t::m_size,matu);
+      if (nmodif)
+        CFinfo << "sparse_matrix: symmetry preserving additional entries: " << nmodif << CFendl;
       compress(matrix_base_t::m_size,matu,matc);
       matu.clear();
+      CFinfo << "sparse_matrix::compress." << CFendl;
     }
     return matc;
   }
 
   matrix_uncompressed_t& uncompress() {
     if (is_compressed()) {
+      CFinfo << "sparse_matrix::uncompress..." << CFendl;
       uncompress(matrix_base_t::m_size,matu,matc);
-      ensure_structural_symmetry(matrix_base_t::m_size,matu);
       matc.clear();
+      const size_t nmodif = ensure_structural_symmetry(matrix_base_t::m_size,matu);
+      if (nmodif)
+        CFinfo << "sparse_matrix: symmetry preserving additional entries: " << nmodif << CFendl;
+      CFinfo << "sparse_matrix::uncompress." << CFendl;
     }
     return matu;
   }
@@ -736,20 +799,20 @@ struct sparse_matrix :
     matrix_compressed_t& _c)
   {
     _c.clear();
-
     typename matrix_uncompressed_t::const_iterator it=_u.begin();
     if (it==_u.end())
       return;
 
+    _c.nnu = (ORIENT? _size.i:_size.j);
+    _c.nnz = _u.size();
+    _c.ia.reserve(ORIENT? _c.nnu+1 : _c.nnz  );
+    _c.ja.reserve(ORIENT? _c.nnz   : _c.nnu+1);
+    _c.a .reserve(_c.nnz);
+
     // row-oriented matrix
     if (ORIENT) {
       _c.ia.push_back(0);
-      _c.ja.reserve(_u.size());
-      _c.a .reserve(_u.size());
-      for (size_t count,
-           r =  _u.begin() ->first.i;
-           r <= _u.rbegin()->first.i;
-           ++r) {
+      for (size_t count, r=0; r<_size.i; ++r) {
         for (count=0; r==(it->first.i) && it!=_u.end(); ++it, ++count) {
           _c.ja.push_back(it->first.j);
           _c.a .push_back(it->second);
@@ -761,12 +824,7 @@ struct sparse_matrix :
     // column-oriented matrix
     else {
       _c.ja.push_back(0);
-      _c.ia.reserve(_u.size());
-      _c.a .reserve(_u.size());
-      for (size_t count,
-           c =  _u.begin() ->first.j;
-           c <= _u.rbegin()->first.j;
-           ++c) {
+      for (size_t count, c=0; c<_size.j; ++c) {
         for (count=0; c==(it->first.j) && it!=_u.end(); ++it, ++count) {
           _c.ia.push_back(it->first.i);
           _c.a .push_back(it->second);
@@ -774,11 +832,6 @@ struct sparse_matrix :
         _c.ja.push_back(_c.ja.back() + count);
       }
     }
-    _c.nnu = (ORIENT? _size.i:_size.j);
-    _c.nnz = _u.size();
-    if ( _size.i!=_c.nnu
-      || _size.j<=*max_element(_c.ja.begin(),_c.ja.end()))
-      throw std::runtime_error("sparse_matrix: after compression, indexing not correct.");
 
     if (BASE) {
       std::for_each(_c.ja.begin(),_c.ja.end(),base_conversion_t(BASE));
@@ -809,6 +862,7 @@ struct sparse_matrix :
     size_t nmodif = 0;
     for (size_t i=0; i<std::min(_size.i,_size.j); ++i)
       _u.insert(coord_t<T>(idx_t(i,i),T())).second? ++nmodif:nmodif;
+#if 0
     for (bool modif=true; modif;) {
       modif = false;
       for (typename matrix_uncompressed_t::const_reverse_iterator c=_u.rbegin(); !modif && c!=_u.rend(); ++c)
@@ -817,6 +871,11 @@ struct sparse_matrix :
           (modif = _u.insert(p).second)? ++nmodif:nmodif;
         }
     }
+#else
+    for (typename matrix_uncompressed_t::const_iterator c=_u.begin(); c!=_u.end(); ++c)
+      if (c->first.j != c->first.i)
+        _u.insert( coord_t<T>(idx_t(c->first.j,c->first.i),T()) ).second? ++nmodif:nmodif;
+#endif
     return nmodif;
   }
 
