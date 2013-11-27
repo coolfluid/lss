@@ -539,7 +539,7 @@ struct sparse_matrix :
           matc.ia.push_back(matc.ia.back() + static_cast< int >(_nnz[r].size()));
 
         matc.nnz = matc.ia.back()-BASE;
-        matc.ja.reserve(matc.nnz);
+        matc.ja.resize(matc.nnz);
         for (size_t r=0, k=0; r<_nnz.size(); ++r)
           for (size_t c=0; c<_nnz[r].size(); ++c)
             matc.ja[k++] = static_cast< int >(_nnz[r][c])+BASE;
