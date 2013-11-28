@@ -20,6 +20,7 @@ namespace lss {
 namespace petsc {
 
 
+#if 0
 /// @brief PETSc matrix wrapper (consistent with cf3::lss::matrix<...>)
 struct matrix_wrapper  :
   matrix< double, matrix_wrapper >
@@ -42,6 +43,7 @@ struct matrix_wrapper  :
 
   double v;
 };
+#endif
 
 
 #if 0
@@ -80,13 +82,13 @@ struct vector_wrapper  :
 class lss_API PETSc_Seq : public linearsystem< double >
 {
   // utility definitions
-  typedef petsc::matrix_wrapper matrix_t;
+//typedef petsc::matrix_wrapper matrix_t;
+  typedef sparse_matrix< double, sort_by_row, 0 > matrix_t;
 
 
  public:
   // framework interfacing
-  static std::string type_name() { return "petsc"; }
-
+  static std::string type_name() { return "petsc_seq"; }
 
   /// Construction
   PETSc_Seq(const std::string& name,
@@ -94,11 +96,21 @@ class lss_API PETSc_Seq : public linearsystem< double >
     const size_t& _size_j=size_t(),
     const size_t& _size_k=1 );
 
+  /// Destruction
+  ~PETSc_Seq();
+
   /// Linear system solving
   PETSc_Seq& solve();
 
   /// Linear system copy
   PETSc_Seq& copy(const PETSc_Seq& _other);
+
+
+  // internal functions
+ private:
+
+  /// Verbose error message
+  static const std::string err_message(const int& err, const char* basemsg);
 
 
  protected:
