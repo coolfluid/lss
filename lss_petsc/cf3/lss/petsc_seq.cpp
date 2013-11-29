@@ -31,7 +31,7 @@ petsc_seq::petsc_seq(const std::string& name,
   PetscInitialize(&argc,&args,(char*)0,help);
 
   opt.ksptype = "gmres";
-  opt.pctype  = "jacobi";
+  opt.pctype  = "asm";
   opt.monitor = false;
   opt.ovl = 1;
   PetscErrorCode err = 0;
