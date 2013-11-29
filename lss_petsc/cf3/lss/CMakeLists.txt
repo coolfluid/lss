@@ -2,8 +2,8 @@
 list( APPEND petsc_files
   LibLSS_PETSC.cpp
   LibLSS_PETSC.hpp
-  PETSc_Seq.cpp
-  PETSc_Seq.hpp )
+  petsc_seq.cpp
+  petsc_seq.h )
 
 
 if(CF3_HAVE_PETSC)
