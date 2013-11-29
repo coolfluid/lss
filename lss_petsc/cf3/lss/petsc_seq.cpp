@@ -30,8 +30,8 @@ petsc_seq::petsc_seq(const std::string& name,
   char help[] = "";
   PetscInitialize(&argc,&args,(char*)0,help);
 
-  opt.ksptype = "gmres";
-  opt.pctype  = "asm";
+  opt.ksptype = KSPGMRES;
+  opt.pctype  = PCASM;
   opt.monitor = false;
   opt.ovl = 1;
   PetscErrorCode err = 0;
