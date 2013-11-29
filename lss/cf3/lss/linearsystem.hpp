@@ -9,6 +9,8 @@
 #define cf3_lss_linearsystem_hpp
 
 
+#include <iostream>
+
 #include "common/BasicExceptions.hpp"
 #include "common/Signal.hpp"
 #include "common/Action.hpp"
@@ -210,7 +212,7 @@ class linearsystem : public common::Action
   void execute() {
     try { solve(); }
     catch (const std::runtime_error& e) {
-      std::cout << "linearsystem: " << e.what() << std::endl;
+      CFwarn << "linearsystem: " << e.what() << CFendl;
     }
   }
 
