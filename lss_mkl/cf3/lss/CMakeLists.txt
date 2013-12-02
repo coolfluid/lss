@@ -3,11 +3,13 @@ list( APPEND mkl_files
   LibLSS_MKL.cpp
   LibLSS_MKL.hpp
   dss.cpp
-  dss.hpp
-  iss.cpp
-  iss.hpp
+  dss.h
+  iss_fgmres.cpp
+  iss_fgmres.h
+  iss_fgmres_pc.cpp
+  iss_fgmres_pc.h
   pardiso.cpp
-  pardiso.hpp )
+  pardiso.h )
 
 
 if(CF3_HAVE_INTELMKL)

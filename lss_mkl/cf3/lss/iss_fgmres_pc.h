@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_mkl_pardiso_hpp
-#define cf3_lss_mkl_pardiso_hpp
+#ifndef cf3_lss_mkl_iss_fgmres_pc_h
+#define cf3_lss_mkl_iss_fgmres_pc_h
 
 
 #include "LibLSS_MKL.hpp"
@@ -19,44 +19,34 @@ namespace mkl {
 
 
 /**
- * @brief Interface to Pardiso linear system solver (Intel MKL version).
+ * @brief Interface to Intel MKL iterative sparse solvers, using RCI interface
+ * to implement a ILU0 or ILUT-preconditioned flexible (F) GMRES solver
  * @author Pedro Maciel
  */
-class lss_API pardiso : public linearsystem< double >
+class lss_API iss_fgmres_pc : public
+  linearsystem< double >
 {
   // utility definitions
   typedef sparse_matrix< double, sort_by_row, 1 > matrix_t;
+  enum pc_t { ILU0=0, ILUT=1, all_pc };
 
 
-  // framework interfacing
  public:
-  static std::string type_name() { return "pardiso"; }
+  // framework interfacing
+  static std::string type_name() { return "iss_fgmres_pc"; }
 
 
   /// Construction
-  pardiso(const std::string& name,
+  iss_fgmres_pc(const std::string& name,
     const size_t& _size_i=size_t(),
     const size_t& _size_j=size_t(),
     const size_t& _size_k=1 );
 
-  /// Destruction
-  ~pardiso();
-
   /// Linear system solving
-  pardiso& solve();
+  iss_fgmres_pc& solve();
 
   /// Linear system copy
-  pardiso& copy(const pardiso& _other);
-
-
-  // internal functions
- private:
-
-  /// Verbose error message
-  static const std::string err_message(const int& err);
-
-  /// Library call
-  int call_pardiso(int _phase, int _msglvl);
+  iss_fgmres_pc& copy(const iss_fgmres_pc& _other);
 
 
  protected:
@@ -80,11 +70,10 @@ class lss_API pardiso : public linearsystem< double >
  protected:
   // storage
   matrix_t m_A;
-  void* pt[64];  // internal memory pointer (void* for both 32/64-bit)
-  int   iparm[64],
-        maxfct,
-        mnum,
-        mtype;
+  matrix_t::matrix_compressed_t m_pc;
+  pc_t   m_pc_type;
+  int    iparm[128];
+  double dparm[128];
 
 };
 

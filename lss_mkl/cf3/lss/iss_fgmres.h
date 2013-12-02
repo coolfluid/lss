@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_mkl_dss_hpp
-#define cf3_lss_mkl_dss_hpp
+#ifndef cf3_lss_mkl_iss_fgmres_h
+#define cf3_lss_mkl_iss_fgmres_h
 
 
 #include "LibLSS_MKL.hpp"
@@ -19,10 +19,11 @@ namespace mkl {
 
 
 /**
- * @brief Interface to Intel MKL direct sparse solvers.
+ * @brief Interface to Intel MKL iterative sparse solvers, using RCI interface
+ * to implement a non-preconditioned flexible (F) GMRES solver
  * @author Pedro Maciel
  */
-class lss_API dss : public
+class lss_API iss_fgmres : public
   linearsystem< double >
 {
   // utility definitions
@@ -31,31 +32,20 @@ class lss_API dss : public
 
  public:
   // framework interfacing
-  static std::string type_name() { return "dss"; }
+  static std::string type_name() { return "iss_fgmres"; }
 
 
   /// Construction
-  dss(const std::string& name,
+  iss_fgmres(const std::string& name,
     const size_t& _size_i=size_t(),
     const size_t& _size_j=size_t(),
     const size_t& _size_k=1 );
 
-  /// Destruction
-  ~dss();
-
   /// Linear system solving
-  dss& solve();
+  iss_fgmres& solve();
 
   /// Linear system copy
-  dss& copy(const dss& _other);
-
-
-  // internal functions
- private:
-
-  /// Verbose error message
-  static std::string err_message(const int& err);
-
+  iss_fgmres& copy(const iss_fgmres& _other);
 
  protected:
   // linear system matrix interfacing
@@ -76,14 +66,10 @@ class lss_API dss : public
 
 
  protected:
-  // phase options
-  enum phase_t { _create=0, _structure, _reorder, _factor, _solve, _delete, _all_phases };
-
- protected:
   // storage
   matrix_t m_A;
-  int opts[_all_phases];
-  void *handle;
+  int    iparm[128];
+  double dparm[128];
 
 };
 
