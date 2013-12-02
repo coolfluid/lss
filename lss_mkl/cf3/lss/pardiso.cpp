@@ -10,7 +10,7 @@
 
 #include "common/Builder.hpp"
 #include "common/Log.hpp"
-#include "pardiso.hpp"
+#include "pardiso.h"
 
 
 namespace cf3 {

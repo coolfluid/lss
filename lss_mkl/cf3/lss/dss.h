@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_mkl_dss_hpp
-#define cf3_lss_mkl_dss_hpp
+#ifndef cf3_lss_mkl_dss_h
+#define cf3_lss_mkl_dss_h
 
 
 #include "LibLSS_MKL.hpp"

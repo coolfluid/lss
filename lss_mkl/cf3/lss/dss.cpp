@@ -10,7 +10,7 @@
 
 #include "common/Builder.hpp"
 #include "common/Log.hpp"
-#include "dss.hpp"
+#include "dss.h"
 
 
 namespace cf3 {
