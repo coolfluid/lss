@@ -19,7 +19,8 @@ namespace mkl {
 
 
 /**
- * @brief Interface to Intel MKL direct sparse solvers.
+ * @brief Interface to Intel MKL iterative sparse solvers, using RCI interface
+ * to implement a non-preconditioned flexible (F) GMRES solver
  * @author Pedro Maciel
  */
 class lss_API iss_fgmres : public
@@ -67,6 +68,8 @@ class lss_API iss_fgmres : public
  protected:
   // storage
   matrix_t m_A;
+  int    iparm[128];
+  double dparm[128];
 
 };
 
