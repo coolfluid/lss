@@ -62,7 +62,7 @@ iss_fgmres& iss_fgmres::solve()
   if (RCI_request)
     throw std::runtime_error(std::string("iss_fgmres: dfgmres_init failed."));
 
-  CFdebug << "iss_fgmres: information about the RCI FGMRES method:" << 'n'
+  CFdebug << "iss_fgmres: information about the RCI FGMRES method:" << '\n'
           << "  iparm[ 7]=" << iparm[ 7] << ": automatic test for the maximal number of iterations will be " << (iparm[7]? "performed":"skipped") << '\n'
           << "  iparm[ 8]=" << iparm[ 8] << ": automatic residual test will be " << (iparm[8]? "performed":"skipped") << '\n'
           << "  iparm[ 9]=" << iparm[ 9] << ": user-defined stopping test " << (iparm[9]? "will be requested via RCI_request=2":"will not be requested, thus RCI_request will not take the value 2") << '\n'
