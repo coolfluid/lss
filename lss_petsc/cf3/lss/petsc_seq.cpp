@@ -92,6 +92,16 @@ petsc_seq& petsc_seq::solve()
 
   // set solver/preconditioner options
   // NOTE: here the system matrix serves as preconditioning matrix
+  CFdebug << "petsc_seq: solver/preconditioner options:" << '\n'
+          << "  ksptype:  " << opt.ksptype << '\n'
+          << "  pctype:   " << opt.pctype  << '\n'
+          << "  monitor:  " << (opt.monitor?"true":"false") << '\n'
+          << "  restart:  " << opt.restart << '\n'
+          << "  ovl:      " << opt.ovl     << '\n'
+          << "  maxits:   " << opt.maxits  << '\n'
+          << "  rtol:     " << opt.rtol    << '\n'
+          << "  abstol:   " << opt.abstol  << '\n'
+          << "  dtol:     " << opt.dtol    << CFendl;
   if ( (err=KSPSetType(ksp,opt.ksptype.c_str())) ||
        (err=KSPSetTolerances(ksp,opt.rtol,opt.abstol,opt.dtol,opt.maxits)) ||
        (err=KSPSetOperators(ksp,Ap,Ap,DIFFERENT_NONZERO_PATTERN)) ||
@@ -100,6 +110,9 @@ petsc_seq& petsc_seq::solve()
        (err=KSPGMRESSetRestart(ksp,opt.restart)) ||
        (opt.monitor && (err=KSPMonitorSet(ksp,&KSPMonitorDefault,NULL,NULL))) )
     throw std::runtime_error(err_message((int) err,"set solver/preconditioner options"));
+
+
+
 
 
   // solve
