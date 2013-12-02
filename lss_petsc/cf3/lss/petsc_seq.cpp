@@ -112,9 +112,6 @@ petsc_seq& petsc_seq::solve()
     throw std::runtime_error(err_message((int) err,"set solver/preconditioner options"));
 
 
-
-
-
   // solve
   if (err=KSPSolve(ksp,bp,xp))
     throw std::runtime_error(err_message((int) err,"solve"));
