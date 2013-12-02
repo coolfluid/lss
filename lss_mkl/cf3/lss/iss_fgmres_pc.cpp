@@ -100,7 +100,7 @@ iss_fgmres_pc& iss_fgmres_pc::solve()
       dparm[30] = 1.e-20;  // small value to compare a diagonal entry with it
       dparm[31] = 1.e-16;  // preconditioner diagonal target value if it is small as compared to dpar[30], change it to this rather than abort preconditioner calculation.
 
-      m_pc.a.assign(static_cast< size_t >(A.nnu),0.);
+      m_pc.a.assign(static_cast< size_t >(A.nnz),0.);
       dcsrilu0(&A.nnu, &A.a[0], &A.ia[0], &A.ja[0], &m_pc.a[0], &iparm[0], &dparm[0], &ierr);
       break;
 
@@ -135,7 +135,6 @@ iss_fgmres_pc& iss_fgmres_pc::solve()
           << CFendl;
 
 
-#if 0
   // reverse communication loop
   for (bool finished=false; !finished;) {
     dfgmres(&A.nnu, &m_x.a[0], &m_b.a[0], &RCI_request, iparm, dparm, &tmp[0]);
@@ -232,7 +231,6 @@ iss_fgmres_pc& iss_fgmres_pc::solve()
     }
   }
   CFdebug << "iss_fgmres_pc: " << (RCI_request? "failed":"succeded") << ", iterations: " << itercount << CFendl;
-#endif
 
 
   // release internal memory
