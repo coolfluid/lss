@@ -29,6 +29,10 @@ iss_fgmres::iss_fgmres(const std::string& name, const size_t& _size_i, const siz
   CFinfo << "mkl iss_fgmres: OMP_NUM_THREADS: " << nthreads.description() << CFendl;
   mkl_set_num_threads(nthreads.value);
 
+  // reset iparm and dparm
+  for (size_t i=0; i<128; ++i) iparm[i] = 0;
+  for (size_t i=0; i<128; ++i) dparm[i] = 0.;
+
   linearsystem< double >::initialize(_size_i,_size_j,_size_k);
 }
 
@@ -43,7 +47,7 @@ iss_fgmres& iss_fgmres::solve()
   std::vector< double > tmp( N*(2*N+1) + (N*(N+9))/2 + 1 );
   MKL_INT RCI_request;
   MKL_INT itercount = 0;
-  char cvar = 'N'; // non-transposed matrix
+  char cvar1;
 
 
   // initialize the solver
@@ -52,16 +56,17 @@ iss_fgmres& iss_fgmres::solve()
     throw std::runtime_error(std::string("iss_fgmres: dfgmres_init failed."));
 
 
-  // set configuration parameters and check their consistency
+  // set configuration parameters
   iparm[ 8] = 1;      // do residual stopping test
   iparm[ 9] = 0;      // do not request for the user defined stopping test
   iparm[11] = 1;      // do the check of the norm of the next generated vector automatically
   dparm[ 0] = 1.E-3;  // relative tolerance (instead of default value 1.E-6)
 
+
+  // check configuration parameters consistency
   dfgmres_check(&A.nnu, &m_x.a[0], &m_b.a[0], &RCI_request, iparm, dparm, &tmp[0]);
   if (RCI_request)
     throw std::runtime_error(std::string("iss_fgmres: dfgmres_init failed."));
-
   CFdebug << "iss_fgmres: information about the RCI FGMRES method:" << '\n'
           << "  iparm[ 7]=" << iparm[ 7] << ": automatic test for the maximal number of iterations will be " << (iparm[7]? "performed":"skipped") << '\n'
           << "  iparm[ 8]=" << iparm[ 8] << ": automatic residual test will be " << (iparm[8]? "performed":"skipped") << '\n'
@@ -72,23 +77,25 @@ iss_fgmres& iss_fgmres::solve()
 
 
   // reverse communication loop
-  for (bool finished=false; !finished; ) {
+  for (bool finished=false; !finished;) {
     dfgmres(&A.nnu, &m_x.a[0], &m_b.a[0], &RCI_request, iparm, dparm, &tmp[0]);
     switch (RCI_request) {
+
+      case 0:
+        // finish step:
+        // - get the FGMRES solution (x still contains initial guess)
+        // - get the current iteration number
+        iparm[12] = 0;
+        dfgmres_get(&A.nnu, &m_x.a[0], &m_b.a[0], &RCI_request, iparm, dparm, &tmp[0], &itercount);
+        finished = true;
+        break;
 
       case 1:
         // iterative step:
         // compute vector A*tmp[ipar[21]-1] into vector tmp[ipar[22]-1]
         // NOTE: iparm[21] and [22] contain FORTRAN style addresses
-        mkl_dcsrgemv(&cvar, &A.nnu, &A.a[0], &A.ia[0], &A.ja[0], &tmp[iparm[21] - 1], &tmp[iparm[22] - 1]);
-        break;
-
-      case 0:
-        // finish step:
-        // - get the FGMRES solution (computed_solution still contains initial guess)
-        // - get the current iteration number
-        dfgmres_get(&A.nnu, &m_x.a[0], &m_b.a[0], &RCI_request, iparm, dparm, &tmp[0], &itercount);
-        finished = true;
+        cvar1 = 'N';
+        mkl_dcsrgemv(&cvar1, &A.nnu, &A.a[0], &A.ia[0], &A.ja[0], &tmp[iparm[21] - 1], &tmp[iparm[22] - 1]);
         break;
 
       default:
@@ -97,7 +104,7 @@ iss_fgmres& iss_fgmres::solve()
         break;
     }
   }
-  CFdebug << "iss_fgmres: " << (RCI_request? "failed":"success") << ", iterations: " << itercount << CFendl;
+  CFdebug << "iss_fgmres: " << (RCI_request? "failed":"succeded") << ", iterations: " << itercount << CFendl;
 
 
   // release internal memory

@@ -6,6 +6,8 @@ list( APPEND mkl_files
   dss.h
   iss_fgmres.cpp
   iss_fgmres.h
+  iss_fgmres_pc.cpp
+  iss_fgmres_pc.h
   pardiso.cpp
   pardiso.h )
 
