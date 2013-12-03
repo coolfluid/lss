@@ -655,7 +655,7 @@ struct sparse_matrix :
                                                 print_full )));
 
     if (lvl==print_size)  {
-      o << "(" << size.i << 'x' << size.j << ">=" << (matc.nnu+matu.size()) << ") [ ... ]";
+      o << "(" << size.i << 'x' << size.j << ">=" << (matc.nnz+matu.size()) << ") [ ... ]";
     }
     else {
 
