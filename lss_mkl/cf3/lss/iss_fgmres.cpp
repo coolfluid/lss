@@ -109,9 +109,8 @@ iss_fgmres& iss_fgmres::solve()
 
 
   CFdebug << "mkl iss_fgmres: allocate temporary storage" << CFendl;
-  const size_t
-    N = m_A.size(0),
-    tmp_size = N*(2*opt.iparm_14+1) + (opt.iparm_14*(opt.iparm_14+9))/2 + 1;
+  const size_t tmp_size =
+    m_A.size(0)*(2*opt.iparm_14+1) + (opt.iparm_14*(opt.iparm_14+9))/2 + 1;
   if (tmp.size()!=tmp_size)
     tmp.assign(tmp_size,0.);  // this is really really heavy!
 
@@ -198,8 +197,8 @@ iss_fgmres& iss_fgmres::solve()
     switch (RCI_request) {
 
       case 1:
-        // iterative step:
-        // compute vector A*tmp[ipar[21]-1] into vector tmp[ipar[22]-1]
+        // iterative step
+        // compute vector A*tmp[iparm[21]-1] into vector tmp[iparm[22]-1]
         // NOTE: iparm[21] and [22] contain FORTRAN style addresses
         cvar[0] = 'N';
         mkl_dcsrgemv(&cvar[0], &A.nnu, &A.a[0], &A.ia[0], &A.ja[0], &tmp[iparm[21] - 1], &tmp[iparm[22] - 1]);
@@ -228,8 +227,8 @@ iss_fgmres& iss_fgmres::solve()
         break;
 
       case 3:
-        // apply the preconditioner on the vector tmp[iparm[21]-1] and put
-        // result in vector tmp[iparm[22]-1]
+        // apply preconditioner on vector tmp[iparm[21]-1] into vector
+        // tmp[iparm[22]-1]
         // NOTE: iparm[21] and [22] contain FORTRAN style addresses
         trvec.assign(A.nnu,0.);
 
@@ -264,14 +263,14 @@ iss_fgmres& iss_fgmres::solve()
 
     }
   }
-  if (!RCI_request) {
-    // finish step:
-    // - get the FGMRES solution (x still contains initial guess)
-    // - get the current iteration number
-    iparm[12] = 0;
-    dfgmres_get(&A.nnu, &m_x.a[0], &m_b.a[0], &RCI_request, iparm, dparm, &tmp[0], &itercount);
-  }
-  CFinfo << "mkl iss_fgmres: " << (RCI_request? "failed":"succeded") << ", iterations: " << itercount << CFendl;
+
+
+  // get solution if successful (x still has initial guess) and iteration number
+  const bool ok(!RCI_request);
+  iparm[12] = ok? 0:-1;
+  dfgmres_get(&A.nnu, &m_x.a[0], &m_b.a[0], &RCI_request, iparm, dparm, &tmp[0], &itercount);
+  CFinfo << "mkl iss_fgmres: " << (ok? "succeded":"failed") << ", iterations: " << itercount << CFendl;
+
 
   return *this;
 }
@@ -285,7 +284,7 @@ iss_fgmres& iss_fgmres::copy(const iss_fgmres& _other)
   m_pc_type    = _other.m_pc_type;
   m_pc_refresh = _other.m_pc_refresh;
   m_monitor    = _other.m_monitor;
-  m_resnorm   = _other.m_resnorm;
+  m_resnorm    = _other.m_resnorm;
   opt          = _other.opt;
   previous_opt = _other.previous_opt;
   tmp          = _other.tmp;
