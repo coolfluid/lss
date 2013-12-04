@@ -41,14 +41,14 @@ iss_fgmres::iss_fgmres(const std::string& name, const size_t& _size_i, const siz
   m_pc_type    = "none";
   m_pc_refresh = true;
   m_monitor    = false;
-  m_resnorm    = 1.e-3;
+  m_resnorm    = 1.e-12;
   opt.pc_type  = previous_opt.pc_type = NONE;
   opt.tol      = 1.e-16;
   opt.maxfil   = 1;
   options().add("PCType",      m_pc_type   ).link_to(&m_pc_type   ).mark_basic().description("preconditioner type, \"none\" (default), \"ilu0\" or \"ilut\"");
   options().add("PCRefresh",   m_pc_refresh).link_to(&m_pc_refresh).mark_basic().description("if preconditioner is to be recalculated (default true)");
   options().add("monitor",     m_monitor   ).link_to(&m_monitor   ).mark_basic().description("if each iteration should be printed (default false)");
-  options().add("resnorm",     m_resnorm   ).link_to(&m_resnorm   ).mark_basic().description("user-defined stopping test, maximum residual norm (default 1.e-3)");
+  options().add("resnorm",     m_resnorm   ).link_to(&m_resnorm   ).mark_basic().description("user-defined stopping test, maximum residual norm (default 1.e-12)");
   options().add("ilut_tol",    opt.tol     ).link_to(&opt.tol     ).mark_basic().description("ilut only: tolerance threshold for preconditioner entries (default 1.e-16)");
   options().add("ilut_maxfil", opt.maxfil  ).link_to(&opt.maxfil  ).mark_basic().description("ilut only: maximum fill-in (half of preconditioner bandwidth (default 1)");
 
@@ -62,7 +62,7 @@ iss_fgmres::iss_fgmres(const std::string& name, const size_t& _size_i, const siz
   options().add("maxits",    opt.iparm__4).link_to(&opt.iparm__4).mark_basic().description("maximum number of iterations to perform (default 150)");
   options().add("test_its",  opt.iparm__7).link_to(&opt.iparm__7).mark_basic().description("perform maximum iterations stopping test (default 1, yes)");
   options().add("test_res",  opt.iparm__8).link_to(&opt.iparm__8).mark_basic().description("perform residual stopping test (default 0, no)");
-  options().add("test_user", opt.iparm__9).link_to(&opt.iparm__9).mark_basic().description("perform user-defined stopping test, in this case the residual norm (default 1, yes)");
+  options().add("test_user", opt.iparm__9).link_to(&opt.iparm__9).mark_basic().description("perform user-defined stopping test, in this case the residual norm against option 'resnorm' (default 1, yes)");
   options().add("test_norm", opt.iparm_11).link_to(&opt.iparm_11).mark_basic().description("perform test for zero norm of next generated vector (default 0, no)");
   options().add("restart",   opt.iparm_14).link_to(&opt.iparm_14).mark_basic().description("number of non-restarted iterations (default 150)");
   options().add("pc_zerodiag_subs", iparm[30]).link_to(&iparm[30]).mark_basic().description("preconditioner: perform zero diagonal element substitution (default 1, yes)");
@@ -177,6 +177,7 @@ iss_fgmres& iss_fgmres::solve()
     dcsrilut(&A.nnu, &A.a[0], &A.ia[0], &A.ja[0], &m_pc.a[0], &m_pc.ia[0], &m_pc.ja[0], &opt.tol, &opt.maxfil, &iparm[0], &dparm[0], &RCI_request);
 
   }
+  else if (opt.pc_type && !m_pc_refresh) {}
   else {
 
     opt.pc_type = NONE;
