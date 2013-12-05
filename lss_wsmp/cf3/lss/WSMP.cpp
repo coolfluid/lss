@@ -32,8 +32,8 @@ WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j
 {
   environment_variable_t< int >
     nthreads("WSMP_NUM_THREADS",1),
-    malloc_trh("MALLOC_TRIM_THRESHOLD_",500*1024*1024),  // trim threshold 500Mb
-    malloc_max("MALLOC_MMAP_MAX_",0);
+    malloc_trh("MALLOC_TRIM_THRESHOLD_"),
+    malloc_max("MALLOC_MMAP_MAX_");
   environment_variable_t< std::string >
     licpath    ("WSMPLICPATH"),
     wincoremem ("WINCOREMEM"),
@@ -41,7 +41,7 @@ WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j
 
   CFinfo  << "WSMP: WSMP_NUM_THREADS:       " << nthreads  .description() << CFendl
           << "WSMP: WSMPLICPATH:            " << licpath   .description() << CFendl
-          << "WSMP: MALLOC_TRIM_THRESHOLD_: " << malloc_trh.description() << " (optimal -1, disable trim [bytes])" << CFendl
+          << "WSMP: MALLOC_TRIM_THRESHOLD_: " << malloc_trh.description() << " (optimal -1: disable trim, suggest 524288000 [bytes])" /* 500Mb */<< CFendl
           << "WSMP: MALLOC_MMAP_MAX_:       " << malloc_max.description() << " (optimal 0)" << CFendl;
   CFdebug << "WSMP: WINCOREMEM:             " << wincoremem.description() << CFendl
           << "WSMP: WOOCDIR0:               " << woocdir0  .description() << CFendl;
