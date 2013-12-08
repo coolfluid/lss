@@ -373,6 +373,7 @@ class linearsystem : public common::Action
     m_dummy_value = _other.m_dummy_value;
     m_dummy_vector = _other.m_dummy_vector;
     for (size_t i=0; i<3; ++i) m_print[i] = _other.m_print[i];
+    return *this;
   }
 
   // -- Interfacing (protected)

@@ -74,6 +74,7 @@ class lss_API LAPACK : public linearsystem< T >
   LAPACK& copy(const LAPACK& _other) {
     linearsystem< T >::copy(_other);
     m_A = _other.m_A;
+    return *this;
   }
 
 

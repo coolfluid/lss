@@ -163,6 +163,7 @@ class lss_API Dlib : public linearsystem< T >
   Dlib& copy(const Dlib& _other) {
     linearsystem< T >::copy(_other);
     m_A = _other.m_A;
+    return *this;
   }
 
 

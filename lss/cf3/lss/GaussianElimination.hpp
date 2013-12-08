@@ -108,6 +108,7 @@ class lss_API GaussianElimination : public linearsystem< T >
   GaussianElimination& copy(const GaussianElimination& _other) {
     linearsystem< T >::copy(_other);
     m_A = _other.m_A;
+    return *this;
   }
 
 
