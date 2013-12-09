@@ -2,7 +2,7 @@
 set(lss_files)
 set(lss_ignore)
 set(lss_extra_includes)
-set(lss_extra_libs)
+set(lss_extra_libs coolfluid_common)
 
 
 list(APPEND lss_extra_libs ${LAPACK_LIBRARIES} )
