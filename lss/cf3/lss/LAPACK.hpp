@@ -20,8 +20,10 @@ namespace lss {
 /// Prototypes for single and double precision (as per Intel MKL documentation)
 extern "C"
 {
-  void dgesv_(int* n, int* nrhs, double* a, int* lda, int* ipiv, double* b, int* ldb, int* info);
-  void sgesv_(int* n, int* nrhs, float*  a, int* lda, int* ipiv, float*  b, int* ldb, int* info);
+  void dgesv_(int* n, int* nrhs, double*  a, int* lda, int* ipiv, double*  b, int* ldb, int* info);
+  void zgesv_(int* n, int* nrhs, zdouble* a, int* lda, int* ipiv, zdouble* b, int* ldb, int* info);
+  void sgesv_(int* n, int* nrhs, float*   a, int* lda, int* ipiv, float*   b, int* ldb, int* info);
+  void cgesv_(int* n, int* nrhs, zfloat*  a, int* lda, int* ipiv, zfloat*  b, int* ldb, int* info);
 }
 
 
@@ -55,8 +57,10 @@ class lss_API LAPACK : public linearsystem< T >
     std::vector< int > ipiv(n);
 
     if (!m_A.m_size.is_square_size()) { err = -17; }
-    else if (type_is_equal< T, double >()) { this->m_x=this->m_b; dgesv_( &n, &nrhs, (double*) &m_A.a[0], &n, &ipiv[0], (double*) &this->m_x.a[0], &n, &err ); }
-    else if (type_is_equal< T, float  >()) { this->m_x=this->m_b; sgesv_( &n, &nrhs, (float*)  &m_A.a[0], &n, &ipiv[0], (float*)  &this->m_x.a[0], &n, &err ); }
+    else if (type_is_equal< T, double  >()) { this->m_x=this->m_b; dgesv_( &n, &nrhs, (double*)  &m_A.a[0], &n, &ipiv[0], (double*)  &this->m_x.a[0], &n, &err ); }
+    else if (type_is_equal< T, zdouble >()) { this->m_x=this->m_b; zgesv_( &n, &nrhs, (zdouble*) &m_A.a[0], &n, &ipiv[0], (zdouble*) &this->m_x.a[0], &n, &err ); }
+    else if (type_is_equal< T, float   >()) { this->m_x=this->m_b; sgesv_( &n, &nrhs, (float*)   &m_A.a[0], &n, &ipiv[0], (float*)   &this->m_x.a[0], &n, &err ); }
+    else if (type_is_equal< T, zfloat  >()) { this->m_x=this->m_b; cgesv_( &n, &nrhs, (zfloat*)  &m_A.a[0], &n, &ipiv[0], (zfloat*)  &this->m_x.a[0], &n, &err ); }
     else { err = -42; }
 
     std::ostringstream msg;
