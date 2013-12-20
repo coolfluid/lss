@@ -127,7 +127,7 @@ struct matrix
         int nnz(0);
         if (!MatrixMarket::read_banner(f,t))                    throw runtime_error("matrix: MatrixMarket: invalid header, \"%%MatrixMarket ...\" not found.");
         if (!MatrixMarket::read_size(f,m_size.i,m_size.j,nnz))  throw runtime_error("matrix: MatrixMarket: invalid matrix/array size.");
-        if (!t.is_real() || !t.is_general())                    throw runtime_error("matrix: MatrixMarket: only \"(coordinate|array) real general\" supported.");
+        if (!t.is_general())                                    throw runtime_error("matrix: MatrixMarket: only \"general\" matrices supported.");
 
         initialize(m_size.i,m_size.j);
 
@@ -136,17 +136,38 @@ struct matrix
         string line;
         while (getline(f,line)) {
           if (line.find_first_of("%")==0) {}
-          else if (t.is_dense()) {
-            istringstream(line) >> operator()(ij.i-1,ij.j-1);
-            if (++ij.i > m_size.i) {
+          else {
+            T& v(operator()(ij.i-1,ij.j-1));
+            istringstream strm(line);
+
+            double
+                a(0.),
+                b(0.);
+            t.is_sparse()?  strm >> ij.i >> ij.j : strm;
+            t.is_complex()? strm >> a >> b :
+            t.is_real()?    strm >> a :
+            t.is_integer()? strm >> a :
+                            strm;
+
+            if (t.is_pattern()) {
+              v = T();
+            }
+            else if (type_is_equal< T, zdouble >()) {
+              ((zdouble&) v).real(a);
+              ((zdouble&) v).imag(b);
+            }
+            else if (type_is_equal< T, zfloat >()) {
+              ((zfloat&) v).real(static_cast< float >(a));
+              ((zfloat&) v).imag(static_cast< float >(b));
+            }
+            else {
+              v = static_cast< T >(a);
+            }
+
+            if (t.is_dense() && (++ij.i>m_size.i)) {
               ij.i = 1;
               ij.j++;
             }
-          }
-          else {
-            T v;
-            istringstream(line) >> ij.i >> ij.j >> v;
-            operator()(ij.i-1,ij.j-1) = v;
           }
         }
 
@@ -221,7 +242,7 @@ struct matrix
 
   virtual void print(std::ostream& o, const print_t& l=print_auto) const {
 
-    const T eps = 1.e3*std::numeric_limits< T >::epsilon();
+    const double eps = 1.e3*static_cast< double >(std::abs(std::numeric_limits< T >::epsilon()));
     const print_t lvl(l? std::max(print_size,std::min(l,print_file)) :
                      (m_size.i>100 || m_size.j>100? print_size  :
                      (m_size.i> 10 || m_size.j> 10? print_signs :
@@ -238,10 +259,14 @@ struct matrix
         o << "(" << size(0) << 'x' << size(1) << ") [";
         for (size_t i=0; i<size(0); ++i) {
           row_s.resize(size(1));
-          for (size_t j=0; j<size(1); ++j)
-            row_s[j] = (operator()(i,j)> eps? '+'
-                     : (operator()(i,j)<-eps? '-'
-                     :                        '0' ));
+          for (size_t j=0; j<size(1); ++j) {
+            const T& v(operator()(i,j));
+            const double a(type_is_equal< T, zfloat >()? static_cast< double >(((const zfloat&) v).real()) : type_is_equal< T, zdouble >()? ((const zdouble&) v).real() : (const double&) v );
+            row_s[j] = type_is_complex< T >()? (static_cast< double >(std::abs(v))>eps? '*':'0') :
+                       a> eps? '+' :
+                       a<-eps? '-' :
+                               '0' ;
+          }
           o << "\n  " << row_s;
         }
         o << " ]";
@@ -259,11 +284,20 @@ struct matrix
         break;
 
       case print_file:
-        o << "%%MatrixMarket matrix array real general\n"
+        CFinfo << (typeid(T).name()) << CFendl;
+        o << "%%MatrixMarket matrix array"
+          << (type_is_complex< T >()? " complex":" real")
+          << " general\n"
           << size(0) << ' ' << size(1) << '\n';
         for (size_t j=0; j<size(1); ++j)
-          for (size_t i=0; i<size(0); ++i)
-            o << operator()(i,j) << '\n';
+          for (size_t i=0; i<size(0); ++i) {
+            const T& v(operator()(i,j));
+            const double
+                a(type_is_equal< T, zfloat >()? static_cast< double >(((const zfloat&) v).real()) : type_is_equal< T, zdouble >()? ((const zdouble&) v).real() : (const double&) v ),
+                b(type_is_equal< T, zfloat >()? static_cast< double >(((const zfloat&) v).imag()) : type_is_equal< T, zdouble >()? ((const zdouble&) v).imag() : double() );
+            type_is_complex< T >()? o << a << ' ' << b << '\n' :
+                                    o << a << '\n';
+          }
         break;
 
       case print_auto:
@@ -647,8 +681,8 @@ struct sparse_matrix :
 
   void print(std::ostream& o, const print_t& l=print_auto) const {
     using namespace std;
+    const double eps = 1.e3*static_cast< double >(abs(numeric_limits< T >::epsilon()));
     const idx_t&  size = matrix_base_t::m_size;
-    const T       eps  = 1.e3*numeric_limits< T >::epsilon();
     const print_t lvl(l? max(print_size,min(l,print_file)) :
                      (size.i>100 || size.j>100? print_size  :
                      (size.i> 10 || size.j> 10? print_signs :
@@ -664,21 +698,22 @@ struct sparse_matrix :
       if (is_compressed())
         uncompress(size,tmp,matc);
       const matrix_uncompressed_t& mat(is_compressed()? tmp:matu);
-
-      string row_s;
-      vector< T > row_v;
       switch (lvl) {
 
         case print_signs:
           o << "(" << size.i << 'x' << size.j << ">=" << mat.size() << ") [ ";
           for (size_t i=0; i<size.i; ++i) {
-            row_s.assign(size.j,' ');
-            for (typename matrix_uncompressed_t::const_iterator it = mat.begin(); it!=mat.end(); ++it)
+            string row(size.j,' ');
+            for (typename matrix_uncompressed_t::const_iterator it = mat.begin(); it!=mat.end(); ++it) {
+              const T& v(it->second);
+              const double a(type_is_equal< T, zfloat >()? static_cast< double >(((const zfloat&) v).real()) : type_is_equal< T, zdouble >()? ((const zdouble&) v).real() : (const double&) v );
               if (it->first.i==i)
-                row_s[ it->first.j ] = (it->second> eps? '+'
-                                     : (it->second<-eps? '-'
-                                     :                   '.' ));
-            o << "\n  " << row_s;
+                row[ it->first.j ] = type_is_complex< T >()? (static_cast< double >(abs(v))>eps? '*':'.') :
+                                       a> eps? '+' :
+                                       a<-eps? '-' :
+                                               '.' ;
+            }
+            o << "\n  " << row;
           }
           o << " ]";
           break;
@@ -686,21 +721,30 @@ struct sparse_matrix :
         case print_full:
           o << "(" << size.i << 'x' << size.j << ">=" << mat.size() << ") [ ";
           for (size_t i=0; i<size.i; ++i) {
-            row_v.assign(size.j,T());
+            vector< T >row(size.j,T());
             for (typename matrix_uncompressed_t::const_iterator it = mat.begin(); it!=mat.end(); ++it)
               if (it->first.i==i)
-                row_v[ it->first.j ] = it->second;
+                row[ it->first.j ] = it->second;
             o << "\n  ";
-            copy(row_v.begin(),row_v.end(),ostream_iterator< T >(o,", "));
+            copy(row.begin(),row.end(),ostream_iterator< T >(o,", "));
           }
           o << " ]";
           break;
 
         case print_file:
-          o << "%%MatrixMarket matrix coordinate real general\n"
+          o << "%%MatrixMarket matrix coordinate"
+            << (type_is_complex< T >()? " complex":" real")
+            << " general\n"
             << size.i << ' ' << size.j << ' ' << mat.size() << '\n';
-          for (typename matrix_uncompressed_t::const_iterator i = mat.begin(); i!=mat.end(); ++i)
-            o << (i->first.i+1) << ' '<< (i->first.j+1) << ' '<< i->second << '\n';
+          for (typename matrix_uncompressed_t::const_iterator i = mat.begin(); i!=mat.end(); ++i) {
+            o << (i->first.i+1) << ' '<< (i->first.j+1) << ' ';
+            const T& v(i->second);
+            const double
+                a(type_is_equal< T, zfloat >()? static_cast< double >(((const zfloat&) v).real()) : type_is_equal< T, zdouble >()? ((const zdouble&) v).real() : (const double&) v ),
+                b(type_is_equal< T, zfloat >()? static_cast< double >(((const zfloat&) v).imag()) : type_is_equal< T, zdouble >()? ((const zdouble&) v).imag() : double() );
+            type_is_complex< T >()? o << a << ' ' << b << '\n' :
+                                    o << a << '\n';
+          }
           break;
 
         case print_auto:

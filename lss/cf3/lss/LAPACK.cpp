@@ -13,10 +13,14 @@ namespace cf3 {
 namespace lss {
 
 
-template<> std::string LAPACK< double >::type_name() { return "LAPACK"; }
-template<> std::string LAPACK< float  >::type_name() { return "LAPACK_SinglePrecision"; }
-common::ComponentBuilder< LAPACK< double >, common::Component, LibLSS > Builder_LAPACK;
-common::ComponentBuilder< LAPACK< float  >, common::Component, LibLSS > Builder_LAPACK_SinglePrecision;
+template<> std::string LAPACK< double  >::type_name() { return "LAPACK"; }
+template<> std::string LAPACK< zdouble >::type_name() { return "LAPACK_LongPrecisionComplex"; }
+template<> std::string LAPACK< float   >::type_name() { return "LAPACK_ShortPrecisionReal"; }
+template<> std::string LAPACK< zfloat  >::type_name() { return "LAPACK_ShortPrecisionComplex"; }
+common::ComponentBuilder< LAPACK< double  >, common::Component, LibLSS > Builder_LAPACK_LongPrecisionReal;
+common::ComponentBuilder< LAPACK< zdouble >, common::Component, LibLSS > Builder_LAPACK_LongPrecisionComplex;
+common::ComponentBuilder< LAPACK< float   >, common::Component, LibLSS > Builder_LAPACK_ShortPrecisionReal;
+common::ComponentBuilder< LAPACK< zfloat  >, common::Component, LibLSS > Builder_LAPACK_ShortPrecisionComplex;
 
 
 }  // namespace lss

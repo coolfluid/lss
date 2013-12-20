@@ -10,6 +10,7 @@
 
 
 #include <algorithm>
+#include <complex>
 #include <stdexcept>
 #include <string>
 #include <typeinfo>
@@ -22,8 +23,14 @@ namespace cf3 {
 namespace lss {
 
 
-/* -- fundamental index pair (tuple?) type ---------------------------------- */
+/* -- fundamental complex types --------------------------------------------- */
 
+/// @brief Complex types
+typedef std::complex< double > zdouble;
+typedef std::complex< float  > zfloat;
+
+
+/* -- fundamental index pair (tuple?) type ---------------------------------- */
 
 /// @brief Basic index pair (tuple?) input/return type
 struct idx_t
@@ -52,6 +59,13 @@ struct idx_t
 /// @brief Type comparison at compilation time
 template< typename A, typename B >
 bool type_is_equal() { return (typeid(A)==typeid(B)); }
+
+
+/// @brief Type comparison for complexes at compilation time
+template< typename A >
+bool type_is_complex() {
+  return (type_is_equal< A, zfloat >() || type_is_equal< A, zdouble >());
+}
 
 
 /// @brief Type conversion functor (POD to POD, no fancy stuff)
@@ -143,7 +157,6 @@ struct typecode_t {
 
   bool is_valid() {
     return is_matrix()
-        && !(is_complex())  // (not supported in this implementation)
         && !(is_dense() && is_pattern())
         && !(is_real() && is_hermitian())
         && !(is_pattern() && (is_hermitian() || is_skew()));
