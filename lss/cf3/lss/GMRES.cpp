@@ -1235,5 +1235,11 @@ L121:
 }
 
 
+void GMRES::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b) const
+{
+  //TODO
+}
+
+
 }  // namespace lss
 }  // namespace cf3

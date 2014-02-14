@@ -67,8 +67,9 @@ class linearsystem : public common::Action
         .connect   ( boost::bind( &linearsystem::signal_output,  this, _1 ))
         .signature ( boost::bind( &linearsystem::signat_abcfile, this, _1 ));
 
-    regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this )).description("Empty linear system components");
-    regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this )).description("Solve linear system, returning solution in x");
+    regist_signal("clear").connect( boost::bind( &linearsystem::signal_clear, this )).description("Empty linear system components");
+    regist_signal("solve").connect( boost::bind( &linearsystem::signal_solve, this )).description("Solve linear system, returning solution in x");
+    regist_signal("multi").connect( boost::bind( &linearsystem::signal_multi, this )).description("Multiply linear system, returning solution in b");
 
     regist_signal("A").connect(boost::bind( &linearsystem::signal_A, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in matrix A, by given index (i,j) and value (value)");
     regist_signal("b").connect(boost::bind( &linearsystem::signal_b, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in vector b, by given index (i,k) and value (value)");
@@ -183,8 +184,9 @@ class linearsystem : public common::Action
     }
   }
 
-  void signal_clear () { clear(); }
-  void signal_solve () { execute(); }
+  void signal_clear() { clear(); }
+  void signal_solve() { execute(); }
+  void signal_multi() { multi(m_x,m_b); }
 
   void signal_A(common::SignalArgs& args) { common::XML::SignalOptions opts(args); A  (opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double >("value"); }
   void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); m_b(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< double >("value"); }
@@ -216,7 +218,19 @@ class linearsystem : public common::Action
     }
   }
 
-  /// Initialize the linear system
+  /// Linear system forward multiplication
+  linearsystem& multi(const vector_t& _x, vector_t& _b) {
+    try {
+      consistent(A___size(0),A___size(1),_b.size(0),_b.size(1),_x.size(0),_x.size(1));
+      A___multi(_x,_b);
+    }
+    catch (const std::runtime_error& e) {
+      CFwarn << "linearsystem: " << e.what() << CFendl;
+    }
+    return *this;
+  }
+
+  /// Linear system initialization
   linearsystem& initialize(
       const size_t& i=size_t(),
       const size_t& j=size_t(),
@@ -229,7 +243,7 @@ class linearsystem : public common::Action
     return *this;
   }
 
-  /// Initialize linear system from file(s)
+  /// Linear system initialization, from file(s)
   linearsystem& initialize(
       const std::string& _Afname,
       const std::string& _bfname="",
@@ -241,7 +255,7 @@ class linearsystem : public common::Action
     return *this;
   }
 
-  /// Initialize linear system from vectors of values (lists, in the right context)
+  /// Linear system initialization, from vectors of values (lists, in the right context)
   linearsystem& initialize(
       const std::vector< double >& vA,
       const std::vector< double >& vb=std::vector< double >(),
@@ -380,6 +394,7 @@ class linearsystem : public common::Action
  protected:
 
   /// Linear system matrix modifiers
+  virtual void A___multi(const vector_t& _x, vector_t& _b) const = 0;
   virtual void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
