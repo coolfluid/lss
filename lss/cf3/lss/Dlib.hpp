@@ -175,7 +175,7 @@ class lss_API Dlib : public linearsystem< T >
         T& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
 
   /// matrix modifiers
-  void A___multi(const typename linearsystem< T >::vector_t& _x, typename linearsystem< T >::vector_t& _b) const {
+  void A___multi(const typename linearsystem< T >::vector_t& _x, typename linearsystem< T >::vector_t& _b) {
     //TODO
   }
   void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j); }
