@@ -1235,9 +1235,14 @@ L121:
 }
 
 
-void GMRES::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b) const
+void GMRES::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b)
 {
-  //TODO
+  matrix_t::matrix_compressed_t& A = m_A.compress();
+  _b = 0.;
+  for (size_t i=0; i<A.nnu; ++i)
+    for (size_t l=A.ia[i]; l<A.ia[i+1]; ++l)
+      for (size_t k=0, j(A.ja[ l-A.ia[0] ] - A.ia[0]); k<this->size(2); ++k)
+        _b(i,k) = A.a[ l-A.ia[0] ] * _x(j,k);
 }
 
 
