@@ -134,6 +134,12 @@ int WSMP::call_wsmp(int _phase)
 }
 
 
+void WSMP::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b)
+{
+  //TODO
+}
+
+
 }  // namespace lss
 }  // namespace cf3
 
