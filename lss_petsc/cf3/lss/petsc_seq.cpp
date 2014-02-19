@@ -182,6 +182,12 @@ const std::string petsc_seq::converged_message(const KSPConvergedReason& rsn)
 }
 
 
+void petsc_seq::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b)
+{
+  //TODO
+}
+
+
 }  // namespace lss
 }  // namespace cf3
 
