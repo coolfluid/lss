@@ -120,8 +120,12 @@ class lss_API GaussianElimination : public linearsystem< T >
         T& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
 
   /// matrix modifiers
-  void A___multi(const typename linearsystem< T >::vector_t& _x, typename linearsystem< T >::vector_t& _b) const {
-    //TODO
+  void A___multi(const typename linearsystem< T >::vector_t& _x, typename linearsystem< T >::vector_t& _b) {
+    _b = T();
+    for (size_t i=0; i<this->size(0); ++i)
+      for (size_t j=0; j<this->size(1); ++j)
+        for (size_t k=0; k<this->size(2); ++k)
+          _b(i,k) = A(i,j) * _x(j,k);
   }
   void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
