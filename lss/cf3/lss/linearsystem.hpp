@@ -394,7 +394,7 @@ class linearsystem : public common::Action
  protected:
 
   /// Linear system matrix modifiers
-  virtual void A___multi(const vector_t& _x, vector_t& _b) const = 0;
+  virtual void A___multi(const vector_t& _x, vector_t& _b) = 0;
   virtual void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
