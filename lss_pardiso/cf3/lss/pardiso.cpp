@@ -143,6 +143,12 @@ int pardiso::call_pardiso_printstats()
 }
 
 
+void pardiso::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b)
+{
+  //TODO
+}
+
+
 }  // namespace lss
 }  // namespace cf3
 
