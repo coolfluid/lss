@@ -103,8 +103,8 @@ GMRES& GMRES::multi(const double& _alpha, const double& _beta)
   for (size_t i=0; i<this->size(0); ++i) {
     for (size_t k=0; k<this->size(2); ++k) {
       b(i,k) *= _beta;
-      for (size_t l=A.ia[i], j=A.ja[ l-A.ia[0] ]-A.ia[0]; l<A.ia[i+1]; ++l)
-        b(i,k) += _alpha*A.a[ l-A.ia[0] ]*m_x(j,k);
+      for (size_t l=A.ia[i]-A.ia[0]; l<A.ia[i+1]-A.ia[0]; ++l)
+        b(i,k) += _alpha*A.a[l]*m_x( A.ja[l]-A.ia[0], k);
     }
   }
   return *this;
