@@ -165,10 +165,13 @@ class lss_API Dlib : public linearsystem< T >
       alpha = static_cast< T >(_alpha),
       beta  = static_cast< T >(_beta);
     //TODO this could be severely improved with internal functions
-    for (size_t i=0; i<this->size(0); ++i)
-      for (size_t j=0; j<this->size(1); ++j)
-        for (size_t k=0; k<this->size(2); ++k)
-          this->b(i,k) = alpha*this->A(i,j)*this->x(j,k) + beta*this->b(i,k);
+    for (size_t i=0; i<this->size(0); ++i) {
+      for (size_t k=0; k<this->size(2); ++k) {
+        this->b(i,k) *= beta;
+        for (size_t j=0; j<this->size(1); ++j)
+          this->b(i,k) += alpha*this->A(i,j)*this->x(j,k);
+      }
+    }
     return *this;
   }
 
