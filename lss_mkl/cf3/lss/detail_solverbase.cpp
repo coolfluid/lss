@@ -27,15 +27,8 @@ solverbase::solverbase(const std::string& name)
 }
 
 
-void solverbase::A___multi(
-    const vector_t& _x,
-    vector_t& _b,
-    const double& alpha,
-    const double& beta )
+solverbase& solverbase::multi(const double& _alpha, const double& _beta)
 {
-  // sparse matrix - dense matrix multiplication:
-  // b(m,n) = alpha A(m,k) x(k,n) + beta b(m,n)
-
   matrix_t::matrix_compressed_t& A = m_A.compress();
   char
     transa = 'N',                           // not transposed,
@@ -45,11 +38,12 @@ void solverbase::A___multi(
     n = static_cast< int >(this->size(2)),  // ...
     k = m;                                  // square matrix (phew!)
 
-  mkl_dcsrmm(
-    &transa, &m, &n, &k, const_cast< double* >(&alpha),
+  mkl_dcsrmm( &transa, &m, &n, &k, const_cast< double* >(&_alpha),
     &matdescra[0], &A.a[0], &A.ja[0], &A.ia[0], &A.ia[1],
-    const_cast< double* >(&_x.a[0]), &n,
-    const_cast< double* >(&beta), &_b.a[0], &n );
+    const_cast< double* >(&m_x.a[0]), &m,
+    const_cast< double* >(&_beta), &m_b.a[0], &m );
+
+  return *this;
 }
 
 
