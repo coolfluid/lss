@@ -10,7 +10,7 @@
 
 
 #include "LibLSS_MKL.hpp"
-#include "detail_mkl_solver_base.h"
+#include "detail_solverbase.h"
 
 
 namespace cf3 {

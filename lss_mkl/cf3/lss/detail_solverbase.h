@@ -5,8 +5,8 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_mkl_detail_mkl_solver_base_h
-#define cf3_lss_mkl_detail_mkl_solver_base_h
+#ifndef cf3_lss_mkl_detail_solverbase_h
+#define cf3_lss_mkl_detail_solverbase_h
 
 
 #include "../../../lss/cf3/lss/linearsystem.hpp"
@@ -22,10 +22,10 @@ namespace detail {
  * @brief MKL solvers management of sparse matrix and common operations
  * @author Pedro Maciel
  */
-struct mkl_solver_base : public linearsystem< double >
+struct solverbase : public linearsystem< double >
 {
   /// Construction
-  mkl_solver_base(const std::string& name);
+  solverbase(const std::string& name);
 
   /// Matrix storage
   typedef sparse_matrix< double, sort_by_row, 1 > matrix_t;
@@ -36,7 +36,7 @@ struct mkl_solver_base : public linearsystem< double >
         double& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
 
   /// Matrix operations
-  void A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b);
+  void A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b, const double& alpha, const double& beta);
   void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j,_nnz); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }

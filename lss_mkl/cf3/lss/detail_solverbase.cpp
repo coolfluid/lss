@@ -9,7 +9,7 @@
 #include "mkl_spblas.h"
 
 #include "common/Log.hpp"
-#include "detail_mkl_solver_base.h"
+#include "detail_solverbase.h"
 
 
 namespace cf3 {
@@ -18,7 +18,7 @@ namespace mkl {
 namespace detail {
 
 
-mkl_solver_base::mkl_solver_base(const std::string& name)
+solverbase::solverbase(const std::string& name)
   : linearsystem< double >(name)
 {
   environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
@@ -27,7 +27,11 @@ mkl_solver_base::mkl_solver_base(const std::string& name)
 }
 
 
-void mkl_solver_base::A___multi(const vector_t& _x, vector_t& _b)
+void solverbase::A___multi(
+    const vector_t& _x,
+    vector_t& _b,
+    const double& alpha,
+    const double& beta )
 {
   // sparse matrix - dense matrix multiplication:
   // b(m,n) = alpha A(m,k) x(k,n) + beta b(m,n)
