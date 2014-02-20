@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -24,12 +24,8 @@ common::ComponentBuilder< iss_fgmres, common::Component, LibLSS_MKL > Builder_MK
 
 
 iss_fgmres::iss_fgmres(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k)
-  : linearsystem< double >(name)
+  : detail::mkl_solver_base(name)
 {
-  environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
-  CFinfo << "mkl iss_fgmres: OMP_NUM_THREADS: " << nthreads.description() << CFendl;
-  mkl_set_num_threads(nthreads.value);
-
   // reset iparm and dparm defaults
   for (size_t i=0; i<128; ++i) iparm[i] = 0;
   for (size_t i=0; i<128; ++i) dparm[i] = 0.;
