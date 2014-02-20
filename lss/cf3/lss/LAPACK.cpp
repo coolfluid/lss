@@ -13,7 +13,7 @@ namespace cf3 {
 namespace lss {
 
 
-template<> std::string LAPACK< double  >::type_name() { return "LAPACK"; }
+template<> std::string LAPACK< double  >::type_name() { return "LAPACK_LongPrecisionReal"; }
 template<> std::string LAPACK< zdouble >::type_name() { return "LAPACK_LongPrecisionComplex"; }
 template<> std::string LAPACK< float   >::type_name() { return "LAPACK_ShortPrecisionReal"; }
 template<> std::string LAPACK< zfloat  >::type_name() { return "LAPACK_ShortPrecisionComplex"; }
