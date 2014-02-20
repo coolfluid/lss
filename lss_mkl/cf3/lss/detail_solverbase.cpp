@@ -37,9 +37,6 @@ void solverbase::A___multi(
   // b(m,n) = alpha A(m,k) x(k,n) + beta b(m,n)
 
   matrix_t::matrix_compressed_t& A = m_A.compress();
-  double
-    alpha = 1.,
-    beta  = 0.;
   char
     transa = 'N',                           // not transposed,
     matdescra[6] = "G--F-";                 // general, 1-based,
@@ -49,9 +46,10 @@ void solverbase::A___multi(
     k = m;                                  // square matrix (phew!)
 
   mkl_dcsrmm(
-    &transa, &m, &n, &k, &alpha,
+    &transa, &m, &n, &k, const_cast< double* >(&alpha),
     &matdescra[0], &A.a[0], &A.ja[0], &A.ia[0], &A.ia[1],
-    const_cast< double* >(&_x.a[0]), &n, &beta, &_b.a[0], &n );
+    const_cast< double* >(&_x.a[0]), &n,
+    const_cast< double* >(&beta), &_b.a[0], &n );
 }
 
 
