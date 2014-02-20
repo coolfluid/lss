@@ -131,6 +131,13 @@ petsc_seq& petsc_seq::solve()
 }
 
 
+petsc_seq& petsc_seq::multi(const double& _alpha, const double& _beta)
+{
+  //TODO
+  return *this;
+}
+
+
 petsc_seq& petsc_seq::copy(const petsc_seq& _other)
 {
   linearsystem< double >::copy(_other);
@@ -179,12 +186,6 @@ const std::string petsc_seq::converged_message(const KSPConvergedReason& rsn)
                                       s << "(unknown)";
   s << '.';
   return s.str();
-}
-
-
-void petsc_seq::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b)
-{
-  //TODO
 }
 
 

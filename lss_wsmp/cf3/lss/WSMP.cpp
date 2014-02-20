@@ -83,6 +83,13 @@ WSMP& WSMP::solve()
 }
 
 
+WSMP& WSMP::multi(const double& _alpha, const double& _beta)
+{
+  //TODO
+  return *this;
+}
+
+
 WSMP& WSMP::copy(const WSMP& _other)
 {
   linearsystem< double >::copy(_other);
@@ -131,12 +138,6 @@ int WSMP::call_wsmp(int _phase)
 
   iparm[63] = (iparm[63]>0 && ldlt_pivot? 0 : iparm[63]);
   return iparm[63];
-}
-
-
-void WSMP::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b)
-{
-  //TODO
 }
 
 

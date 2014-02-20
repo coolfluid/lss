@@ -75,6 +75,13 @@ pardiso& pardiso::solve()
 }
 
 
+pardiso& pardiso::multi(const double& _alpha, const double& _beta)
+{
+  //TODO
+  return *this;
+}
+
+
 pardiso& pardiso::copy(const pardiso& _other)
 {
   linearsystem< double >::copy(_other);
@@ -132,20 +139,14 @@ int pardiso::call_pardiso(int _phase, int _msglvl)
 int pardiso::call_pardiso_printstats()
 {
   matrix_t::matrix_compressed_t& A = m_A.compress();
-  int nrhs = static_cast< int >(m_b.size(1));
-
-  int err = 0;
+  int
+    nrhs = static_cast< int >(m_b.size(1)),
+    err = 0;
   pardiso_printstats_(
     &mtype,
     &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],
     &nrhs, &m_b.a[0], &err );
   return err;
-}
-
-
-void pardiso::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b)
-{
-  //TODO
 }
 
 

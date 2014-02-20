@@ -44,6 +44,9 @@ class lss_API pardiso : public linearsystem< double >
   /// Linear system solving
   pardiso& solve();
 
+  /// Linear system forward multiplication
+  pardiso& multi(const double& _alpha=1., const double& _beta=0.);
+
   /// Linear system copy
   pardiso& copy(const pardiso& _other);
 
@@ -67,7 +70,6 @@ class lss_API pardiso : public linearsystem< double >
   const double& A(const size_t& i, const size_t& j) const { return m_A(i,j); }
         double& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
 
-  void A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b);
   void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j,_nnz); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
