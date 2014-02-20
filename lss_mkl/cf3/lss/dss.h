@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -10,7 +10,7 @@
 
 
 #include "LibLSS_MKL.hpp"
-#include "../../../lss/cf3/lss/linearsystem.hpp"
+#include "detail_mkl_solver_base.h"
 
 
 namespace cf3 {
@@ -23,16 +23,18 @@ namespace mkl {
  * @author Pedro Maciel
  */
 class lss_API dss : public
-  linearsystem< double >
+  detail::mkl_solver_base
 {
+ private:
   // utility definitions
-  typedef sparse_matrix< double, sort_by_row, 1 > matrix_t;
+  enum phase_t { _CREATE=0, _STRUCTURE, _REORDER, _FACTOR, _SOLVE, _DELETE, _ALL_PHASES };
 
 
  public:
   // framework interfacing
-  static std::string type_name() { return "dss"; }
 
+  /// Component type name
+  static std::string type_name() { return "dss"; }
 
   /// Construction
   dss(const std::string& name,
@@ -50,39 +52,13 @@ class lss_API dss : public
   dss& copy(const dss& _other);
 
 
-  // internal functions
  private:
+  // internal functions and storage
 
   /// Verbose error message
   static std::string err_message(const int& err);
 
-
- protected:
-  // linear system matrix interfacing
-
-  const double& A(const size_t& i, const size_t& j) const { return m_A(i,j); }
-        double& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
-
-  void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j,_nnz); }
-  void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
-  void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
-  void A___assign(const double& _value) { m_A = _value;   }
-  void A___clear()                      { m_A.clear();    }
-  void A___zerorow(const size_t& i)     { m_A.zerorow(i); }
-  void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
-
-  void   A___print(std::ostream& o, const print_t& l=print_auto) const { m_A.print(o,l); }
-  size_t A___size(const size_t& d)  const { return m_A.size(d);  }
-
-
- protected:
-  // phase options
-  enum phase_t { _create=0, _structure, _reorder, _factor, _solve, _delete, _all_phases };
-
- protected:
-  // storage
-  matrix_t m_A;
-  int opts[_all_phases];
+  int opts[_ALL_PHASES];
   void *handle;
 
 };
