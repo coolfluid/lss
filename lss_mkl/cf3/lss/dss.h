@@ -23,7 +23,7 @@ namespace mkl {
  * @author Pedro Maciel
  */
 class lss_API dss : public
-  detail::mkl_solver_base
+  detail::solverbase
 {
  private:
   // utility definitions

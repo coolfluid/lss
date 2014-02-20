@@ -24,7 +24,7 @@ common::ComponentBuilder< iss_fgmres, common::Component, LibLSS_MKL > Builder_MK
 
 
 iss_fgmres::iss_fgmres(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k)
-  : detail::mkl_solver_base(name)
+  : detail::solverbase(name)
 {
   // reset iparm and dparm defaults
   for (size_t i=0; i<128; ++i) iparm[i] = 0;
@@ -74,7 +74,7 @@ iss_fgmres::iss_fgmres(const std::string& name, const size_t& _size_i, const siz
 
 
   // initialize linearsystem
-  linearsystem< double >::initialize(_size_i,_size_j,_size_k);
+  solverbase::initialize(_size_i,_size_j,_size_k);
 }
 
 

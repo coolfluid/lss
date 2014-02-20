@@ -22,7 +22,7 @@ common::ComponentBuilder< dss, common::Component, LibLSS_MKL > Builder_MKL_dss;
 
 
 dss::dss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k)
-  : detail::mkl_solver_base(name)
+  : detail::solverbase(name)
 {
   handle = NULL;
   for (int i=0; i<_ALL_PHASES; ++i)
@@ -35,7 +35,7 @@ dss::dss(const std::string& name, const size_t& _size_i, const size_t& _size_j, 
   if (err=dss_create_(&handle, &opts[_CREATE]))
     throw std::runtime_error(err_message(err));
 
-  linearsystem< double >::initialize(_size_i,_size_j,_size_k);
+  solverbase::initialize(_size_i,_size_j,_size_k);
 }
 
 dss::~dss()

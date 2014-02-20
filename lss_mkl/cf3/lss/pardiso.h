@@ -23,7 +23,7 @@ namespace mkl {
  * @author Pedro Maciel
  */
 class lss_API pardiso : public
-  detail::mkl_solver_base
+  detail::solverbase
 {
  public:
   // framework interfacing

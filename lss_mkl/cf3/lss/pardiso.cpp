@@ -26,7 +26,7 @@ pardiso::pardiso(
     const size_t& _size_i,
     const size_t& _size_j,
     const size_t& _size_k )
-  : detail::mkl_solver_base(name)
+  : detail::solverbase(name)
 {
   environment_variable_t< std::string >
     ooc_path("MKL_PARDISO_OOC_PATH"),
@@ -50,7 +50,7 @@ pardiso::pardiso(
   iparm[ 7] = 0;  // + max numbers of iterative refinement steps
   iparm[31] = 0;  // + [0|1] sparse direct solver or multi-recursive iterative solver
 
-  detail::mkl_solver_base::initialize(_size_i,_size_j,_size_k);
+  detail::solverbase::initialize(_size_i,_size_j,_size_k);
 }
 
 

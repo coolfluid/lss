@@ -25,7 +25,7 @@ namespace mkl {
  * @author Pedro Maciel
  */
 class lss_API iss_fgmres : public
-  detail::mkl_solver_base
+  detail::solverbase
 {
  private:
   // utility definitions
