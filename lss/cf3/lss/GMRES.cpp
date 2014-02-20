@@ -97,6 +97,20 @@ GMRES& GMRES::solve()
 }
 
 
+GMRES& GMRES::multi(const double& _alpha, const double& _beta)
+{
+  matrix_t::matrix_compressed_t& A = m_A.compress();
+  for (size_t i=0; i<this->size(0); ++i) {
+    for (size_t k=0; k<this->size(2); ++k) {
+      b(i,k) *= _beta;
+      for (size_t l=A.ia[i], j=A.ja[ l-A.ia[0] ]-A.ia[0]; l<A.ia[i+1]; ++l)
+        b(i,k) += _alpha*A.a[ l-A.ia[0] ]*m_x(j,k);
+    }
+  }
+  return *this;
+}
+
+
 GMRES& GMRES::copy(const GMRES& _other) {
   linearsystem< double >::copy(_other);
   m_A  = _other.m_A;
@@ -1232,17 +1246,6 @@ L121:
 
   /* restart outer loop. */
    goto L20;
-}
-
-
-void GMRES::A___multi(const linearsystem< double >::vector_t& _x, linearsystem< double >::vector_t& _b)
-{
-  matrix_t::matrix_compressed_t& A = m_A.compress();
-  _b = 0.;
-  for (size_t i=0; i<A.nnu; ++i)
-    for (size_t l=A.ia[i]; l<A.ia[i+1]; ++l)
-      for (size_t k=0, j(A.ja[ l-A.ia[0] ] - A.ia[0]); k<this->size(2); ++k)
-        _b(i,k) = A.a[ l-A.ia[0] ] * _x(j,k);
 }
 
 

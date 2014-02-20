@@ -78,6 +78,28 @@ class lss_API LAPACK : public linearsystem< T >
     return *this;
   }
 
+  /// Linear system forward multiplication
+  LAPACK& multi(const double& _alpha=1., const double& _beta=0.) {
+    const char trans = 'N';
+    const int
+      m = static_cast< int >(this->size(0)),
+      n = static_cast< int >(this->size(2)),
+      k = m;
+    const T
+      alpha = static_cast< T >(_alpha),
+      beta  = static_cast< T >(_beta);
+
+    if (!m_A.m_size.is_square_size())
+      throw std::runtime_error("LAPACK: system matrix must be square.");
+    else if (type_is_equal< T, double  >()) { dgemm_(&trans, &trans, &m, &n, &k, (double*)  &alpha, (double*)  &this->m_A.a[0], &m, (double*)  &this->m_x.a[0], &m, (double*)  &beta, (double*)  &this->m_b.a[0], &m); }
+    else if (type_is_equal< T, zdouble >()) { zgemm_(&trans, &trans, &m, &n, &k, (zdouble*) &alpha, (zdouble*) &this->m_A.a[0], &m, (zdouble*) &this->m_x.a[0], &m, (zdouble*) &beta, (zdouble*) &this->m_b.a[0], &m); }
+    else if (type_is_equal< T, float   >()) { sgemm_(&trans, &trans, &m, &n, &k, (float*)   &alpha, (float*)   &this->m_A.a[0], &m, (float*)   &this->m_x.a[0], &m, (float*)   &beta, (float*)   &this->m_b.a[0], &m); }
+    else if (type_is_equal< T, zfloat  >()) { cgemm_(&trans, &trans, &m, &n, &k, (zfloat*)  &alpha, (zfloat*)  &this->m_A.a[0], &m, (zfloat*)  &this->m_x.a[0], &m, (zfloat*)  &beta, (zfloat*)  &this->m_b.a[0], &m); }
+    else
+      throw std::runtime_error("LAPACK: precision not implemented.");
+    return *this;
+  }
+
   /// Linear system copy
   LAPACK& copy(const LAPACK& _other) {
     linearsystem< T >::copy(_other);
@@ -94,25 +116,6 @@ class lss_API LAPACK : public linearsystem< T >
         T& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
 
   /// matrix modifiers
-  void A___multi(const typename linearsystem< T >::vector_t& _x, typename linearsystem< T >::vector_t& _b) {
-    const int
-      m = static_cast< int >(this->size(0)),
-      n = static_cast< int >(this->size(2)),
-      k = m;
-    const T
-      alpha = 1.,
-      beta  = 0.;
-    const char trans = 'N';
-
-    if (!m_A.m_size.is_square_size())
-      throw std::runtime_error("LAPACK: system matrix must be square.");
-    else if (type_is_equal< T, double  >()) { dgemm_(&trans, &trans, &m, &n, &k, (double*)  &alpha, (double*)  &m_A.a[0], &m, (double*)  &_x.a[0], &m, (double*)  &beta, (double*)  &_b.a[0], &m); }
-    else if (type_is_equal< T, zdouble >()) { zgemm_(&trans, &trans, &m, &n, &k, (zdouble*) &alpha, (zdouble*) &m_A.a[0], &m, (zdouble*) &_x.a[0], &m, (zdouble*) &beta, (zdouble*) &_b.a[0], &m); }
-    else if (type_is_equal< T, float   >()) { sgemm_(&trans, &trans, &m, &n, &k, (float*)   &alpha, (float*)   &m_A.a[0], &m, (float*)   &_x.a[0], &m, (float*)   &beta, (float*)   &_b.a[0], &m); }
-    else if (type_is_equal< T, zfloat  >()) { cgemm_(&trans, &trans, &m, &n, &k, (zfloat*)  &alpha, (zfloat*)  &m_A.a[0], &m, (zfloat*)  &_x.a[0], &m, (zfloat*)  &beta, (zfloat*)  &_b.a[0], &m); }
-    else
-      throw std::runtime_error("LAPACK: precision not implemented.");
-  }
   void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
