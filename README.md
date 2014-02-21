@@ -36,7 +36,7 @@ If you don't wish to read further, the short list of linear system solvers most 
 * cf3.lss.wsmp.wsmp: IBM sparse matrix direct s.
 * cf3.lss.mkl.iss_fgmres: sparse matrix iterative s.
 * cf3.lss.GMRES: generic sparse matrix iterative s.
-* cf3.lss.LAPACK: generic dense matrix dense s.
+* cf3.lss.LAPACK_LongPrecisionReal: generic dense matrix dense s.
 
 This list is not comprehensive but for the time being there is little reason to explore further if you are not a developer. For the linear systems considered here, the left and right-hand side vectors are actually dense matrices for simultaneous solutions, and these solver categories are explained further below.
 
@@ -66,7 +66,7 @@ A particularlly known direct matrix inversion method, and thus linear system sol
 
 This applies to complex matrices too (in addition to real), which occur in many electronics physics PDEs, equations describing waves and their interactions, or your method involves this and you need it anyway (BEM stands out quite well here). BEM also traditionally results in a dense system matrix, so the following direct *dense* solver components are available:
 
-* cf3.lss.LAPACK
+* cf3.lss.LAPACK_LongPrecisionReal
 * cf3.lss.LAPACK_LongPrecisionComplex
 
 
