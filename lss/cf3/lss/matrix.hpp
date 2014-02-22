@@ -9,6 +9,7 @@
 #define cf3_lss_matrix_hpp
 
 
+#include <cmath>
 #include <iterator>
 
 #include "common/Log.hpp"
@@ -232,6 +233,9 @@ struct matrix
   matrix& operator=(const matrix& _other) { return IMPL::operator=(_other); }
   matrix& zerorow(const size_t& i)        { return IMPL::zerorow(i); }
   matrix& sumrows(const size_t& i, const size_t& isrc) { return IMPL::sumrows(i,isrc); }
+  virtual T norm1(const size_t& j=0) { T n(0); for (size_t i=0; i<m_size.i; ++i) n += std::abs(operator()(i,j)); return n; }
+  virtual T norm2(const size_t& j=0) { T n(0); for (size_t i=0; i<m_size.i; ++i) { const T a(operator()(i,j)); n += std::abs(a*a); } return std::sqrt(n); }
+  virtual T normi(const size_t& j=0) { T n(0); for (size_t i=0; i<m_size.i; ++i) n = std::max(std::abs(n),std::abs(operator()(i,j))); return n; }
 
   // -- intrinsic functionality
 
@@ -671,6 +675,10 @@ struct sparse_matrix :
         operator()(i,it->first.j) += it->second;
     return *this;
   }
+
+  T norm1(const size_t& j=0) { T n(0); for (size_t i=0; i<this->size(0); ++i) n += std::abs(operator()(i,j)); return n; }
+  T norm2(const size_t& j=0) { T n(0); for (size_t i=0; i<this->size(0); ++i) { const T a(operator()(i,j)); n += a*a; } return std::sqrt(n); }
+  T normi(const size_t& j=0) { T n(0); for (size_t i=0; i<this->size(0); ++i) n = std::max(n,std::abs(operator()(i,j))); return n; }
 
   sparse_matrix& swap(sparse_matrix& _other) {
     matrix_base_t::swap(_other);
