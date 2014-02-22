@@ -37,12 +37,11 @@ template< typename T > std::ostream& operator<< (std::ostream&, const linearsyst
 template< typename T >
 class linearsystem : public common::Action
 {
- protected:
-  // utility definitions
-  typedef dense_matrix_v< T, sort_by_column > vector_t;
-
   // -- Construction and destruction
  public:
+
+  /// Definition of linear system vector (as a column-oriented matrix)
+  typedef dense_matrix_v< T, sort_by_column > vector_t;
 
   /// Construct the linear system
   linearsystem(const std::string& name) :
