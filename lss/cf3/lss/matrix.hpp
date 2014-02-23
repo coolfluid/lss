@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <iterator>
+#include <numeric>
 
 #include "common/Log.hpp"
 
@@ -233,6 +234,7 @@ struct matrix
   matrix& operator=(const matrix& _other) { return IMPL::operator=(_other); }
   matrix& zerorow(const size_t& i)        { return IMPL::zerorow(i); }
   matrix& sumrows(const size_t& i, const size_t& isrc) { return IMPL::sumrows(i,isrc); }
+  T sumrows(const size_t& j=0) const { return IMPL::sumrows(j); }
   virtual T norm1(const size_t& j=0) { T n(0); for (size_t i=0; i<m_size.i; ++i) n += std::abs(operator()(i,j)); return n; }
   virtual T norm2(const size_t& j=0) { T n(0); for (size_t i=0; i<m_size.i; ++i) { const T a(operator()(i,j)); n += std::abs(a*a); } return std::sqrt(n); }
   virtual T normi(const size_t& j=0) { T n(0); for (size_t i=0; i<m_size.i; ++i) n = std::max(std::abs(n),std::abs(operator()(i,j))); return n; }
@@ -407,6 +409,15 @@ struct dense_matrix_vv :
     return *this;
   }
 
+  T sumrows(const size_t& j=0) const {
+    if (j>=size(1))
+      throw std::runtime_error("dense_matrix_vv: column index outside bounds.");
+    T s(0);
+    if (ORIENT) for (size_t i=0; i<size(0); ++i) s+=a[i][j];
+    else        s = std::accumulate(a[j].begin(),a[j].end(),T());
+    return s;
+  }
+
   dense_matrix_vv& swap(dense_matrix_vv& other) {
     other.a.swap(a);
     matrix_base_t::swap(other);
@@ -509,6 +520,16 @@ struct dense_matrix_v :
     return *this;
   }
 
+  T sumrows(const size_t& j=0) const {
+    if (j>=size(1))
+      throw std::runtime_error("dense_matrix_v: column index outside bounds.");
+    T s(0);
+    if (ORIENT) for (size_t i=0; i<size(0); ++i) s+=operator()(i,j);
+    else s = std::accumulate( a.begin()+size(0)*(j),
+                              a.begin()+size(0)*(j+1), T() );
+    return s;
+  }
+
   // indexing
   const T& operator()(const size_t& i, const size_t& j=0) const { return ORIENT? a[i*matrix_base_t::m_size.j+j]:a[j*matrix_base_t::m_size.i+i]; }
         T& operator()(const size_t& i, const size_t& j=0)       { return ORIENT? a[i*matrix_base_t::m_size.j+j]:a[j*matrix_base_t::m_size.i+i]; }
@@ -556,7 +577,10 @@ struct sparse_matrix :
   };
 
   // constructor
-  sparse_matrix() : matrix_base_t() {}
+  sparse_matrix() : matrix_base_t() {
+    if (BASE!=0 && BASE!=1)
+      throw std::logic_error("sparse_matrix: indexing base should be 0 or 1.");
+  }
 
   // initializations
 
@@ -675,6 +699,31 @@ struct sparse_matrix :
       if (it->first.i==isrc)
         operator()(i,it->first.j) += it->second;
     return *this;
+  }
+
+  T sumrows(const size_t& j=0) const {
+    if (j>=this->size(1))
+      throw std::runtime_error("sparse_matrix: column index outside bounds.");
+
+    T s(0);
+    if (!is_compressed()) {
+      for (typename matrix_uncompressed_t::const_iterator it=matu.begin(); it!=matu.end(); ++it)
+        if (it->first.j==j)
+          s += it->second;
+    }
+    else if (ORIENT) {
+      // compressed & sorted by row
+      for (int i=0; i<matc.nnu; ++i)
+        for (int k=matc.ia[i]-BASE; k<matc.ia[i+1]-BASE; ++k)
+          if (matc.ja[k]==j)
+            s += matc.a[k];
+    }
+    else {
+      // compressed & sorted by column
+      s = std::accumulate( matc.a.begin()+(matc.ja[j  ]-BASE),
+                           matc.a.begin()+(matc.ja[j+1]-BASE), T() );
+    }
+    return s;
   }
 
   T norm1(const size_t& j=0) { T n(0); for (size_t i=0; i<this->size(0); ++i) n += std::abs(operator()(i,j)); return n; }
