@@ -346,11 +346,11 @@ struct dense_matrix_vv :
       const size_t& j,
       const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
     if (idx_t(i,j).is_valid_size()) {
+      if (i!=size(0) && j!=size(1))
+        a.clear();
+      if (i*j)
+        a.assign(ORIENT? i:j, std::vector< T >(ORIENT? j:i, T()));
       matrix_base_t::m_size = idx_t(i,j);
-      a.clear();
-      if (size(0)*size(1))
-        a.assign(ORIENT? size(0):size(1),std::vector< T >(
-                 ORIENT? size(1):size(0),T() ));
     }
     return *this;
   }
@@ -442,10 +442,11 @@ struct dense_matrix_v :
       const size_t& j,
       const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
     if (idx_t(i,j).is_valid_size()) {
+      if (i!=size(0) && j!=size(1))
+        a.clear();
+      if (i*j)
+        a.assign(i*j,T());
       matrix_base_t::m_size = idx_t(i,j);
-      a.clear();
-      if (size(0)*size(1))
-        a.assign(size(0)*size(1),T());
     }
     return *this;
   }
