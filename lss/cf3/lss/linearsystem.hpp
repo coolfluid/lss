@@ -381,9 +381,14 @@ class linearsystem : public common::Action
   // -- Storage
  public: // FIXME should be protected, but Muphys has some weird interests here
 
-  /// Linear system components: b and x vectors
+  /// Linear system vector components: b and x
   vector_t m_b;
   vector_t m_x;
+
+  /// Linear system vector components access
+  vector_t& b() { return m_b; }
+  vector_t& x() { return m_x; }
+
 
  protected:
   /// Scripting temporary storage
