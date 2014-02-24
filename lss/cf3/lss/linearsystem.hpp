@@ -351,6 +351,19 @@ class linearsystem : public common::Action
   /// Checks whether the linear system matrix is empty
   bool empty() { return !(size(0)*size(1)*size(2)); }
 
+  /// Linear system b vector access
+  vector_t& b() { return m_b; }
+
+  /// Linear system x vector access
+  vector_t& x() { return m_x; }
+
+  /// Linar system componets indexing (absolute)
+  virtual const T& A(const size_t& i, const size_t& j)   const = 0;
+  virtual       T& A(const size_t& i, const size_t& j)         = 0;
+          const T& b(const size_t& i, const size_t& j=0) const { return m_b(i,j); }
+          const T& x(const size_t& i, const size_t& j=0) const { return m_x(i,j); }
+                T& b(const size_t& i, const size_t& j=0)       { return m_b(i,j); }
+                T& x(const size_t& i, const size_t& j=0)       { return m_x(i,j); }
 
 
   // -- Internal functionality
@@ -379,33 +392,14 @@ class linearsystem : public common::Action
 
 
   // -- Storage
- public: // FIXME should be protected, but Muphys has some weird interests here
-
-  /// Linear system vector components: b and x
-  vector_t m_b;
-  vector_t m_x;
-
-  /// Linear system vector components access
-  vector_t& b() { return m_b; }
-  vector_t& x() { return m_x; }
-
-
  protected:
-  /// Scripting temporary storage
-  T                     m_dummy_value;
-  std::vector< double > m_dummy_vector;
-  print_t m_print[3];  // matrix and vectors print levels
 
+  vector_t m_b;  // linear system b vector
+  vector_t m_x;  // linear system x vector
 
-  // -- Indexing (absolute)
- public:
-
-  virtual const T& A(const size_t& i, const size_t& j)   const = 0;
-  virtual       T& A(const size_t& i, const size_t& j)         = 0;
-          const T& b(const size_t& i, const size_t& j=0) const { return m_b(i,j); }
-          const T& x(const size_t& i, const size_t& j=0) const { return m_x(i,j); }
-                T& b(const size_t& i, const size_t& j=0)       { return m_b(i,j); }
-                T& x(const size_t& i, const size_t& j=0)       { return m_x(i,j); }
+  T                     m_dummy_value;   // (scripting temp.) value
+  std::vector< double > m_dummy_vector;  // (scripting temp.) vector
+  print_t m_print[3];                    // (scripting temp.) print levels
 
 
   // -- Interfacing (public)
