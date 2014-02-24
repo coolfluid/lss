@@ -523,10 +523,11 @@ struct dense_matrix_v :
   T sumrows(const size_t& j=0) const {
     if (j>=size(1))
       throw std::runtime_error("dense_matrix_v: column index outside bounds.");
+    if (!ORIENT)
+      return std::accumulate(a.begin()+size(0)*(j),a.begin()+size(0)*(j+1),T());
     T s(0);
-    if (ORIENT) for (size_t i=0; i<size(0); ++i) s+=operator()(i,j);
-    else s = std::accumulate( a.begin()+size(0)*(j),
-                              a.begin()+size(0)*(j+1), T() );
+      for (size_t i=0; i<size(0); ++i)
+        s += operator()(i,j);
     return s;
   }
 
@@ -707,6 +708,7 @@ struct sparse_matrix :
 
     T s(0);
     if (!is_compressed()) {
+      // uncompressed
       for (typename matrix_uncompressed_t::const_iterator it=matu.begin(); it!=matu.end(); ++it)
         if (it->first.j==j)
           s += it->second;
@@ -715,8 +717,10 @@ struct sparse_matrix :
       // compressed & sorted by row
       for (int i=0; i<matc.nnu; ++i)
         for (int k=matc.ia[i]-BASE; k<matc.ia[i+1]-BASE; ++k)
-          if (matc.ja[k]==j)
+          if (matc.ja[k]-BASE==j) {
             s += matc.a[k];
+            break;
+          }
     }
     else {
       // compressed & sorted by column
