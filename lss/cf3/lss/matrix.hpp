@@ -235,9 +235,7 @@ struct matrix
   matrix& zerorow(const size_t& i)        { return IMPL::zerorow(i); }
   matrix& sumrows(const size_t& i, const size_t& isrc) { return IMPL::sumrows(i,isrc); }
   T sumrows(const size_t& j=0) const { return IMPL::sumrows(j); }
-  virtual T norm1(const size_t& j=0) { T n(0); for (size_t i=0; i<m_size.i; ++i) n += std::abs(operator()(i,j)); return n; }
-  virtual T norm2(const size_t& j=0) { T n(0); for (size_t i=0; i<m_size.i; ++i) { const T a(operator()(i,j)); n += std::abs(a*a); } return std::sqrt(n); }
-  virtual T normi(const size_t& j=0) { T n(0); for (size_t i=0; i<m_size.i; ++i) n = std::max(std::abs(n),std::abs(operator()(i,j))); return n; }
+  T norm(const size_t& j=0, const double& p=2.) const { return IMPL::norm(j,p); }  // (C++11 can do better here, using int)
 
   // -- intrinsic functionality
 
@@ -418,6 +416,25 @@ struct dense_matrix_vv :
     return s;
   }
 
+  T norm(const size_t& j=0, const double& p=2.) const {
+    T n(0);
+    if (p==std::numeric_limits< double >::infinity()) {
+      for (size_t i=0; ORIENT && i<this->size(0); ++i)
+        n = std::max(std::abs( operator()(i,j) ),n);
+      if (!ORIENT) boost_foreach(T& d,a[j])
+        n = std::max(std::abs(d),n);
+    }
+    else {
+      T q(static_cast< T >(p));
+      for (size_t i=0; ORIENT && i<this->size(0); ++i)
+        n += std::pow(std::abs( operator()(i,j) ),q);
+      if (!ORIENT) boost_foreach(T& d,a[j])
+        n += std::pow(std::abs(d),q);
+      n = std::pow(n,1./q);
+    }
+    return n;
+  }
+
   dense_matrix_vv& swap(dense_matrix_vv& other) {
     other.a.swap(a);
     matrix_base_t::swap(other);
@@ -529,6 +546,21 @@ struct dense_matrix_v :
       for (size_t i=0; i<size(0); ++i)
         s += operator()(i,j);
     return s;
+  }
+
+  T norm(const size_t& j=0, const double& p=2.) const {
+    T n(0);
+    if (p==std::numeric_limits< double >::infinity()) {
+      for (size_t i=0; i<this->size(0); ++i)
+        n = std::max(std::abs( operator()(i,j) ),n);
+    }
+    else {
+      T q(static_cast< T >(p));
+      for (size_t i=0; i<this->size(0); ++i)
+        n += std::pow(std::abs( operator()(i,j) ),q);
+      n = std::pow(n,1./q);
+    }
+    return n;
   }
 
   // indexing
@@ -730,9 +762,39 @@ struct sparse_matrix :
     return s;
   }
 
-  T norm1(const size_t& j=0) { T n(0); for (size_t i=0; i<this->size(0); ++i) n += std::abs(operator()(i,j)); return n; }
-  T norm2(const size_t& j=0) { T n(0); for (size_t i=0; i<this->size(0); ++i) { const T a(operator()(i,j)); n += a*a; } return std::sqrt(n); }
-  T normi(const size_t& j=0) { T n(0); for (size_t i=0; i<this->size(0); ++i) n = std::max(n,std::abs(operator()(i,j))); return n; }
+  T norm(const size_t& j=0, const double& p=2.) const {
+    T n(0);
+    T q(static_cast< T >(p));
+    const bool inf(p==std::numeric_limits< double >::infinity());
+    if (!is_compressed()) {
+      // uncompressed
+      for (typename matrix_uncompressed_t::const_iterator it=matu.begin(); inf && it!=matu.end(); ++it)
+        if (it->first.j==j)
+          n = std::max(std::abs( it->second ),n);
+      for (typename matrix_uncompressed_t::const_iterator it=matu.begin(); !inf && it!=matu.end(); ++it)
+        if (it->first.j==j)
+          n += std::pow(std::abs( it->second ),q);
+    }
+    else if (ORIENT) {
+      // compressed & sorted by row
+      for (int i=0; i<matc.nnu; ++i)
+        for (int k=matc.ia[i]-BASE; k<matc.ia[i+1]-BASE; ++k)
+          if (matc.ja[k]-BASE==j) {
+            n = (inf? std::max(std::abs( matc.a[k] ),n)
+                    : std::pow(std::abs( matc.a[k] ),q) + n);
+            break;
+          }
+    }
+    else {
+      // compressed & sorted by column
+      typename std::vector< T >::const_iterator it;
+      for (it =matc.a.begin()+(matc.ja[j  ]-BASE);
+           it!=matc.a.begin()+(matc.ja[j+1]-BASE); ++it)
+        n = (inf? std::max(std::abs( *it ),n)
+                : std::pow(std::abs( *it ),q) + n);
+    }
+    return inf? n : std::pow(n,1./q);
+  }
 
   sparse_matrix& swap(sparse_matrix& _other) {
     matrix_base_t::swap(_other);
