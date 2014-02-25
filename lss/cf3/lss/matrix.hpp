@@ -421,17 +421,17 @@ struct dense_matrix_vv :
     T n(0);
     if (p==std::numeric_limits< double >::infinity()) {
       for (size_t i=0; ORIENT && i<this->size(0); ++i)
-        n = std::max(std::abs( operator()(i,j) ),n);
+        n = std::max(std::abs( operator()(i,j) ), std::abs( n ));
       if (!ORIENT) boost_foreach(T& d,a[j])
         n = std::max(std::abs(d),n);
     }
     else {
       T q(static_cast< T >(std::max(1.,p)));
       for (size_t i=0; ORIENT && i<this->size(0); ++i)
-        n += std::pow(std::abs( operator()(i,j) ),q);
+        n += std::pow(std::abs( operator()(i,j) ), std::abs( q ));
       if (!ORIENT) boost_foreach(T& d,a[j])
-        n += std::pow(std::abs(d),q);
-      n = std::pow(n,1./q);
+        n += std::pow(std::abs(d), std::abs( q ));
+      n = std::pow(n, std::abs(std::pow(q,-1.)) );
     }
     return n;
   }
@@ -553,13 +553,13 @@ struct dense_matrix_v :
     T n(0);
     if (p==std::numeric_limits< double >::infinity()) {
       for (size_t i=0; i<this->size(0); ++i)
-        n = std::max(std::abs( operator()(i,j) ),n);
+        n = std::max(std::abs( operator()(i,j) ), std::abs( n ));
     }
     else {
-      T q(static_cast< T >(std::max(1.,p)));
+      const T q(static_cast< T >(std::max(1.,p)));
       for (size_t i=0; i<this->size(0); ++i)
-        n += std::pow(std::abs( operator()(i,j) ),q);
-      n = std::pow(n,1./q);
+        n += std::pow(std::abs( operator()(i,j) ), std::abs( q ));
+      n = std::pow(n, std::abs(std::pow(q,-1.)) );
     }
     return n;
   }
