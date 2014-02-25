@@ -426,12 +426,12 @@ struct dense_matrix_vv :
         n = std::max(std::abs(d),n);
     }
     else {
-      T q(static_cast< T >(std::max(1.,p)));
+      const T q(static_cast< T >(std::max(1.,p)));
       for (size_t i=0; ORIENT && i<this->size(0); ++i)
         n += std::pow(std::abs( operator()(i,j) ), std::abs( q ));
       if (!ORIENT) boost_foreach(T& d,a[j])
         n += std::pow(std::abs(d), std::abs( q ));
-      n = std::pow(n, std::abs(std::pow(q,-1.)) );
+      n = std::pow(n, static_cast< T >(1./std::max(1.,p)) );
     }
     return n;
   }
@@ -559,7 +559,7 @@ struct dense_matrix_v :
       const T q(static_cast< T >(std::max(1.,p)));
       for (size_t i=0; i<this->size(0); ++i)
         n += std::pow(std::abs( operator()(i,j) ), std::abs( q ));
-      n = std::pow(n, std::abs(std::pow(q,-1.)) );
+      n = std::pow(n, static_cast< T >(1./std::max(1.,p)) );
     }
     return n;
   }
@@ -765,24 +765,22 @@ struct sparse_matrix :
 
   T norm(const size_t& j=0, const double& p=2.) const {
     T n(0);
-    T q(static_cast< T >(std::max(1.,p)));
+    const T q(static_cast< T >(std::max(1.,p)));
     const bool inf(p==std::numeric_limits< double >::infinity());
     if (!is_compressed()) {
       // uncompressed
-      for (typename matrix_uncompressed_t::const_iterator it=matu.begin(); inf && it!=matu.end(); ++it)
+      for (typename matrix_uncompressed_t::const_iterator it=matu.begin(); it!=matu.end(); ++it)
         if (it->first.j==j)
-          n = std::max(std::abs( it->second ),n);
-      for (typename matrix_uncompressed_t::const_iterator it=matu.begin(); !inf && it!=matu.end(); ++it)
-        if (it->first.j==j)
-          n += std::pow(std::abs( it->second ),q);
+          n = (inf? std::max(std::abs( it->second ), std::abs( n ))
+                  : std::pow(std::abs( it->second ), std::abs( q )) + n );
     }
     else if (ORIENT) {
       // compressed & sorted by row
       for (int i=0; i<matc.nnu; ++i)
         for (int k=matc.ia[i]-BASE; k<matc.ia[i+1]-BASE; ++k)
           if (matc.ja[k]-BASE==j) {
-            n = (inf? std::max(std::abs( matc.a[k] ),n)
-                    : std::pow(std::abs( matc.a[k] ),q) + n);
+            n = (inf? std::max(std::abs( matc.a[k] ), std::abs( n ))
+                    : std::pow(std::abs( matc.a[k] ), std::abs( q )) + n);
             break;
           }
     }
@@ -791,10 +789,10 @@ struct sparse_matrix :
       typename std::vector< T >::const_iterator it;
       for (it =matc.a.begin()+(matc.ja[j  ]-BASE);
            it!=matc.a.begin()+(matc.ja[j+1]-BASE); ++it)
-        n = (inf? std::max(std::abs( *it ),n)
-                : std::pow(std::abs( *it ),q) + n);
+        n = (inf? std::max(std::abs( *it ), std::abs( n ))
+                : std::pow(std::abs( *it ), std::abs( q )) + n);
     }
-    return inf? n : std::pow(n,1./q);
+    return inf? n : std::pow(n, static_cast< T >(1./std::max(1.,p)) );
   }
 
   sparse_matrix& swap(sparse_matrix& _other) {
