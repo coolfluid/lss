@@ -438,11 +438,11 @@ class linearsystem : public common::Action
  public:
 
   /// Linear system solving: x = A^-1 b
-  /// (might destroy system matrix contents (structure or non-zero values)
+  /// @note: might destroy system matrix contents (structure or non-zero values)
   virtual linearsystem& solve() = 0;
 
   /// Linear system forward multiplication: b = alpha A x + beta b
-  /// (might destroy system matrix contents (structure or non-zero values)
+  /// @note: might destroy system matrix contents (structure or non-zero values)
   virtual linearsystem& multi(const double& _alpha, const double& _beta) = 0;
 
   /// Linear system copy
