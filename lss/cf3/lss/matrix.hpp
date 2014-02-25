@@ -9,6 +9,7 @@
 #define cf3_lss_matrix_hpp
 
 
+#include <algorithm>
 #include <cmath>
 #include <iterator>
 #include <numeric>
@@ -425,7 +426,7 @@ struct dense_matrix_vv :
         n = std::max(std::abs(d),n);
     }
     else {
-      T q(static_cast< T >(p));
+      T q(static_cast< T >(std::max(1.,p)));
       for (size_t i=0; ORIENT && i<this->size(0); ++i)
         n += std::pow(std::abs( operator()(i,j) ),q);
       if (!ORIENT) boost_foreach(T& d,a[j])
@@ -555,7 +556,7 @@ struct dense_matrix_v :
         n = std::max(std::abs( operator()(i,j) ),n);
     }
     else {
-      T q(static_cast< T >(p));
+      T q(static_cast< T >(std::max(1.,p)));
       for (size_t i=0; i<this->size(0); ++i)
         n += std::pow(std::abs( operator()(i,j) ),q);
       n = std::pow(n,1./q);
@@ -764,7 +765,7 @@ struct sparse_matrix :
 
   T norm(const size_t& j=0, const double& p=2.) const {
     T n(0);
-    T q(static_cast< T >(p));
+    T q(static_cast< T >(std::max(1.,p)));
     const bool inf(p==std::numeric_limits< double >::infinity());
     if (!is_compressed()) {
       // uncompressed
