@@ -622,13 +622,16 @@ struct sparse_matrix :
       const size_t& i,
       const size_t& j,
       const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
-    if (idx_t(i,j).is_valid_size()) {
-      matu.clear();
-      matc.clear();
-      matrix_base_t::m_size = idx_t(i,j);
-      if (_nnz.size() && ORIENT) {
+    if (!idx_t(i,j).is_valid_size()) {
+      CFwarn << "sparse_matrix: invalid size: (" << i << ',' << j << ')' << CFendl;
+    }
+    else if (_nnz.size() && ORIENT) {
 
-        // build (already compressed) row and column indices, and allocate values
+      // build (already compressed) row and column indices, and allocate values
+        matu.clear();
+        matc.clear();
+        matrix_base_t::m_size = idx_t(i,j);
+
         matc.nnu = static_cast< int >(_nnz.size());
         matc.ia.reserve(matc.nnu+1);
         matc.ia.push_back(BASE);
@@ -643,18 +646,21 @@ struct sparse_matrix :
 
         matc.a.assign(matc.nnz,T());
 
-      }
-      else if (_nnz.size()) {
-
-        for (size_t r=0; r<_nnz.size(); ++r)
-          for (std::vector< size_t >::const_iterator c=_nnz[r].begin(); c!=_nnz[r].end(); ++c)
-            operator()(r,*c) = T();
-        compress();
-
-      }
     }
     else {
-      CFwarn << "sparse_matrix: invalid size: (" << i << ',' << j << ')' << CFendl;
+
+      // build diagonal uncompressed matrix, or compressed matrix if non-zero
+      // pattern is provided
+      matu.clear();
+      matc.clear();
+      matrix_base_t::m_size = idx_t(i,j);
+
+      for (size_t r=0; r<_nnz.size(); ++r)
+        for (std::vector< size_t >::const_iterator c=_nnz[r].begin(); c!=_nnz[r].end(); ++c)
+          operator()(r,*c) = T();
+      if (_nnz.size())  compress();
+      else              ensure_structural_symmetry(matrix_base_t::m_size,matu);
+
     }
     return *this;
   }
