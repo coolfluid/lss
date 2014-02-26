@@ -377,9 +377,10 @@ struct dense_matrix_vv :
   }
 
   dense_matrix_vv& operator=(const double& _value) {
+    const T value = static_cast< T >(_value);
     if (size(0)*size(1))
       a.assign(ORIENT? size(0):size(1),std::vector< T >(
-               ORIENT? size(1):size(0),static_cast< T >(_value) ));
+               ORIENT? size(1):size(0),static_cast< T >(value) ));
     return *this;
   }
 
@@ -482,7 +483,7 @@ struct dense_matrix_v :
 
   dense_matrix_v& initialize(const std::vector< double >& _vector) {
     if (_vector.size()==1)
-      return operator =(_vector[0]);
+      return operator=(_vector[0]);
     matrix_base_t::initialize(_vector);
     return *this;
   }
@@ -667,7 +668,7 @@ struct sparse_matrix :
 
   sparse_matrix& initialize(const std::vector< double >& _vector) {
     if (_vector.size()==1)
-      return operator =(_vector[0]);
+      return operator=(_vector[0]);
     matrix_base_t::initialize(_vector);
     compress();
     return *this;
