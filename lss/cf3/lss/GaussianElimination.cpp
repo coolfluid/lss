@@ -13,10 +13,14 @@ namespace cf3 {
 namespace lss {
 
 
-template<> std::string GaussianElimination< double >::type_name() { return "GaussianElimination_LongPrecisionReal";  }
-template<> std::string GaussianElimination< float  >::type_name() { return "GaussianElimination_ShortPrecisionReal"; }
-common::ComponentBuilder< GaussianElimination< double >, common::Component, LibLSS > Builder_GaussianElimination_LongPrecisionReal;
-common::ComponentBuilder< GaussianElimination< float  >, common::Component, LibLSS > Builder_GaussianElimination_ShortPrecisionReal;
+template<> std::string GaussianElimination< double  >::type_name() { return "GaussianElimination_LongPrecisionReal";  }
+template<> std::string GaussianElimination< zdouble >::type_name() { return "GaussianElimination_LongPrecisionComplex";  }
+template<> std::string GaussianElimination< float   >::type_name() { return "GaussianElimination_ShortPrecisionReal"; }
+template<> std::string GaussianElimination< zfloat  >::type_name() { return "GaussianElimination_ShortPrecisionComplex"; }
+common::ComponentBuilder< GaussianElimination< double  >, common::Component, LibLSS > Builder_GaussianElimination_LongPrecisionReal;
+common::ComponentBuilder< GaussianElimination< zdouble >, common::Component, LibLSS > Builder_GaussianElimination_LongPrecisionComplex;
+common::ComponentBuilder< GaussianElimination< float   >, common::Component, LibLSS > Builder_GaussianElimination_ShortPrecisionReal;
+common::ComponentBuilder< GaussianElimination< zfloat  >, common::Component, LibLSS > Builder_GaussianElimination_ShortPrecisionComplex;
 
 
 }  // namespace lss

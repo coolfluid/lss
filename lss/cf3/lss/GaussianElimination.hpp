@@ -106,11 +106,14 @@ class lss_API GaussianElimination : public linearsystem< T >
 
   /// Linear system forward multiplication
   GaussianElimination& multi(const double& _alpha=1., const double& _beta=0.) {
+    const T
+      alpha = static_cast< T >(_alpha),
+      beta  = static_cast< T >(_beta);
     for (size_t i=0; i<this->size(0); ++i) {
       for (size_t k=0; k<this->size(2); ++k) {
-        this->b(i,k) *= _beta;
+        this->b(i,k) *= beta;
         for (size_t j=0; j<this->size(1); ++j)
-          this->b(i,k) += _alpha*this->A(i,j)*this->x(j,k);
+          this->b(i,k) += alpha*this->A(i,j)*this->x(j,k);
       }
     }
     return *this;
