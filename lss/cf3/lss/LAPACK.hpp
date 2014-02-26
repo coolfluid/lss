@@ -17,7 +17,8 @@ namespace cf3 {
 namespace lss {
 
 
-/// Prototypes for single and double precision (as per Intel MKL documentation)
+/// Prototypes for single/double precisions, real/complex types
+/// (as per Intel MKL documentation)
 extern "C"
 {
   void dgesv_(int* n, int* nrhs, double*  a, int* lda, int* ipiv, double*  b, int* ldb, int* info);
@@ -32,8 +33,7 @@ extern "C"
 
 
 /**
- * @brief example linear system solver, using LAPACK
- * (available in single and double precision, only works for square matrices)
+ * @brief example linear system solver, using LAPACK (only for square matrices)
  */
 template< typename T >
 class lss_API LAPACK : public linearsystem< T >
@@ -88,7 +88,6 @@ class lss_API LAPACK : public linearsystem< T >
     const T
       alpha = static_cast< T >(_alpha),
       beta  = static_cast< T >(_beta);
-
     if (!m_A.m_size.is_square_size())
       throw std::runtime_error("LAPACK: system matrix must be square.");
     else if (type_is_equal< T, double  >()) { dgemm_(&trans, &trans, &m, &n, &k, (double*)  &alpha, (double*)  &this->m_A.a[0], &m, (double*)  &this->m_x.a[0], &m, (double*)  &beta, (double*)  &this->m_b.a[0], &m); }
@@ -119,9 +118,9 @@ class lss_API LAPACK : public linearsystem< T >
   void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
-  void A___assign(const double& _value) { m_A = _value;   }
-  void A___clear()                      { m_A.clear();    }
-  void A___zerorow(const size_t& i)     { m_A.zerorow(i); }
+  void A___assign(const double& _value)                 { m_A = _value;   }
+  void A___clear()                                      { m_A.clear();    }
+  void A___zerorow(const size_t& i)                     { m_A.zerorow(i); }
   void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
   /// matrix inspecting
