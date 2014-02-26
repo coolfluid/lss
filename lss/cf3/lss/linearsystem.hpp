@@ -233,9 +233,23 @@ class linearsystem : public common::Action
     multi(opts.value< double >("alpha"),opts.value< double >("beta"));
   }
 
-  void signal_A(common::SignalArgs& args) { common::XML::SignalOptions opts(args); A  (opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double >("value"); }
-  void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); m_b(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< double >("value"); }
-  void signal_x(common::SignalArgs& args) { common::XML::SignalOptions opts(args); m_x(opts.value< unsigned >("j"),opts.value< unsigned >("k")) = opts.value< double >("value"); }
+  void signal_A(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions opts(args), repl(reply);
+    repl.add("return_value",A(opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double >("value"));
+  }
+
+  void signal_b(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions opts(args), repl(reply);
+    repl.add("return_value",m_b(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< double >("value"));
+  }
+
+  void signal_x(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions opts(args), repl(reply);
+    repl.add("return_value",m_x(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< double >("value"));
+  }
 
   void signal_bnorm(common::SignalArgs& args) {
     common::XML::SignalFrame reply(args.create_reply(uri()));
@@ -462,9 +476,9 @@ class linearsystem : public common::Action
   virtual void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
-  virtual void A___assign(const double& _value) = 0;
-  virtual void A___clear()                      = 0;
-  virtual void A___zerorow(const size_t& i)     = 0;
+  virtual void A___assign(const double& _value)                 = 0;
+  virtual void A___clear()                                      = 0;
+  virtual void A___zerorow(const size_t& i)                     = 0;
   virtual void A___sumrows(const size_t& i, const size_t& isrc) = 0;
 
   /// Linear system matrix inspecting
