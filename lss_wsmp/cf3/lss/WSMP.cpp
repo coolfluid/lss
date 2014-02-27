@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -53,6 +53,7 @@ WSMP::WSMP(const std::string& name, const size_t& _size_i, const size_t& _size_j
 
   // reset pt, iparm and dparm defaults
   call_wsmp(0);
+  iparm[ 3] = 0;  // CSR matrix format
   iparm[ 4] = 0;  // + C-style numbering
   iparm[19] = 2;  // + ordering option 5
 
