@@ -17,7 +17,8 @@ namespace cf3 {
 namespace lss {
 
 
-/// Prototypes for single and double precision (as per Intel MKL documentation)
+/// Prototypes for single/double precisions, real/complex types
+/// (as per Intel MKL documentation)
 extern "C"
 {
   void dgesv_(int* n, int* nrhs, double*  a, int* lda, int* ipiv, double*  b, int* ldb, int* info);
@@ -28,8 +29,7 @@ extern "C"
 
 
 /**
- * @brief example linear system solver, using LAPACK
- * (available in single and double precision, only works for square matrices)
+ * @brief example linear system solver, using LAPACK (only for square matrices)
  */
 template< typename T >
 class lss_API LAPACK : public linearsystem< T >
