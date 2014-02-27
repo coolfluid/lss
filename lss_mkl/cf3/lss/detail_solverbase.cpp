@@ -22,7 +22,7 @@ solverbase::solverbase(const std::string& name)
   : linearsystem< double >(name)
 {
   environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
-  CFinfo << "mkl pardiso: OMP_NUM_THREADS: " << nthreads.description() << CFendl;
+  CFinfo << "mkl: OMP_NUM_THREADS: " << nthreads.description() << CFendl;
   mkl_set_num_threads(nthreads.value);
 }
 
