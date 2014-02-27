@@ -89,7 +89,15 @@ class linearsystem : public common::Action
         .connect   ( boost::bind( &linearsystem::signal_x,        this, _1 ))
         .signature ( boost::bind( &linearsystem::signat_ijkvalue, this, _1 ));
 
+    regist_signal("bnorm")
+        .description("Calculate vector b p-norm, given column index (j) and Lp space dimension (p)")
+        .connect   ( boost::bind( &linearsystem::signal_bnorm, this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_jp,    this, _1 ));
 
+    regist_signal("xnorm")
+        .description("Calculate vector x p-norm, given column index (j) and Lp space dimension (p)")
+        .connect   ( boost::bind( &linearsystem::signal_xnorm, this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_jp,    this, _1 ));
 
     options().add("A",std::vector< double >())
         .link_to(&m_dummy_vector).mark_basic()
@@ -135,6 +143,12 @@ class linearsystem : public common::Action
     opts.add< int >("b",(int) print_auto);
     opts.add< int >("x",(int) print_auto);
     opts.add< std::string >("file","");
+  }
+
+  void signat_jp(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    opts.add< unsigned >("j",(unsigned) 0);
+    opts.add< double >("p",2.);
   }
 
   void signal_initialize(common::SignalArgs& args) {
@@ -221,6 +235,21 @@ class linearsystem : public common::Action
     repl.add("return_value",m_x(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< double >("value"));
   }
 
+  void signal_bnorm(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions
+      opts(args),
+      repl(reply);
+    repl.add("return_value",m_b.norm(opts.value< unsigned >("j"),opts.value< double >("p")));
+  }
+
+  void signal_xnorm(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions
+      opts(args),
+      repl(reply);
+    repl.add("return_value",m_x.norm(opts.value< unsigned >("j"),opts.value< double >("p")));
+  }
 
   void trigger_A() { try { A___initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: A: " << e.what() << CFendl; } m_dummy_vector.clear(); }
   void trigger_b() { try { m_b.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: b: " << e.what() << CFendl; } m_dummy_vector.clear(); }
