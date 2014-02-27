@@ -22,31 +22,27 @@ common::ComponentBuilder< dss, common::Component, LibLSS_MKL > Builder_MKL_dss;
 
 
 dss::dss(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k)
-  : linearsystem< double >(name)
+  : detail::solverbase(name)
 {
-  environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
-  CFinfo << "mkl dss: OMP_NUM_THREADS: " << nthreads.description() << CFendl;
-  mkl_set_num_threads(nthreads.value);
-
   handle = NULL;
-  for (int i=0; i<_all_phases; ++i)
+  for (int i=0; i<_ALL_PHASES; ++i)
     opts[i] = MKL_DSS_DEFAULTS;
-  opts[ _structure ] += MKL_DSS_SYMMETRIC_STRUCTURE;
-  opts[ _factor    ] += MKL_DSS_INDEFINITE;
+  opts[ _STRUCTURE ] += MKL_DSS_SYMMETRIC_STRUCTURE;
+  opts[ _FACTOR    ] += MKL_DSS_INDEFINITE;
 
   // dss: initialize
   int err;
-  if (err=dss_create_(&handle, &opts[_create]))
+  if (err=dss_create_(&handle, &opts[_CREATE]))
     throw std::runtime_error(err_message(err));
 
-  linearsystem< double >::initialize(_size_i,_size_j,_size_k);
+  solverbase::initialize(_size_i,_size_j,_size_k);
 }
 
 dss::~dss()
 {
   // dss: deallocate
   int err;
-  if (err=dss_delete_(&handle, &opts[_delete]))
+  if (err=dss_delete_(&handle, &opts[_DELETE]))
     throw std::runtime_error(err_message(err));
 }
 
@@ -56,10 +52,10 @@ dss& dss::solve()
   matrix_t::matrix_compressed_t& A = m_A.compress();
   int nrhs = static_cast< int >(m_b.size(1));
   int err;
-  if ((err=dss_define_structure_(&handle, &opts[_structure], &A.ia[0], &A.nnu, &A.nnu, &A.ja[0], &A.nnz))
-   || (err=dss_reorder_         (&handle, &opts[_reorder],   NULL))
-   || (err=dss_factor_real_     (&handle, &opts[_factor],    &A.a[0]))
-   || (err=dss_solve_real_      (&handle, &opts[_solve],     &m_b.a[0], &nrhs, &m_x.a[0])) )
+  if ((err=dss_define_structure_(&handle, &opts[_STRUCTURE], &A.ia[0], &A.nnu, &A.nnu, &A.ja[0], &A.nnz))
+   || (err=dss_reorder_         (&handle, &opts[_REORDER],   NULL))
+   || (err=dss_factor_real_     (&handle, &opts[_FACTOR],    &A.a[0]))
+   || (err=dss_solve_real_      (&handle, &opts[_SOLVE],     &m_b.a[0], &nrhs, &m_x.a[0])) )
     throw std::runtime_error(err_message(err));
   return *this;
 }
@@ -70,7 +66,7 @@ dss& dss::copy(const dss& _other)
   linearsystem< double >::copy(_other);
   m_A = _other.m_A;
   handle = _other.handle;
-  for (int i=0; i<_all_phases; ++i)
+  for (int i=0; i<_ALL_PHASES; ++i)
     opts[i] = _other.opts[i];
   return *this;
 }

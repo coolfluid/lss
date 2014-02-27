@@ -2,6 +2,8 @@
 list( APPEND mkl_files
   LibLSS_MKL.cpp
   LibLSS_MKL.hpp
+  detail_solverbase.cpp
+  detail_solverbase.h
   dss.cpp
   dss.h
   iss_fgmres.cpp

@@ -21,23 +21,23 @@ namespace mkl {
 common::ComponentBuilder< pardiso, common::Component, LibLSS_MKL > Builder_MKL_pardiso;
 
 
-pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _size_j, const size_t& _size_k)
-  : linearsystem< double >(name)
+pardiso::pardiso(
+    const std::string& name,
+    const size_t& _size_i,
+    const size_t& _size_j,
+    const size_t& _size_k )
+  : detail::solverbase(name)
 {
-  environment_variable_t< int > nthreads("OMP_NUM_THREADS",1);
   environment_variable_t< std::string >
     ooc_path("MKL_PARDISO_OOC_PATH"),
     ooc_maxc("MKL_PARDISO_OOC_MAX_CORE_SIZE"),
     ooc_swap("MKL_PARDISO_OOC_MAX_SWAP_SIZE"),
     ooc_keep("MKL_PARDISO_OOC_KEEP_FILE");
 
-  CFinfo  << "mkl pardiso: OMP_NUM_THREADS:               " << nthreads.description() << CFendl;
   CFdebug << "mkl pardiso: MKL_PARDISO_OOC_PATH:          " << ooc_path.description() << CFendl
           << "mkl pardiso: MKL_PARDISO_OOC_MAX_CORE_SIZE: " << ooc_maxc.description() << CFendl
           << "mkl pardiso: MKL_PARDISO_OOC_MAX_SWAP_SIZE: " << ooc_swap.description() << CFendl
           << "mkl pardiso: MKL_PARDISO_OOC_KEEP_FILE:     " << ooc_keep.description() << CFendl;
-
-  mkl_set_num_threads(nthreads.value);
 
   mtype  = 1;  // real structurally symmetric matrix
   maxfct = 1;  // maximum number of numerical factorizations
@@ -50,7 +50,7 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
   iparm[ 7] = 0;  // + max numbers of iterative refinement steps
   iparm[31] = 0;  // + [0|1] sparse direct solver or multi-recursive iterative solver
 
-  linearsystem< double >::initialize(_size_i,_size_j,_size_k);
+  detail::solverbase::initialize(_size_i,_size_j,_size_k);
 }
 
 
