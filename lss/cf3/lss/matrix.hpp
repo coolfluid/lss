@@ -342,11 +342,11 @@ struct dense_matrix_vv :
       const size_t& j,
       const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
     if (idx_t(i,j).is_valid_size()) {
+      if (i!=size(0) && j!=size(1))
+        a.clear();
+      if (i*j)
+        a.assign(ORIENT? i:j, std::vector< T >(ORIENT? j:i, T()));
       matrix_base_t::m_size = idx_t(i,j);
-      a.clear();
-      if (size(0)*size(1))
-        a.assign(ORIENT? size(0):size(1),std::vector< T >(
-                 ORIENT? size(1):size(0),T() ));
     }
     return *this;
   }
@@ -372,9 +372,10 @@ struct dense_matrix_vv :
   }
 
   dense_matrix_vv& operator=(const double& _value) {
+    const T value = static_cast< T >(_value);
     if (size(0)*size(1))
       a.assign(ORIENT? size(0):size(1),std::vector< T >(
-               ORIENT? size(1):size(0),static_cast< T >(_value) ));
+               ORIENT? size(1):size(0),static_cast< T >(value) ));
     return *this;
   }
 
@@ -438,17 +439,18 @@ struct dense_matrix_v :
       const size_t& j,
       const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
     if (idx_t(i,j).is_valid_size()) {
+      if (i!=size(0) && j!=size(1))
+        a.clear();
+      if (i*j)
+        a.assign(i*j,T());
       matrix_base_t::m_size = idx_t(i,j);
-      a.clear();
-      if (size(0)*size(1))
-        a.assign(size(0)*size(1),T());
     }
     return *this;
   }
 
   dense_matrix_v& initialize(const std::vector< double >& _vector) {
     if (_vector.size()==1)
-      return operator =(_vector[0]);
+      return operator=(_vector[0]);
     matrix_base_t::initialize(_vector);
     return *this;
   }
@@ -551,7 +553,10 @@ struct sparse_matrix :
   };
 
   // constructor
-  sparse_matrix() : matrix_base_t() {}
+  sparse_matrix() : matrix_base_t() {
+    if (BASE!=0 && BASE!=1)
+      throw std::logic_error("sparse_matrix: indexing base should be 0 or 1.");
+  }
 
   // initializations
 
@@ -559,13 +564,16 @@ struct sparse_matrix :
       const size_t& i,
       const size_t& j,
       const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
-    if (idx_t(i,j).is_valid_size()) {
-      matu.clear();
-      matc.clear();
-      matrix_base_t::m_size = idx_t(i,j);
-      if (_nnz.size() && ORIENT) {
+    if (!idx_t(i,j).is_valid_size()) {
+      CFwarn << "sparse_matrix: invalid size: (" << i << ',' << j << ')' << CFendl;
+    }
+    else if (_nnz.size() && ORIENT) {
 
-        // build (already compressed) row and column indices, and allocate values
+      // build (already compressed) row and column indices, and allocate values
+        matu.clear();
+        matc.clear();
+        matrix_base_t::m_size = idx_t(i,j);
+
         matc.nnu = static_cast< int >(_nnz.size());
         matc.ia.reserve(matc.nnu+1);
         matc.ia.push_back(BASE);
@@ -580,25 +588,28 @@ struct sparse_matrix :
 
         matc.a.assign(matc.nnz,T());
 
-      }
-      else if (_nnz.size()) {
-
-        for (size_t r=0; r<_nnz.size(); ++r)
-          for (std::vector< size_t >::const_iterator c=_nnz[r].begin(); c!=_nnz[r].end(); ++c)
-            operator()(r,*c) = T();
-        compress();
-
-      }
     }
     else {
-      CFwarn << "sparse_matrix: invalid size: (" << i << ',' << j << ')' << CFendl;
+
+      // build diagonal uncompressed matrix, or compressed matrix if non-zero
+      // pattern is provided
+      matu.clear();
+      matc.clear();
+      matrix_base_t::m_size = idx_t(i,j);
+
+      for (size_t r=0; r<_nnz.size(); ++r)
+        for (std::vector< size_t >::const_iterator c=_nnz[r].begin(); c!=_nnz[r].end(); ++c)
+          operator()(r,*c) = T();
+      if (_nnz.size())  compress();
+      else              ensure_structural_symmetry(matrix_base_t::m_size,matu);
+
     }
     return *this;
   }
 
   sparse_matrix& initialize(const std::vector< double >& _vector) {
     if (_vector.size()==1)
-      return operator =(_vector[0]);
+      return operator=(_vector[0]);
     matrix_base_t::initialize(_vector);
     compress();
     return *this;
