@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -75,6 +75,20 @@ pardiso& pardiso::solve()
 }
 
 
+pardiso& pardiso::multi(const double& _alpha, const double& _beta)
+{
+  matrix_t::matrix_compressed_t& A = m_A.compress();
+  for (size_t i=0; i<size(0); ++i) {
+    for (size_t k=0; k<size(2); ++k) {
+      b(i,k) *= _beta;
+      for (size_t l=A.ia[i]-A.ia[0]; l<A.ia[i+1]-A.ia[0]; ++l)
+        b(i,k) += _alpha*A.a[l]*m_x( A.ja[l]-A.ia[0], k);
+    }
+  }
+  return *this;
+}
+
+
 pardiso& pardiso::copy(const pardiso& _other)
 {
   linearsystem< double >::copy(_other);
@@ -132,9 +146,9 @@ int pardiso::call_pardiso(int _phase, int _msglvl)
 int pardiso::call_pardiso_printstats()
 {
   matrix_t::matrix_compressed_t& A = m_A.compress();
-  int nrhs = static_cast< int >(m_b.size(1));
-
-  int err = 0;
+  int
+    nrhs = static_cast< int >(m_b.size(1)),
+    err = 0;
   pardiso_printstats_(
     &mtype,
     &A.nnu, &A.a[0], &A.ia[0], &A.ja[0],

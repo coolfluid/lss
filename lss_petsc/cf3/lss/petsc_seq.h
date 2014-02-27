@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -49,6 +49,9 @@ class lss_API petsc_seq : public linearsystem< double >
 
   /// Linear system copy
   petsc_seq& copy(const petsc_seq& _other);
+
+  /// Linear system forward multiplication
+  petsc_seq& multi(const double& _alpha=1., const double& _beta=0.);
 
 
  private:

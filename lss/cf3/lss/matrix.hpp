@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -9,7 +9,10 @@
 #define cf3_lss_matrix_hpp
 
 
+#include <algorithm>
+#include <cmath>
 #include <iterator>
+#include <numeric>
 
 #include "common/Log.hpp"
 
@@ -232,6 +235,8 @@ struct matrix
   matrix& operator=(const matrix& _other) { return IMPL::operator=(_other); }
   matrix& zerorow(const size_t& i)        { return IMPL::zerorow(i); }
   matrix& sumrows(const size_t& i, const size_t& isrc) { return IMPL::sumrows(i,isrc); }
+  T sumrows(const size_t& j=0) const { return IMPL::sumrows(j); }
+  T norm(const size_t& j=0, const double& p=2.) const { return IMPL::norm(j,p); }  // (C++11 can do better here, using int)
 
   // -- intrinsic functionality
 
@@ -342,11 +347,11 @@ struct dense_matrix_vv :
       const size_t& j,
       const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
     if (idx_t(i,j).is_valid_size()) {
+      if (i!=size(0) && j!=size(1))
+        a.clear();
+      if (i*j)
+        a.assign(ORIENT? i:j, std::vector< T >(ORIENT? j:i, T()));
       matrix_base_t::m_size = idx_t(i,j);
-      a.clear();
-      if (size(0)*size(1))
-        a.assign(ORIENT? size(0):size(1),std::vector< T >(
-                 ORIENT? size(1):size(0),T() ));
     }
     return *this;
   }
@@ -372,9 +377,10 @@ struct dense_matrix_vv :
   }
 
   dense_matrix_vv& operator=(const double& _value) {
+    const T value = static_cast< T >(_value);
     if (size(0)*size(1))
       a.assign(ORIENT? size(0):size(1),std::vector< T >(
-               ORIENT? size(1):size(0),static_cast< T >(_value) ));
+               ORIENT? size(1):size(0),static_cast< T >(value) ));
     return *this;
   }
 
@@ -401,6 +407,34 @@ struct dense_matrix_vv :
     for (size_t j=0; j<size(1); ++j)
       operator()(i,j) += operator()(isrc,j);
     return *this;
+  }
+
+  T sumrows(const size_t& j=0) const {
+    if (j>=size(1))
+      throw std::runtime_error("dense_matrix_vv: column index outside bounds.");
+    T s(0);
+    if (ORIENT) for (size_t i=0; i<size(0); ++i) s+=a[i][j];
+    else        s = std::accumulate(a[j].begin(),a[j].end(),T());
+    return s;
+  }
+
+  T norm(const size_t& j=0, const double& p=2.) const {
+    T n(0);
+    if (p==std::numeric_limits< double >::infinity()) {
+      for (size_t i=0; ORIENT && i<this->size(0); ++i)
+        n = std::max(std::abs( operator()(i,j) ), std::abs( n ));
+      if (!ORIENT) boost_foreach(T& d,a[j])
+        n = std::max(std::abs(d),n);
+    }
+    else {
+      const T q(static_cast< T >(std::max(1.,p)));
+      for (size_t i=0; ORIENT && i<this->size(0); ++i)
+        n += std::pow(std::abs( operator()(i,j) ), std::abs( q ));
+      if (!ORIENT) boost_foreach(T& d,a[j])
+        n += std::pow(std::abs(d), std::abs( q ));
+      n = std::pow(n, static_cast< T >(1./std::max(1.,p)) );
+    }
+    return n;
   }
 
   dense_matrix_vv& swap(dense_matrix_vv& other) {
@@ -438,17 +472,18 @@ struct dense_matrix_v :
       const size_t& j,
       const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
     if (idx_t(i,j).is_valid_size()) {
+      if (i!=size(0) && j!=size(1))
+        a.clear();
+      if (i*j)
+        a.assign(i*j,T());
       matrix_base_t::m_size = idx_t(i,j);
-      a.clear();
-      if (size(0)*size(1))
-        a.assign(size(0)*size(1),T());
     }
     return *this;
   }
 
   dense_matrix_v& initialize(const std::vector< double >& _vector) {
     if (_vector.size()==1)
-      return operator =(_vector[0]);
+      return operator=(_vector[0]);
     matrix_base_t::initialize(_vector);
     return *this;
   }
@@ -504,6 +539,32 @@ struct dense_matrix_v :
     return *this;
   }
 
+  T sumrows(const size_t& j=0) const {
+    if (j>=size(1))
+      throw std::runtime_error("dense_matrix_v: column index outside bounds.");
+    if (!ORIENT)
+      return std::accumulate(a.begin()+size(0)*(j),a.begin()+size(0)*(j+1),T());
+    T s(0);
+      for (size_t i=0; i<size(0); ++i)
+        s += operator()(i,j);
+    return s;
+  }
+
+  T norm(const size_t& j=0, const double& p=2.) const {
+    T n(0);
+    if (p==std::numeric_limits< double >::infinity()) {
+      for (size_t i=0; i<this->size(0); ++i)
+        n = std::max(std::abs( operator()(i,j) ), std::abs( n ));
+    }
+    else {
+      const T q(static_cast< T >(std::max(1.,p)));
+      for (size_t i=0; i<this->size(0); ++i)
+        n += std::pow(std::abs( operator()(i,j) ), std::abs( q ));
+      n = std::pow(n, static_cast< T >(1./std::max(1.,p)) );
+    }
+    return n;
+  }
+
   // indexing
   const T& operator()(const size_t& i, const size_t& j=0) const { return ORIENT? a[i*matrix_base_t::m_size.j+j]:a[j*matrix_base_t::m_size.i+i]; }
         T& operator()(const size_t& i, const size_t& j=0)       { return ORIENT? a[i*matrix_base_t::m_size.j+j]:a[j*matrix_base_t::m_size.i+i]; }
@@ -551,7 +612,10 @@ struct sparse_matrix :
   };
 
   // constructor
-  sparse_matrix() : matrix_base_t() {}
+  sparse_matrix() : matrix_base_t() {
+    if (BASE!=0 && BASE!=1)
+      throw std::logic_error("sparse_matrix: indexing base should be 0 or 1.");
+  }
 
   // initializations
 
@@ -559,13 +623,16 @@ struct sparse_matrix :
       const size_t& i,
       const size_t& j,
       const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >() ) {
-    if (idx_t(i,j).is_valid_size()) {
-      matu.clear();
-      matc.clear();
-      matrix_base_t::m_size = idx_t(i,j);
-      if (_nnz.size() && ORIENT) {
+    if (!idx_t(i,j).is_valid_size()) {
+      CFwarn << "sparse_matrix: invalid size: (" << i << ',' << j << ')' << CFendl;
+    }
+    else if (_nnz.size() && ORIENT) {
 
-        // build (already compressed) row and column indices, and allocate values
+      // build (already compressed) row and column indices, and allocate values
+        matu.clear();
+        matc.clear();
+        matrix_base_t::m_size = idx_t(i,j);
+
         matc.nnu = static_cast< int >(_nnz.size());
         matc.ia.reserve(matc.nnu+1);
         matc.ia.push_back(BASE);
@@ -580,25 +647,28 @@ struct sparse_matrix :
 
         matc.a.assign(matc.nnz,T());
 
-      }
-      else if (_nnz.size()) {
-
-        for (size_t r=0; r<_nnz.size(); ++r)
-          for (std::vector< size_t >::const_iterator c=_nnz[r].begin(); c!=_nnz[r].end(); ++c)
-            operator()(r,*c) = T();
-        compress();
-
-      }
     }
     else {
-      CFwarn << "sparse_matrix: invalid size: (" << i << ',' << j << ')' << CFendl;
+
+      // build diagonal uncompressed matrix, or compressed matrix if non-zero
+      // pattern is provided
+      matu.clear();
+      matc.clear();
+      matrix_base_t::m_size = idx_t(i,j);
+
+      for (size_t r=0; r<_nnz.size(); ++r)
+        for (std::vector< size_t >::const_iterator c=_nnz[r].begin(); c!=_nnz[r].end(); ++c)
+          operator()(r,*c) = T();
+      if (_nnz.size())  compress();
+      else              ensure_structural_symmetry(matrix_base_t::m_size,matu);
+
     }
     return *this;
   }
 
   sparse_matrix& initialize(const std::vector< double >& _vector) {
     if (_vector.size()==1)
-      return operator =(_vector[0]);
+      return operator=(_vector[0]);
     matrix_base_t::initialize(_vector);
     compress();
     return *this;
@@ -670,6 +740,66 @@ struct sparse_matrix :
       if (it->first.i==isrc)
         operator()(i,it->first.j) += it->second;
     return *this;
+  }
+
+  T sumrows(const size_t& j=0) const {
+    if (j>=this->size(1))
+      throw std::runtime_error("sparse_matrix: column index outside bounds.");
+
+    T s(0);
+    if (!is_compressed()) {
+      // uncompressed
+      for (typename matrix_uncompressed_t::const_iterator it=matu.begin(); it!=matu.end(); ++it)
+        if (it->first.j==j)
+          s += it->second;
+    }
+    else if (ORIENT) {
+      // compressed & sorted by row
+      for (int i=0; i<matc.nnu; ++i)
+        for (int k=matc.ia[i]-BASE; k<matc.ia[i+1]-BASE; ++k)
+          if (matc.ja[k]-BASE==j) {
+            s += matc.a[k];
+            break;
+          }
+    }
+    else {
+      // compressed & sorted by column
+      s = std::accumulate( matc.a.begin()+(matc.ja[j  ]-BASE),
+                           matc.a.begin()+(matc.ja[j+1]-BASE), T() );
+    }
+    return s;
+  }
+
+  T norm(const size_t& j=0, const double& p=2.) const {
+    T n(0);
+    const T q(static_cast< T >(std::max(1.,p)));
+    const bool inf(p==std::numeric_limits< double >::infinity());
+    if (!is_compressed()) {
+      // uncompressed
+      for (typename matrix_uncompressed_t::const_iterator it=matu.begin(); it!=matu.end(); ++it)
+        if (it->first.j==j)
+          n = (inf? std::max(std::abs( it->second ), std::abs( n ))
+                  : std::pow(std::abs( it->second ), std::abs( q )) + n );
+    }
+    else if (ORIENT) {
+      // compressed & sorted by row
+      for (int i=0; i<matc.nnu; ++i)
+        for (int k=matc.ia[i]-BASE; k<matc.ia[i+1]-BASE; ++k)
+          if (matc.ja[k]-BASE==j) {
+            n = (inf? std::max(std::abs( matc.a[k] ), std::abs( n ))
+                    : std::pow(std::abs( matc.a[k] ), std::abs( q )) + n);
+            break;
+          }
+    }
+    else {
+      // compressed & sorted by column
+      typename std::vector< T >::const_iterator it;
+      for (it =matc.a.begin()+(matc.ja[j  ]-BASE);
+           it!=matc.a.begin()+(matc.ja[j+1]-BASE); ++it)
+        n = (inf? std::max(std::abs( *it ), std::abs( n ))
+                : std::pow(std::abs( *it ), std::abs( q )) + n);
+    }
+    return inf? n : std::pow(n, static_cast< T >(1./std::max(1.,p)) );
   }
 
   sparse_matrix& swap(sparse_matrix& _other) {

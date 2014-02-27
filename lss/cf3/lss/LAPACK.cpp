@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -13,7 +13,7 @@ namespace cf3 {
 namespace lss {
 
 
-template<> std::string LAPACK< double  >::type_name() { return "LAPACK"; }
+template<> std::string LAPACK< double  >::type_name() { return "LAPACK_LongPrecisionReal"; }
 template<> std::string LAPACK< zdouble >::type_name() { return "LAPACK_LongPrecisionComplex"; }
 template<> std::string LAPACK< float   >::type_name() { return "LAPACK_ShortPrecisionReal"; }
 template<> std::string LAPACK< zfloat  >::type_name() { return "LAPACK_ShortPrecisionComplex"; }

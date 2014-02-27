@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -17,19 +17,23 @@ namespace cf3 {
 namespace lss {
 
 
-/// Prototypes for single and double precision (as per Intel MKL documentation)
+/// Prototypes for single/double precisions, real/complex types
+/// (as per Intel MKL documentation)
 extern "C"
 {
   void dgesv_(int* n, int* nrhs, double*  a, int* lda, int* ipiv, double*  b, int* ldb, int* info);
   void zgesv_(int* n, int* nrhs, zdouble* a, int* lda, int* ipiv, zdouble* b, int* ldb, int* info);
   void sgesv_(int* n, int* nrhs, float*   a, int* lda, int* ipiv, float*   b, int* ldb, int* info);
   void cgesv_(int* n, int* nrhs, zfloat*  a, int* lda, int* ipiv, zfloat*  b, int* ldb, int* info);
+  void dgemm_(const char *transa, const char *transb, const int *m, const int *n, const int *k, const double  *alpha, const double  *a, const int *lda, const double  *b, const int *ldb, const double  *beta, double  *c, const int *ldc);
+  void zgemm_(const char *transa, const char *transb, const int *m, const int *n, const int *k, const zdouble *alpha, const zdouble *a, const int *lda, const zdouble *b, const int *ldb, const zdouble *beta, zdouble *c, const int *ldc);
+  void sgemm_(const char *transa, const char *transb, const int *m, const int *n, const int *k, const float   *alpha, const float   *a, const int *lda, const float   *b, const int *ldb, const float   *beta, float   *c, const int *ldc);
+  void cgemm_(const char *transa, const char *transb, const int *m, const int *n, const int *k, const zfloat  *alpha, const zfloat  *a, const int *lda, const zfloat  *b, const int *ldb, const zfloat  *beta, zfloat  *c, const int *ldc);
 }
 
 
 /**
- * @brief example linear system solver, using LAPACK
- * (available in single and double precision, only works for square matrices)
+ * @brief example linear system solver, using LAPACK (only for square matrices)
  */
 template< typename T >
 class lss_API LAPACK : public linearsystem< T >
@@ -74,6 +78,27 @@ class lss_API LAPACK : public linearsystem< T >
     return *this;
   }
 
+  /// Linear system forward multiplication
+  LAPACK& multi(const double& _alpha=1., const double& _beta=0.) {
+    const char trans = 'N';
+    const int
+      m = static_cast< int >(this->size(0)),
+      n = static_cast< int >(this->size(2)),
+      k = m;
+    const T
+      alpha = static_cast< T >(_alpha),
+      beta  = static_cast< T >(_beta);
+    if (!m_A.m_size.is_square_size())
+      throw std::runtime_error("LAPACK: system matrix must be square.");
+    else if (type_is_equal< T, double  >()) { dgemm_(&trans, &trans, &m, &n, &k, (double*)  &alpha, (double*)  &this->m_A.a[0], &m, (double*)  &this->m_x.a[0], &m, (double*)  &beta, (double*)  &this->m_b.a[0], &m); }
+    else if (type_is_equal< T, zdouble >()) { zgemm_(&trans, &trans, &m, &n, &k, (zdouble*) &alpha, (zdouble*) &this->m_A.a[0], &m, (zdouble*) &this->m_x.a[0], &m, (zdouble*) &beta, (zdouble*) &this->m_b.a[0], &m); }
+    else if (type_is_equal< T, float   >()) { sgemm_(&trans, &trans, &m, &n, &k, (float*)   &alpha, (float*)   &this->m_A.a[0], &m, (float*)   &this->m_x.a[0], &m, (float*)   &beta, (float*)   &this->m_b.a[0], &m); }
+    else if (type_is_equal< T, zfloat  >()) { cgemm_(&trans, &trans, &m, &n, &k, (zfloat*)  &alpha, (zfloat*)  &this->m_A.a[0], &m, (zfloat*)  &this->m_x.a[0], &m, (zfloat*)  &beta, (zfloat*)  &this->m_b.a[0], &m); }
+    else
+      throw std::runtime_error("LAPACK: precision not implemented.");
+    return *this;
+  }
+
   /// Linear system copy
   LAPACK& copy(const LAPACK& _other) {
     linearsystem< T >::copy(_other);
@@ -93,9 +118,9 @@ class lss_API LAPACK : public linearsystem< T >
   void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
-  void A___assign(const double& _value) { m_A = _value;   }
-  void A___clear()                      { m_A.clear();    }
-  void A___zerorow(const size_t& i)     { m_A.zerorow(i); }
+  void A___assign(const double& _value)                 { m_A = _value;   }
+  void A___clear()                                      { m_A.clear();    }
+  void A___zerorow(const size_t& i)                     { m_A.zerorow(i); }
   void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
   /// matrix inspecting

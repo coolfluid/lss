@@ -5,71 +5,40 @@
 // See doc/lgpl.txt and doc/gpl.txt for the license text.
 
 
-#ifndef cf3_lss_pardiso_hpp
-#define cf3_lss_pardiso_hpp
+#ifndef cf3_lss_mkl_detail_solverbase_h
+#define cf3_lss_mkl_detail_solverbase_h
 
 
-#include "LibLSS_PARDISO.hpp"
 #include "../../../lss/cf3/lss/linearsystem.hpp"
 
 
 namespace cf3 {
 namespace lss {
+namespace mkl {
+namespace detail {
 
 
 /**
- * @brief Interface to Pardiso linear system solver (U. Basel version).
+ * @brief MKL solvers management of sparse matrix and common operations
  * @author Pedro Maciel
  */
-class lss_API pardiso : public linearsystem< double >
+struct solverbase : public linearsystem< double >
 {
-  // utility definitions
+  /// Matrix storage
   typedef sparse_matrix< double, sort_by_row, 1 > matrix_t;
-
-
- public:
-  // framework interfacing
-  static std::string type_name() { return "pardiso"; }
-
+  matrix_t m_A;
 
   /// Construction
-  pardiso(const std::string& name,
-    const size_t& _size_i=size_t(),
-    const size_t& _size_j=size_t(),
-    const size_t& _size_k=1 );
-
-  /// Destruction
-  ~pardiso();
-
-  /// Linear system solving
-  pardiso& solve();
+  solverbase(const std::string& name);
 
   /// Linear system forward multiplication
-  pardiso& multi(const double& _alpha=1., const double& _beta=0.);
+  solverbase& multi(const double& _alpha=1., const double& _beta=0.);
 
-  /// Linear system copy
-  pardiso& copy(const pardiso& _other);
-
-
-  // internal functions
- private:
-
-  /// Verbose error message
-  static std::string err_message(const int& err);
-
-  /// Library call
-  int call_pardiso(int _phase, int _msglvl);
-
-  /// Library call (print statistics)
-  int call_pardiso_printstats();
-
-
- protected:
-  // linear system matrix interfacing
-
+  /// Matrix indexing
   const double& A(const size_t& i, const size_t& j) const { return m_A(i,j); }
         double& A(const size_t& i, const size_t& j)       { return m_A(i,j); }
 
+  /// Matrix operations
   void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) { m_A.initialize(i,j,_nnz); }
   void A___initialize(const std::vector< double >& _vector) { m_A.initialize(_vector); }
   void A___initialize(const std::string& _fname)            { m_A.initialize(_fname);  }
@@ -78,23 +47,14 @@ class lss_API pardiso : public linearsystem< double >
   void A___zerorow(const size_t& i)     { m_A.zerorow(i); }
   void A___sumrows(const size_t& i, const size_t& isrc) { m_A.sumrows(i,isrc); }
 
+  /// Matrix utilities
   void   A___print(std::ostream& o, const print_t& l=print_auto) const { m_A.print(o,l); }
   size_t A___size(const size_t& d)  const { return m_A.size(d);  }
-
-
- protected:
-  // storage
-  matrix_t m_A;
-  void*  pt[64];  // internal memory pointer (void* for both 32/64-bit)
-  double dparm[64];
-  int    iparm[64],
-         maxfct,
-         mnum,
-         mtype;
-
 };
 
 
+}  // namespace detail
+}  // namespace mkl
 }  // namespace lss
 }  // namespace cf3
 

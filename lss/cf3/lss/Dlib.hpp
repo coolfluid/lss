@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -156,6 +156,22 @@ class lss_API Dlib : public linearsystem< T >
     for (size_t i=0; i<linearsystem< T >::size(1); ++i)
       for (size_t j=0; j<linearsystem< T >::size(2); ++j)
         linearsystem< T >::x(i,j) = sol(i,j);
+    return *this;
+  }
+
+  /// Linear system forward multiplication
+  Dlib& multi(const double& _alpha=1., const double& _beta=0.) {
+    const T
+      alpha = static_cast< T >(_alpha),
+      beta  = static_cast< T >(_beta);
+    //TODO this could be severely improved with internal functions
+    for (size_t i=0; i<this->size(0); ++i) {
+      for (size_t k=0; k<this->size(2); ++k) {
+        this->b(i,k) *= beta;
+        for (size_t j=0; j<this->size(1); ++j)
+          this->b(i,k) += alpha*this->A(i,j)*this->x(j,k);
+      }
+    }
     return *this;
   }
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -40,6 +40,9 @@ class lss_API WSMP : public linearsystem< double >
 
   /// Linear system solving
   WSMP& solve();
+
+  /// Linear system forward multiplication
+  WSMP& multi(const double& _alpha=1., const double& _beta=0.);
 
   /// Linear system copy
   WSMP& copy(const WSMP& _other);

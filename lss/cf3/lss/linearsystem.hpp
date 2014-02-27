@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -37,12 +37,11 @@ template< typename T > std::ostream& operator<< (std::ostream&, const linearsyst
 template< typename T >
 class linearsystem : public common::Action
 {
- protected:
-  // utility definitions
-  typedef dense_matrix_v< T, sort_by_column > vector_t;
-
   // -- Construction and destruction
  public:
+
+  /// Definition of linear system vector (as a column-oriented matrix)
+  typedef dense_matrix_v< T, sort_by_column > vector_t;
 
   /// Construct the linear system
   linearsystem(const std::string& name) :
@@ -67,12 +66,43 @@ class linearsystem : public common::Action
         .connect   ( boost::bind( &linearsystem::signal_output,  this, _1 ))
         .signature ( boost::bind( &linearsystem::signat_abcfile, this, _1 ));
 
-    regist_signal("clear") .connect( boost::bind( &linearsystem::signal_clear,  this )).description("Empty linear system components");
-    regist_signal("solve") .connect( boost::bind( &linearsystem::signal_solve,  this )).description("Solve linear system, returning solution in x");
+    regist_signal("clear")
+        .description("Empty linear system components")
+        .connect( boost::bind( &linearsystem::signal_clear, this ));
 
-    regist_signal("A").connect(boost::bind( &linearsystem::signal_A, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in matrix A, by given index (i,j) and value (value)");
-    regist_signal("b").connect(boost::bind( &linearsystem::signal_b, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in vector b, by given index (i,k) and value (value)");
-    regist_signal("x").connect(boost::bind( &linearsystem::signal_x, this, _1 )).signature(boost::bind( &linearsystem::signat_ijkvalue, this, _1 )).description("Set entry in vector x, by given index (j,k) and value (value)");
+    regist_signal("solve")
+        .description("Linear system solving, x = A^-1 b")
+        .connect( boost::bind( &linearsystem::signal_solve, this ));
+
+    regist_signal("multi")
+        .description("Linear system forward multiplication, b = alpha A x + beta b")
+        .connect   ( boost::bind( &linearsystem::signal_multi, this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_multi, this, _1 ));
+
+    regist_signal("A")
+        .description("Set entry in matrix A, by given index (i,j) and value (value)")
+        .connect   ( boost::bind( &linearsystem::signal_A,        this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_ijkvalue, this, _1 ));
+
+    regist_signal("b")
+        .description("Set entry in vector b, by given index (i,k) and value (value)")
+        .connect   ( boost::bind( &linearsystem::signal_b,        this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_ijkvalue, this, _1 ));
+
+    regist_signal("x")
+        .description("Set entry in vector x, by given index (j,k) and value (value)")
+        .connect   ( boost::bind( &linearsystem::signal_x,        this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_ijkvalue, this, _1 ));
+
+    regist_signal("bnorm")
+        .description("Calculate vector b p-norm, given column index (j) and Lp space dimension (p)")
+        .connect   ( boost::bind( &linearsystem::signal_bnorm, this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_jp,    this, _1 ));
+
+    regist_signal("xnorm")
+        .description("Calculate vector x p-norm, given column index (j) and Lp space dimension (p)")
+        .connect   ( boost::bind( &linearsystem::signal_xnorm, this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_jp,    this, _1 ));
 
     options().add("A",std::vector< double >())
         .link_to(&m_dummy_vector).mark_basic()
@@ -120,6 +150,18 @@ class linearsystem : public common::Action
     opts.add< std::string >("file","");
   }
 
+  void signat_multi(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    opts.add< double >("alpha",1.);
+    opts.add< double >("beta", 0.);
+  }
+
+  void signat_jp(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    opts.add< unsigned >("j",(unsigned) 0);
+    opts.add< double >("p",2.);
+  }
+
   void signal_initialize(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
     const double value(opts.value< double >("value"));
@@ -143,7 +185,6 @@ class linearsystem : public common::Action
       m_x.initialize(j,k);
     }
   }
-
 
   void signal_zerorow(common::SignalArgs& args) {
     common::XML::SignalOptions opts(args);
@@ -183,12 +224,48 @@ class linearsystem : public common::Action
     }
   }
 
-  void signal_clear () { clear(); }
-  void signal_solve () { execute(); }
+  void signal_clear() { clear(); }
 
-  void signal_A(common::SignalArgs& args) { common::XML::SignalOptions opts(args); A  (opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double >("value"); }
-  void signal_b(common::SignalArgs& args) { common::XML::SignalOptions opts(args); m_b(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< double >("value"); }
-  void signal_x(common::SignalArgs& args) { common::XML::SignalOptions opts(args); m_x(opts.value< unsigned >("j"),opts.value< unsigned >("k")) = opts.value< double >("value"); }
+  void signal_solve() { execute(); }
+
+  void signal_multi(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    multi(opts.value< double >("alpha"),opts.value< double >("beta"));
+  }
+
+  void signal_A(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions opts(args), repl(reply);
+    repl.add("return_value",A(opts.value< unsigned >("i"),opts.value< unsigned >("j")) = opts.value< double >("value"));
+  }
+
+  void signal_b(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions opts(args), repl(reply);
+    repl.add("return_value",m_b(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< double >("value"));
+  }
+
+  void signal_x(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions opts(args), repl(reply);
+    repl.add("return_value",m_x(opts.value< unsigned >("i"),opts.value< unsigned >("k")) = opts.value< double >("value"));
+  }
+
+  void signal_bnorm(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions
+      opts(args),
+      repl(reply);
+    repl.add("return_value",m_b.norm(opts.value< unsigned >("j"),opts.value< double >("p")));
+  }
+
+  void signal_xnorm(common::SignalArgs& args) {
+    common::XML::SignalFrame reply(args.create_reply(uri()));
+    common::XML::SignalOptions
+      opts(args),
+      repl(reply);
+    repl.add("return_value",m_x.norm(opts.value< unsigned >("j"),opts.value< double >("p")));
+  }
 
   void trigger_A() { try { A___initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: A: " << e.what() << CFendl; } m_dummy_vector.clear(); }
   void trigger_b() { try { m_b.initialize(m_dummy_vector); } catch (const std::runtime_error& e) { CFwarn << "linearsystem: b: " << e.what() << CFendl; } m_dummy_vector.clear(); }
@@ -216,7 +293,19 @@ class linearsystem : public common::Action
     }
   }
 
-  /// Initialize the linear system
+  /// Linear system forward multiplication
+  linearsystem& multi(const vector_t& _x, vector_t& _b) {
+    try {
+      consistent(A___size(0),A___size(1),_b.size(0),_b.size(1),_x.size(0),_x.size(1));
+      A___multi(_x,_b);
+    }
+    catch (const std::runtime_error& e) {
+      CFwarn << "linearsystem: " << e.what() << CFendl;
+    }
+    return *this;
+  }
+
+  /// Linear system initialization
   linearsystem& initialize(
       const size_t& i=size_t(),
       const size_t& j=size_t(),
@@ -229,7 +318,7 @@ class linearsystem : public common::Action
     return *this;
   }
 
-  /// Initialize linear system from file(s)
+  /// Linear system initialization, from file(s)
   linearsystem& initialize(
       const std::string& _Afname,
       const std::string& _bfname="",
@@ -241,7 +330,7 @@ class linearsystem : public common::Action
     return *this;
   }
 
-  /// Initialize linear system from vectors of values (lists, in the right context)
+  /// Linear system initialization, from vectors of values (lists, in the right context)
   linearsystem& initialize(
       const std::vector< double >& vA,
       const std::vector< double >& vb=std::vector< double >(),
@@ -308,6 +397,19 @@ class linearsystem : public common::Action
   /// Checks whether the linear system matrix is empty
   bool empty() { return !(size(0)*size(1)*size(2)); }
 
+  /// Linear system b vector access
+  vector_t& b() { return m_b; }
+
+  /// Linear system x vector access
+  vector_t& x() { return m_x; }
+
+  /// Linar system componets indexing (absolute)
+  virtual const T& A(const size_t& i, const size_t& j)   const = 0;
+  virtual       T& A(const size_t& i, const size_t& j)         = 0;
+          const T& b(const size_t& i, const size_t& j=0) const { return m_b(i,j); }
+          const T& x(const size_t& i, const size_t& j=0) const { return m_x(i,j); }
+                T& b(const size_t& i, const size_t& j=0)       { return m_b(i,j); }
+                T& x(const size_t& i, const size_t& j=0)       { return m_x(i,j); }
 
 
   // -- Internal functionality
@@ -336,35 +438,26 @@ class linearsystem : public common::Action
 
 
   // -- Storage
- public: // FIXME should be protected, but Muphys has some weird interests here
-
-  /// Linear system components: b and x vectors
-  vector_t m_b;
-  vector_t m_x;
-
  protected:
-  /// Scripting temporary storage
-  T                     m_dummy_value;
-  std::vector< double > m_dummy_vector;
-  print_t m_print[3];  // matrix and vectors print levels
 
+  vector_t m_b;  // linear system b vector
+  vector_t m_x;  // linear system x vector
 
-  // -- Indexing (absolute)
- public:
-
-  virtual const T& A(const size_t& i, const size_t& j)   const = 0;
-  virtual       T& A(const size_t& i, const size_t& j)         = 0;
-          const T& b(const size_t& i, const size_t& j=0) const { return m_b(i,j); }
-          const T& x(const size_t& i, const size_t& j=0) const { return m_x(i,j); }
-                T& b(const size_t& i, const size_t& j=0)       { return m_b(i,j); }
-                T& x(const size_t& i, const size_t& j=0)       { return m_x(i,j); }
+  T                     m_dummy_value;   // (scripting temp.) value
+  std::vector< double > m_dummy_vector;  // (scripting temp.) vector
+  print_t m_print[3];                    // (scripting temp.) print levels
 
 
   // -- Interfacing (public)
  public:
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
+  /// @note: might destroy system matrix contents (structure or non-zero values)
   virtual linearsystem& solve() = 0;
+
+  /// Linear system forward multiplication: b = alpha A x + beta b
+  /// @note: might destroy system matrix contents (structure or non-zero values)
+  virtual linearsystem& multi(const double& _alpha, const double& _beta) = 0;
 
   /// Linear system copy
   virtual linearsystem& copy(const linearsystem& _other) {
@@ -383,9 +476,9 @@ class linearsystem : public common::Action
   virtual void A___initialize(const size_t& i, const size_t& j, const std::vector< std::vector< size_t > >& _nnz=std::vector< std::vector< size_t > >()) = 0;
   virtual void A___initialize(const std::vector< double >& _vector) = 0;
   virtual void A___initialize(const std::string& _fname)            = 0;
-  virtual void A___assign(const double& _value) = 0;
-  virtual void A___clear()                      = 0;
-  virtual void A___zerorow(const size_t& i)     = 0;
+  virtual void A___assign(const double& _value)                 = 0;
+  virtual void A___clear()                                      = 0;
+  virtual void A___zerorow(const size_t& i)                     = 0;
   virtual void A___sumrows(const size_t& i, const size_t& isrc) = 0;
 
   /// Linear system matrix inspecting

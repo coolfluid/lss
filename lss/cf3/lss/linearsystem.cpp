@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -15,8 +15,10 @@ namespace cf3 {
 namespace lss {
 
 
-common::RegisterComponent< linearsystem< double >, LibLSS > Register_linearsystem;
-common::RegisterComponent< linearsystem< float  >, LibLSS > Register_linearsystem_SinglePrecision;
+common::RegisterComponent< linearsystem< double  >, LibLSS > Register_linearsystem_LongPrecisionReal;
+common::RegisterComponent< linearsystem< zdouble >, LibLSS > Register_linearsystem_LongPrecisionComplex;
+common::RegisterComponent< linearsystem< float   >, LibLSS > Register_linearsystem_ShortPrecisionReal;
+common::RegisterComponent< linearsystem< zfloat  >, LibLSS > Register_linearsystem_ShortPrecisionComplex;
 
 
 }  // namespace lss

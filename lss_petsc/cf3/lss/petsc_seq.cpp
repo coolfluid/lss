@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Vrije Universiteit Brussel, Belgium
+// Copyright (C) 2014 Vrije Universiteit Brussel, Belgium
 //
 // This software is distributed under the terms of the
 // GNU Lesser General Public License version 3 (LGPLv3).
@@ -127,6 +127,13 @@ petsc_seq& petsc_seq::solve()
     throw std::runtime_error(err_message((int) err,"unset matrix/vectors"));
 
 
+  return *this;
+}
+
+
+petsc_seq& petsc_seq::multi(const double& _alpha, const double& _beta)
+{
+  //TODO
   return *this;
 }
 
