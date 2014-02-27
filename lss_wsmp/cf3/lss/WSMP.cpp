@@ -17,6 +17,7 @@
 extern "C" {
   void wsetmaxthrds_(int*);
   void wgsmp_(int*, int*, int*, double*, double*, int*, int*, double*, int*, double*);
+  void wgsmatvec_(int*, int*, int*, double*, double*, double*, int*, int*);
 }
 
 
@@ -80,6 +81,25 @@ WSMP& WSMP::solve()
    */
 
   m_b.swap(m_x);
+  return *this;
+}
+
+
+WSMP& WSMP::multi(const double& _alpha, const double& _beta)
+{
+  matrix_t::matrix_compressed_t& A = m_A.compress();
+  vector_t b = m_b;
+
+  int err = 0;
+  for (int k=0, fmt(iparm[3]+1); k<static_cast< int >(size(2)) && !err;  ++k)
+    wgsmatvec_(
+      &A.nnu, &A.ia[0], &A.ja[0], &A.a[0],
+      &m_x.a[A.nnu*k], &b.a[A.nnu*k], &fmt, &err );
+  if (err)
+    throw std::runtime_error(err_message(err));
+
+  for (size_t i=0; i<m_b.a.size(); ++i)
+    m_b.a[i] = _alpha*b.a[i] + _beta*m_b.a[i];
   return *this;
 }
 

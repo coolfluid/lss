@@ -50,6 +50,9 @@ class lss_API petsc_seq : public linearsystem< double >
   /// Linear system copy
   petsc_seq& copy(const petsc_seq& _other);
 
+  /// Linear system forward multiplication
+  petsc_seq& multi(const double& _alpha=1., const double& _beta=0.);
+
 
  private:
   // internal functions

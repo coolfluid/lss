@@ -74,6 +74,11 @@ class linearsystem : public common::Action
         .description("Linear system solving, x = A^-1 b")
         .connect( boost::bind( &linearsystem::signal_solve, this ));
 
+    regist_signal("multi")
+        .description("Linear system forward multiplication, b = alpha A x + beta b")
+        .connect   ( boost::bind( &linearsystem::signal_multi, this, _1 ))
+        .signature ( boost::bind( &linearsystem::signat_multi, this, _1 ));
+
     regist_signal("A")
         .description("Set entry in matrix A, by given index (i,j) and value (value)")
         .connect   ( boost::bind( &linearsystem::signal_A,        this, _1 ))
@@ -143,6 +148,12 @@ class linearsystem : public common::Action
     opts.add< int >("b",(int) print_auto);
     opts.add< int >("x",(int) print_auto);
     opts.add< std::string >("file","");
+  }
+
+  void signat_multi(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    opts.add< double >("alpha",1.);
+    opts.add< double >("beta", 0.);
   }
 
   void signat_jp(common::SignalArgs& args) {
@@ -217,6 +228,11 @@ class linearsystem : public common::Action
 
   void signal_solve() { execute(); }
 
+  void signal_multi(common::SignalArgs& args) {
+    common::XML::SignalOptions opts(args);
+    multi(opts.value< double >("alpha"),opts.value< double >("beta"));
+  }
+
   void signal_A(common::SignalArgs& args) {
     common::XML::SignalFrame reply(args.create_reply(uri()));
     common::XML::SignalOptions opts(args), repl(reply);
@@ -275,6 +291,18 @@ class linearsystem : public common::Action
     catch (const std::runtime_error& e) {
       CFwarn << "linearsystem: " << e.what() << CFendl;
     }
+  }
+
+  /// Linear system forward multiplication
+  linearsystem& multi(const vector_t& _x, vector_t& _b) {
+    try {
+      consistent(A___size(0),A___size(1),_b.size(0),_b.size(1),_x.size(0),_x.size(1));
+      A___multi(_x,_b);
+    }
+    catch (const std::runtime_error& e) {
+      CFwarn << "linearsystem: " << e.what() << CFendl;
+    }
+    return *this;
   }
 
   /// Linear system initialization
@@ -426,6 +454,10 @@ class linearsystem : public common::Action
   /// Linear system solving: x = A^-1 b
   /// @note: might destroy system matrix contents (structure or non-zero values)
   virtual linearsystem& solve() = 0;
+
+  /// Linear system forward multiplication: b = alpha A x + beta b
+  /// @note: might destroy system matrix contents (structure or non-zero values)
+  virtual linearsystem& multi(const double& _alpha, const double& _beta) = 0;
 
   /// Linear system copy
   virtual linearsystem& copy(const linearsystem& _other) {

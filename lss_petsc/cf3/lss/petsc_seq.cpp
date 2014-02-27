@@ -131,6 +131,13 @@ petsc_seq& petsc_seq::solve()
 }
 
 
+petsc_seq& petsc_seq::multi(const double& _alpha, const double& _beta)
+{
+  //TODO
+  return *this;
+}
+
+
 petsc_seq& petsc_seq::copy(const petsc_seq& _other)
 {
   linearsystem< double >::copy(_other);

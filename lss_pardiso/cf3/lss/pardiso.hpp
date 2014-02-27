@@ -44,6 +44,9 @@ class lss_API pardiso : public linearsystem< double >
   /// Linear system solving
   pardiso& solve();
 
+  /// Linear system forward multiplication
+  pardiso& multi(const double& _alpha=1., const double& _beta=0.);
+
   /// Linear system copy
   pardiso& copy(const pardiso& _other);
 

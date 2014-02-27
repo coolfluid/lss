@@ -75,6 +75,20 @@ pardiso& pardiso::solve()
 }
 
 
+pardiso& pardiso::multi(const double& _alpha, const double& _beta)
+{
+  matrix_t::matrix_compressed_t& A = m_A.compress();
+  for (size_t i=0; i<size(0); ++i) {
+    for (size_t k=0; k<size(2); ++k) {
+      b(i,k) *= _beta;
+      for (size_t l=A.ia[i]-A.ia[0]; l<A.ia[i+1]-A.ia[0]; ++l)
+        b(i,k) += _alpha*A.a[l]*m_x( A.ja[l]-A.ia[0], k);
+    }
+  }
+  return *this;
+}
+
+
 pardiso& pardiso::copy(const pardiso& _other)
 {
   linearsystem< double >::copy(_other);

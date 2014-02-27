@@ -41,6 +41,9 @@ class lss_API WSMP : public linearsystem< double >
   /// Linear system solving
   WSMP& solve();
 
+  /// Linear system forward multiplication
+  WSMP& multi(const double& _alpha=1., const double& _beta=0.);
+
   /// Linear system copy
   WSMP& copy(const WSMP& _other);
 

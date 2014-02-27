@@ -159,6 +159,22 @@ class lss_API Dlib : public linearsystem< T >
     return *this;
   }
 
+  /// Linear system forward multiplication
+  Dlib& multi(const double& _alpha=1., const double& _beta=0.) {
+    const T
+      alpha = static_cast< T >(_alpha),
+      beta  = static_cast< T >(_beta);
+    //TODO this could be severely improved with internal functions
+    for (size_t i=0; i<this->size(0); ++i) {
+      for (size_t k=0; k<this->size(2); ++k) {
+        this->b(i,k) *= beta;
+        for (size_t j=0; j<this->size(1); ++j)
+          this->b(i,k) += alpha*this->A(i,j)*this->x(j,k);
+      }
+    }
+    return *this;
+  }
+
   /// Linear system copy
   Dlib& copy(const Dlib& _other) {
     linearsystem< T >::copy(_other);

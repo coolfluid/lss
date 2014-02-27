@@ -40,6 +40,9 @@ class lss_API GMRES : public linearsystem< double >
   /// Linear system solving
   GMRES& solve();
 
+  /// Linear system forward multiplication
+  GMRES& multi(const double& _alpha=1., const double& _beta=0.);
+
   /// Linear system copy
   GMRES& copy(const GMRES& _other);
 
