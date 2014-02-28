@@ -103,6 +103,14 @@ pardiso& pardiso::copy(const pardiso& _other)
 }
 
 
+pardiso& pardiso::swap(pardiso& _other)
+{
+  linearsystem< double >::swap(_other);
+  m_A.swap(_other.m_A);
+  return *this;
+}
+
+
 std::string pardiso::err_message(const int& err)
 {
   std::ostringstream s;

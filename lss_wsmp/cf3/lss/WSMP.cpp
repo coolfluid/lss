@@ -116,6 +116,14 @@ WSMP& WSMP::copy(const WSMP& _other)
 }
 
 
+WSMP& WSMP::swap(WSMP& _other)
+{
+  linearsystem< double >::swap(_other);
+  m_A.swap(_other.m_A);
+  return *this;
+}
+
+
 const std::string WSMP::err_message(const int& err)
 {
   std::ostringstream s;

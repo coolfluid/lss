@@ -41,14 +41,17 @@ class lss_API pardiso : public linearsystem< double >
   /// Destruction
   ~pardiso();
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   pardiso& solve();
 
-  /// Linear system forward multiplication
+  /// Linear system forward multiplication: b = alpha A x + beta b
   pardiso& multi(const double& _alpha=1., const double& _beta=0.);
 
   /// Linear system copy
   pardiso& copy(const pardiso& _other);
+
+  /// Linear system swap
+  pardiso& swap(pardiso& _other);
 
 
   // internal functions
