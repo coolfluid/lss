@@ -35,11 +35,7 @@ struct solverbase : public linearsystem< double >
   solverbase& multi(const double& _alpha=1., const double& _beta=0.);
 
   /// Linear system swap
-  solverbase& swap(solverbase& _other) {
-    linearsystem< double >::swap(_other);
-    m_A.swap(_other.m_A);
-    return *this;
-  }
+  solverbase& swap(solverbase& _other);
 
   /// Matrix indexing
   const double& A(const size_t& i, const size_t& j) const { return m_A(i,j); }
