@@ -456,16 +456,29 @@ class linearsystem : public common::Action
   virtual linearsystem& solve() = 0;
 
   /// Linear system forward multiplication: b = alpha A x + beta b
-  /// @note: might destroy system matrix contents (structure or non-zero values)
+  /// @note: might should not destroy system matrix contents (structure or non-zero values)
   virtual linearsystem& multi(const double& _alpha, const double& _beta) = 0;
 
   /// Linear system copy
+  /// @note (to be specialized in concrete derived class to account for matrix)
   virtual linearsystem& copy(const linearsystem& _other) {
     m_b = _other.m_b;
     m_x = _other.m_x;
-    m_dummy_value = _other.m_dummy_value;
+    std::copy(_other.m_print,_other.m_print+3,m_print);
+    m_dummy_value  = _other.m_dummy_value;
     m_dummy_vector = _other.m_dummy_vector;
-    for (size_t i=0; i<3; ++i) m_print[i] = _other.m_print[i];
+    return *this;
+  }
+
+  /// Linear system swap
+  /// @note (to be specialized in concrete derived class to account for matrix)
+  virtual linearsystem& swap(linearsystem& _other) {
+    m_b.swap(_other.m_b);
+    m_x.swap(_other.m_x);
+    print_t *pa1(m_print), *pa2(_other.m_print);
+    std::swap(pa1,pa2);
+    std::swap(m_dummy_value,_other.m_dummy_value);
+    m_dummy_vector.swap(_other.m_dummy_vector);
     return *this;
   }
 

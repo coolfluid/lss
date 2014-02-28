@@ -37,14 +37,17 @@ class lss_API GMRES : public linearsystem< double >
     linearsystem< double >::initialize(_size_i,_size_j,_size_k);
   }
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   GMRES& solve();
 
-  /// Linear system forward multiplication
+  /// Linear system forward multiplication: b = alpha A x + beta b
   GMRES& multi(const double& _alpha=1., const double& _beta=0.);
 
   /// Linear system copy
   GMRES& copy(const GMRES& _other);
+
+  /// Linear system swap
+  GMRES& swap(GMRES& _other);
 
 
  private:

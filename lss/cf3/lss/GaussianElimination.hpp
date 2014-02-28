@@ -42,7 +42,7 @@ class lss_API GaussianElimination : public linearsystem< T >
     linearsystem< T >::initialize(_size_i,_size_j,_size_k);
   }
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   GaussianElimination& solve() {
     const size_t
       N(linearsystem< T >::size(0)),
@@ -104,7 +104,7 @@ class lss_API GaussianElimination : public linearsystem< T >
     return *this;
   }
 
-  /// Linear system forward multiplication
+  /// Linear system forward multiplication: b = alpha A x + beta b
   GaussianElimination& multi(const double& _alpha=1., const double& _beta=0.) {
     const T
       alpha = static_cast< T >(_alpha),
@@ -123,6 +123,14 @@ class lss_API GaussianElimination : public linearsystem< T >
   GaussianElimination& copy(const GaussianElimination& _other) {
     linearsystem< T >::copy(_other);
     m_A = _other.m_A;
+    return *this;
+  }
+
+  /// Linear system swap
+  GaussianElimination& swap(GaussianElimination& _other)
+  {
+    linearsystem< T >::swap(_other);
+    m_A.swap(_other.m_A);
     return *this;
   }
 
