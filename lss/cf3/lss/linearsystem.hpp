@@ -482,6 +482,7 @@ class linearsystem : public common::Action
     return *this;
   }
 
+
   // -- Interfacing (protected)
  protected:
 

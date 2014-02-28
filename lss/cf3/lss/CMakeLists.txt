@@ -12,7 +12,11 @@ list(APPEND lss_files
   GMRES.cpp
   GMRES.hpp
   LAPACK.cpp
-  LAPACK.hpp )
+  LAPACK.hpp
+  NewtonMethod.cpp
+  NewtonMethod.hpp
+  QuasiNewtonMethod.cpp
+  QuasiNewtonMethod.hpp )
 
 
 if(CF3_HAVE_DLIB)
@@ -37,6 +41,8 @@ coolfluid3_add_library(
     linearsystem.cpp
     linearsystem.hpp
     matrix.hpp
+    nonlinearsystem.cpp
+    nonlinearsystem.hpp
     utilities.cpp
     utilities.hpp
     ${lss_files} )
