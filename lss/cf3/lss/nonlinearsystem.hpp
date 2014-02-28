@@ -149,31 +149,28 @@ class nonlinearsystem : public common::Action
     }
   }
 
-  /// Linear system: access currently active linearsystem
+  /// Linear system: access base, "unperturbed" linearsystem
   linearsystem< T >& linearsystem_get() {
     if (is_null(h_linearsystem))
       throw std::runtime_error("nonlinearsystem: linearsystem not set");
     return *h_linearsystem;
   }
 
-  /// Linear system: swap active linear system contents, if a copy is there
-  /// already created (which happens on linearsystem assignment)
-  linearsystem< T >& linearsystem_swap() {
-    linearsystem< T >& ls = linearsystem_get();
+  /// Linear system: access internal, "perturbed" linearsystem
+  linearsystem< T >& linearsystem_pert_get() {
     if (is_null(h_linearsystem_pert))
-      linearsystem_recreate();
-    h_linearsystem->swap(*h_linearsystem_pert);
-    return ls;
+      throw std::runtime_error("nonlinearsystem: linearsystem not recreated");
+    return *h_linearsystem_pert;
   }
 
-  /// Linear system: copy active linear system contents into non-active linear
-  /// system, creating internal component (if this has not occurred before)
+  /// Linear system: swap contents of "unperturbed" with "perturbed" linear sys.
+  linearsystem< T >& linearsystem_swap() {
+    return linearsystem_get().swap(linearsystem_pert_get());
+  }
+
+  /// Linear system: copy contents of "unperturbed" to "perturbed" linear sys.
   linearsystem< T >& linearsystem_copy() {
-    linearsystem< T >& ls = linearsystem_get();
-    if (is_null(h_linearsystem_pert))
-      linearsystem_recreate();
-    h_linearsystem_pert->copy(*h_linearsystem);
-    return ls;
+    return linearsystem_pert_get().copy(linearsystem_get());
   }
 
 
