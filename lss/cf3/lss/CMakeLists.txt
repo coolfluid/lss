@@ -13,8 +13,11 @@ list(APPEND lss_files
   GMRES.hpp
   LAPACK.cpp
   LAPACK.hpp
+
   NewtonMethod.cpp
   NewtonMethod.hpp
+  NewtonMethodBounded.cpp
+  NewtonMethodBounded.hpp
   QuasiNewtonMethod.cpp
   QuasiNewtonMethod.hpp )
 

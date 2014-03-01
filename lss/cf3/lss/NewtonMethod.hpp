@@ -18,8 +18,8 @@ namespace lss {
 
 
 /**
- * @brief Example non-linear system solver, using Gaussian elimination
- * (configurable precision)
+ * @brief Non-linear solver using the classic Newton Method (configurable
+ * precision)
  * @author Pedro Maciel
  */
 template< typename T >
