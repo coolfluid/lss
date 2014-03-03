@@ -45,7 +45,7 @@ class lss_API dss : public
   /// Destruction
   ~dss();
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   dss& solve();
 
   /// Linear system copy

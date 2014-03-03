@@ -53,7 +53,7 @@ class lss_API LAPACK : public linearsystem< T >
     linearsystem< T >::initialize(_size_i,_size_j,_size_k);
   }
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   LAPACK& solve() {
     int n    = static_cast< int >(this->size(0));
     int nrhs = static_cast< int >(this->size(2));
@@ -78,7 +78,7 @@ class lss_API LAPACK : public linearsystem< T >
     return *this;
   }
 
-  /// Linear system forward multiplication
+  /// Linear system forward multiplication: b = alpha A x + beta b
   LAPACK& multi(const double& _alpha=1., const double& _beta=0.) {
     const char trans = 'N';
     const int
@@ -103,6 +103,14 @@ class lss_API LAPACK : public linearsystem< T >
   LAPACK& copy(const LAPACK& _other) {
     linearsystem< T >::copy(_other);
     m_A = _other.m_A;
+    return *this;
+  }
+
+  /// Linear system swap
+  LAPACK& swap(LAPACK& _other)
+  {
+    linearsystem< T >::swap(_other);
+    m_A.swap(_other.m_A);
     return *this;
   }
 

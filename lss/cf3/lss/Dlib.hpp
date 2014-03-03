@@ -137,7 +137,7 @@ class lss_API Dlib : public linearsystem< T >
     linearsystem< T >::initialize(_size_i,_size_j,_size_k);
   }
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   Dlib& solve() {
 
     //dlib::matrix<double,0,1> dlib_x = dlib::inv(m_A.a) * dlib::vector_to_matrix(m_B);
@@ -159,7 +159,7 @@ class lss_API Dlib : public linearsystem< T >
     return *this;
   }
 
-  /// Linear system forward multiplication
+  /// Linear system forward multiplication: b = alpha A x + beta b
   Dlib& multi(const double& _alpha=1., const double& _beta=0.) {
     const T
       alpha = static_cast< T >(_alpha),
@@ -179,6 +179,14 @@ class lss_API Dlib : public linearsystem< T >
   Dlib& copy(const Dlib& _other) {
     linearsystem< T >::copy(_other);
     m_A = _other.m_A;
+    return *this;
+  }
+
+  /// Linear system swap
+  Dlib& swap(Dlib& _other)
+  {
+    linearsystem< T >::swap(_other);
+    m_A.swap(_other.m_A);
     return *this;
   }
 

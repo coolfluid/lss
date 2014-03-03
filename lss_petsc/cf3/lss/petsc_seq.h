@@ -44,14 +44,17 @@ class lss_API petsc_seq : public linearsystem< double >
   /// Destruction
   ~petsc_seq();
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   petsc_seq& solve();
+
+  /// Linear system forward multiplication: b = alpha A x + beta b
+  petsc_seq& multi(const double& _alpha=1., const double& _beta=0.);
 
   /// Linear system copy
   petsc_seq& copy(const petsc_seq& _other);
 
-  /// Linear system forward multiplication
-  petsc_seq& multi(const double& _alpha=1., const double& _beta=0.);
+  /// Linear system swap
+  petsc_seq& swap(petsc_seq& _other);
 
 
  private:

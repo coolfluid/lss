@@ -47,7 +47,7 @@ class lss_API iss_fgmres : public
   /// Destruction
   ~iss_fgmres();
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   iss_fgmres& solve();
 
   /// Linear system copy

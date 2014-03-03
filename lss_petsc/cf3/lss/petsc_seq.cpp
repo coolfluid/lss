@@ -149,6 +149,14 @@ petsc_seq& petsc_seq::copy(const petsc_seq& _other)
 }
 
 
+petsc_seq& petsc_seq::swap(petsc_seq& _other)
+{
+  linearsystem< double >::swap(_other);
+  m_A.swap(_other.m_A);
+  return *this;
+}
+
+
 const std::string petsc_seq::err_message(const int& err, const char* basemsg)
 {
   std::ostringstream s;
