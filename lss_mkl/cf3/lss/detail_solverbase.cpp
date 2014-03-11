@@ -47,6 +47,14 @@ solverbase& solverbase::multi(const double& _alpha, const double& _beta)
 }
 
 
+solverbase& solverbase::swap(solverbase& _other)
+{
+  linearsystem< double >::swap(_other);
+  m_A.swap(_other.m_A);
+  return *this;
+}
+
+
 }  // namespace detail
 }  // namespace mkl
 }  // namespace lss

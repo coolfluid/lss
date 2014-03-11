@@ -40,7 +40,7 @@ class lss_API pardiso : public
   /// Destruction
   ~pardiso();
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   pardiso& solve();
 
   /// Linear system copy

@@ -111,10 +111,19 @@ GMRES& GMRES::multi(const double& _alpha, const double& _beta)
 }
 
 
-GMRES& GMRES::copy(const GMRES& _other) {
+GMRES& GMRES::copy(const GMRES& _other)
+{
   linearsystem< double >::copy(_other);
   m_A  = _other.m_A;
   c__1 = _other.c__1;
+  return *this;
+}
+
+
+GMRES& GMRES::swap(GMRES& _other)
+{
+  linearsystem< double >::swap(_other);
+  m_A.swap(_other.m_A);
   return *this;
 }
 

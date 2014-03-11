@@ -263,10 +263,11 @@ iss_fgmres& iss_fgmres::solve()
 
 
   // get solution if successful (x still has initial guess) and iteration number
-  const bool ok(!RCI_request);
-  iparm[12] = ok? 0:-1;
+  iparm[12] = RCI_request? -1:0;
   dfgmres_get(&A.nnu, &m_x.a[0], &m_b.a[0], &RCI_request, iparm, dparm, &tmp[0], &itercount);
-  CFinfo << "mkl iss_fgmres: " << (ok? "succeded":"failed") << ", iterations: " << itercount << CFendl;
+  if ((RCI_request = (iparm[12] || (x(0)==x(0))? RCI_request : -10000)))
+    throw std::runtime_error(err_message(RCI_request,opt.pc_type));
+  CFinfo << "mkl iss_fgmres: " << (RCI_request? "failed":"succeded") << ", iterations: " << itercount << CFendl;
 
 
   return *this;
@@ -294,12 +295,7 @@ iss_fgmres& iss_fgmres::copy(const iss_fgmres& _other)
 const std::string iss_fgmres::err_message(const int& err, const pc_t& _pc_type)
 {
   std::ostringstream s;
-  s << "mkl iss_fgmres error: " << err << ": "
-    << (err==-10000?               "dfgmres_init: "  :
-       (err<=-1001 && err>=-1100)? "dfgmres_check: " :
-        _pc_type==ILU0?            "ILU0: " :
-        _pc_type==ILUT?            "ILUT: " :
-                                   "" );
+  s << "mkl iss_fgmres error: " << err << ": ";
   err==     0? s << "(success)" :
   err== -1001? s << "warnings occurred" :
   err== -1010? s << "routine changed some parameters to make them consistent or correct" :

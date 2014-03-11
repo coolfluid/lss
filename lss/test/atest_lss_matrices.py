@@ -6,14 +6,14 @@ import math
 import time
 
 
-cf.env.log_level = 4 #  1=error, 2=warning, 3=info, 4=debug
+cf.env.log_level = 3 #  1=error, 2=warning, 3=info, 4=debug
 
 
 solvers = [
-  'GaussianElimination',
-  'GaussianElimination_SinglePrecision',
-  'LAPACK',
-  'LAPACK_SinglePrecision',
+  'GaussianElimination_LongPrecisionReal',
+  'GaussianElimination_ShortPrecisionReal',
+  'LAPACK_LongPrecisionReal',
+  'LAPACK_ShortPrecisionReal',
   'GMRES',
   'pardiso.pardiso',
   'mkl.dss',

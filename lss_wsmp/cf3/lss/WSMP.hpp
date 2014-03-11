@@ -38,14 +38,17 @@ class lss_API WSMP : public linearsystem< double >
     const size_t& _size_j=size_t(),
     const size_t& _size_k=1 );
 
-  /// Linear system solving
+  /// Linear system solving: x = A^-1 b
   WSMP& solve();
 
-  /// Linear system forward multiplication
+  /// Linear system forward multiplication: b = alpha A x + beta b
   WSMP& multi(const double& _alpha=1., const double& _beta=0.);
 
   /// Linear system copy
   WSMP& copy(const WSMP& _other);
+
+  /// Linear system swap
+  WSMP& swap(WSMP& _other);
 
 
  private:

@@ -31,8 +31,11 @@ struct solverbase : public linearsystem< double >
   /// Construction
   solverbase(const std::string& name);
 
-  /// Linear system forward multiplication
+  /// Linear system forward multiplication: b = alpha A x + beta b
   solverbase& multi(const double& _alpha=1., const double& _beta=0.);
+
+  /// Linear system swap
+  solverbase& swap(solverbase& _other);
 
   /// Matrix indexing
   const double& A(const size_t& i, const size_t& j) const { return m_A(i,j); }
