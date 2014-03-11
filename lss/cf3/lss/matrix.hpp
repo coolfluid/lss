@@ -688,7 +688,8 @@ struct sparse_matrix :
   }
 
   sparse_matrix& operator=(const double& _value) {
-    CFdebug << "sparse_matrix: assigning a value only affects populated entries." << CFendl;
+    if (std::abs(_value)>1.e3*std::numeric_limits< double >::epsilon())
+      CFdebug << "sparse_matrix: assigning a value only affects populated entries." << CFendl;
     const T value = static_cast< T >(_value);
     std::fill(matc.a.begin(),matc.a.end(),value);
     for (typename matrix_uncompressed_t::iterator it = matu.begin(); it!=matu.end(); ++it)
