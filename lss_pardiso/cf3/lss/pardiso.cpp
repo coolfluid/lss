@@ -37,9 +37,11 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
          << "pardiso: PARDISO_LIC_PATH: " << licspath .description() << CFendl
          << "pardiso: MKL_SERIAL:       " << mklserial.description() << " (should be set to YES)" << CFendl;
 
-  mtype  = 1;  // real and structurally symmetric matrix
   maxfct = 1;  // maximum number of numerical factorizations
   mnum   = 1;  // which factorization to use
+  mtype  = (type_is_complex< double >()?  //FIXME make generic
+              3 :   // complex, structurally symmetric matrix
+              1 );  // real, structurally symmetric matrix;
 
   for (size_t i=0; i<64; ++i) iparm[i] = 0;
   for (size_t i=0; i<64; ++i) dparm[i] = 0.;

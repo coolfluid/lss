@@ -39,9 +39,11 @@ pardiso::pardiso(
           << "mkl pardiso: MKL_PARDISO_OOC_MAX_SWAP_SIZE: " << ooc_swap.description() << CFendl
           << "mkl pardiso: MKL_PARDISO_OOC_KEEP_FILE:     " << ooc_keep.description() << CFendl;
 
-  mtype  = 1;  // real structurally symmetric matrix
   maxfct = 1;  // maximum number of numerical factorizations
   mnum   = 1;  // which factorization to use
+  mtype  = (type_is_complex< double >()?  //FIXME make generic
+              3 :   // complex, structurally symmetric matrix
+              1 );  // real, structurally symmetric matrix;
 
   for (size_t i=0; i<64; ++i) iparm[i] = 0;
 
