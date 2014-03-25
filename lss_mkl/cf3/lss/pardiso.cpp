@@ -53,19 +53,18 @@ pardiso::pardiso(
   iparm[31] = 0;  // + [0|1] sparse direct solver or multi-recursive iterative solver
 
   // adjust user options
-  const std::string desc( type_is_complex< double >()?  //FIXME make generic
-           "3: structurally symmetric"
-         ", 4: Hermitian positive definite"
-        ", -4: Hermitian indefinite"
-         ", 6: symmetric"
-    ", and 13: nonsymmetric" :
-           "1: structurally symmetric"
-         ", 2: symmetric positive definite"
-        ", -2: symmetric indefinite"
-    ", and 11: nonsymmetric" );
-  options().add("mtype", mtype).link_to(&mtype)
-    .description("This scalar value defines the matrix type ("+desc+")")
-    .mark_basic();
+  const std::string
+    desc_mtype( type_is_complex< double >()?  //FIXME make generic
+             "3: structurally symmetric"
+           ", 4: Hermitian positive definite"
+          ", -4: Hermitian indefinite"
+           ", 6: symmetric"
+      ", and 13: nonsymmetric" :
+             "1: structurally symmetric"
+           ", 2: symmetric positive definite"
+          ", -2: symmetric indefinite"
+      ", and 11: nonsymmetric" );
+  options().add("mtype", mtype).link_to(&mtype).description("This scalar value defines the matrix type ("+desc_mtype+")").mark_basic();
 
   detail::solverbase::initialize(_size_i,_size_j,_size_k);
 }
