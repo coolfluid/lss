@@ -37,9 +37,11 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
          << "pardiso: PARDISO_LIC_PATH: " << licspath .description() << CFendl
          << "pardiso: MKL_SERIAL:       " << mklserial.description() << " (should be set to YES)" << CFendl;
 
-  mtype  = 1;  // real and structurally symmetric matrix
   maxfct = 1;  // maximum number of numerical factorizations
   mnum   = 1;  // which factorization to use
+  mtype  = (type_is_complex< double >()?  //FIXME make generic
+              3 :   // complex, structurally symmetric matrix
+              1 );  // real, structurally symmetric matrix;
 
   for (size_t i=0; i<64; ++i) iparm[i] = 0;
   for (size_t i=0; i<64; ++i) dparm[i] = 0.;
@@ -50,8 +52,25 @@ pardiso::pardiso(const std::string& name, const size_t& _size_i, const size_t& _
   if (err)
     throw std::runtime_error(err_message(err));
   iparm[ 2] = nthreads.value;  // + set nb. threads
-  iparm[ 7] = 0;               // + max numbers of iterative refinement steps
-  iparm[31] = 0;               // + [0|1] sparse direct solver or multi-recursive iterative solver
+
+  // adjust user options
+  const std::string
+    desc_mtype = type_is_complex< double >()?  //FIXME make generic
+             "3: structurally symmetric"
+           ", 4: Hermitian positive definite"
+          ", -4: Hermitian indefinite"
+           ", 6: symmetric"
+      ", and 13: nonsymmetric" :
+             "1: structurally symmetric"
+           ", 2: symmetric positive definite"
+          ", -2: symmetric indefinite"
+      ", and 11: nonsymmetric",
+    desc_solver =
+             "0: sparse direct solver"
+       ", and 1: multi-recursive iterative solver";
+  options().add("mtype",  mtype    ).link_to(&mtype    ).description("This scalar value defines the matrix type ("+desc_mtype+")").mark_basic();
+  options().add("solver", iparm[31]).link_to(&iparm[31]).description("This scalar value defines the solver method ("+desc_solver+")").mark_basic();
+  options().add("maxits", iparm[ 7]).link_to(&iparm[ 7]).description("Max. numbers of iterative refinement steps").mark_basic();
 
   linearsystem< double >::initialize(_size_i,_size_j,_size_k);
 }

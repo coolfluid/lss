@@ -39,9 +39,11 @@ pardiso::pardiso(
           << "mkl pardiso: MKL_PARDISO_OOC_MAX_SWAP_SIZE: " << ooc_swap.description() << CFendl
           << "mkl pardiso: MKL_PARDISO_OOC_KEEP_FILE:     " << ooc_keep.description() << CFendl;
 
-  mtype  = 1;  // real structurally symmetric matrix
   maxfct = 1;  // maximum number of numerical factorizations
   mnum   = 1;  // which factorization to use
+  mtype  = (type_is_complex< double >()?  //FIXME make generic
+              3 :   // complex, structurally symmetric matrix
+              1 );  // real, structurally symmetric matrix;
 
   for (size_t i=0; i<64; ++i) iparm[i] = 0;
 
@@ -49,6 +51,20 @@ pardiso::pardiso(
   PARDISOINIT(pt,&mtype,iparm);
   iparm[ 7] = 0;  // + max numbers of iterative refinement steps
   iparm[31] = 0;  // + [0|1] sparse direct solver or multi-recursive iterative solver
+
+  // adjust user options
+  const std::string
+    desc_mtype( type_is_complex< double >()?  //FIXME make generic
+             "3: structurally symmetric"
+           ", 4: Hermitian positive definite"
+          ", -4: Hermitian indefinite"
+           ", 6: symmetric"
+      ", and 13: nonsymmetric" :
+             "1: structurally symmetric"
+           ", 2: symmetric positive definite"
+          ", -2: symmetric indefinite"
+      ", and 11: nonsymmetric" );
+  options().add("mtype", mtype).link_to(&mtype).description("This scalar value defines the matrix type ("+desc_mtype+")").mark_basic();
 
   detail::solverbase::initialize(_size_i,_size_j,_size_k);
 }
